@@ -2,6 +2,7 @@
 
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 
+import { AddPhotosButton } from '@/features/photo-upload/AddPhotosButton';
 import { formatDate } from '@/lib/format';
 import type { Photo } from '@/types/photo';
 
@@ -66,7 +67,9 @@ function TrayPhoto({ photo, onPlace }: TrayPhotoProps) {
 
 interface PhotoTrayProps {
   photos: Photo[];
+  isImporting: boolean;
   onPlace: (photoId: string) => void;
+  onAddFiles: (files: File[]) => void;
 }
 
 /**
@@ -79,7 +82,12 @@ interface PhotoTrayProps {
  * Por baixo, "estar no depósito" é o mesmo estado que "foto não incluída" no
  * modo Grade. Uma verdade só, duas maneiras de mexer nela.
  */
-export function PhotoTray({ photos, onPlace }: PhotoTrayProps) {
+export function PhotoTray({
+  photos,
+  isImporting,
+  onPlace,
+  onAddFiles,
+}: PhotoTrayProps) {
   const { setNodeRef, isOver, active } = useDroppable({ id: TRAY_DROP_ID });
 
   const isReceiving =
@@ -97,13 +105,16 @@ export function PhotoTray({ photos, onPlace }: PhotoTrayProps) {
       ].join(' ')}
     >
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h2 className="text-xs font-medium text-white/70">
+        <h2 className="flex items-center gap-2 text-xs font-medium text-white/70">
           Depósito
           {photos.length > 0 && (
-            <span className="ml-2 rounded-full bg-amber-400/15 px-2 py-0.5 text-[11px] text-amber-300">
+            <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[11px] text-amber-300">
               {photos.length}
             </span>
           )}
+          <AddPhotosButton onFilesSelected={onAddFiles} disabled={isImporting}>
+            {isImporting ? 'lendo…' : '+ Fotos'}
+          </AddPhotosButton>
         </h2>
         <p className="text-[11px] text-white/40">
           {photos.length === 0

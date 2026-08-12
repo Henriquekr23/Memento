@@ -43,14 +43,23 @@ export type AlbumPageKind =
   | 'story'
   | 'back';
 
-/** Página escrita pelo usuário, ancorada a uma página de fotos. */
+/**
+ * Página escrita pelo usuário.
+ *
+ * A âncora é o **id de uma foto**, não a chave de uma página: a foto é a única
+ * coisa que continua sendo a mesma quando o layout muda, quando a paginação
+ * recalcula ou quando o usuário reordena as páginas. A história entra logo
+ * depois da página que contém aquela foto.
+ */
 export interface StoryInsertion {
   id: string;
-  /** `'start'` = antes de tudo; senão, a `key` da página de fotos anterior. */
-  anchorKey: string;
+  /** `'start'` = antes de tudo; senão, o id da foto que a história segue. */
+  anchorPhotoId: string;
   title: string;
   body: string;
 }
+
+export const STORY_ANCHOR_START = 'start';
 
 export interface AlbumPage {
   /** Chave estável: guarda layout, legenda e histórias do usuário. */
@@ -208,27 +217,32 @@ function interleaveStories(
 ): AlbumPage[] {
   const byAnchor = new Map<string, StoryInsertion[]>();
   for (const story of stories) {
-    const list = byAnchor.get(story.anchorKey);
+    const list = byAnchor.get(story.anchorPhotoId);
     if (list) list.push(story);
-    else byAnchor.set(story.anchorKey, [story]);
+    else byAnchor.set(story.anchorPhotoId, [story]);
   }
 
   const used = new Set<string>();
   const content: AlbumPage[] = [];
 
-  for (const story of byAnchor.get('start') ?? []) {
+  for (const story of byAnchor.get(STORY_ANCHOR_START) ?? []) {
     content.push(storyPage(story));
     used.add(story.id);
   }
 
   for (const page of photoPages) {
     content.push(page);
-    for (const story of byAnchor.get(page.key) ?? []) {
-      content.push(storyPage(story));
-      used.add(story.id);
+    // A história entra depois da página que contém a foto âncora.
+    for (const photo of page.photos) {
+      for (const story of byAnchor.get(photo.id) ?? []) {
+        content.push(storyPage(story));
+        used.add(story.id);
+      }
     }
   }
 
+  // Âncora que sumiu (a foto foi para o depósito ou apagada): a história vai
+  // para o fim em vez de desaparecer. Perder texto do usuário é inaceitável.
   for (const story of stories) {
     if (!used.has(story.id)) content.push(storyPage(story));
   }
@@ -266,6 +280,65 @@ export function buildAlbumPages(
     ...content,
     emptyPage('back', 'back'),
   ];
+}
+
+/** Páginas que o usuário pode reordenar — capa, guarda e contracapa ficam. */
+export function contentPagesOf(pages: readonly AlbumPage[]): AlbumPage[] {
+  return pages.filter(
+    (page) => page.kind === 'photos' || page.kind === 'story',
+  );
+}
+
+export interface PageReorder {
+  /** Ids das fotos do álbum na nova ordem. */
+  photoOrder: string[];
+  /** História → nova foto âncora, para o texto seguir a página. */
+  storyAnchors: Record<string, string>;
+}
+
+/**
+ * Move uma página do miolo para outra posição.
+ *
+ * A ordem das fotos continua sendo a fonte de verdade, então reordenar páginas
+ * é reescrever essa ordem — e reancorar as histórias na foto que passou a
+ * vir antes delas. Função pura: quem chama aplica o resultado no estado.
+ */
+export function reorderContentPages(
+  pages: readonly AlbumPage[],
+  fromIndex: number,
+  toIndex: number,
+): PageReorder {
+  const content = contentPagesOf(pages);
+
+  if (
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= content.length ||
+    toIndex >= content.length
+  ) {
+    return { photoOrder: [], storyAnchors: {} };
+  }
+
+  const reordered = [...content];
+  const [moved] = reordered.splice(fromIndex, 1);
+  reordered.splice(toIndex, 0, moved);
+
+  const photoOrder: string[] = [];
+  const storyAnchors: Record<string, string> = {};
+  let lastPhotoId = STORY_ANCHOR_START;
+
+  for (const page of reordered) {
+    if (page.story) {
+      storyAnchors[page.story.id] = lastPhotoId;
+      continue;
+    }
+    for (const photo of page.photos) {
+      photoOrder.push(photo.id);
+      lastPhotoId = photo.id;
+    }
+  }
+
+  return { photoOrder, storyAnchors };
 }
 
 /**

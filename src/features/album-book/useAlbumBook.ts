@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { buildAlbumPages, type StoryInsertion } from '@/lib/paginate';
+import {
+  STORY_ANCHOR_START,
+  buildAlbumPages,
+  type StoryInsertion,
+} from '@/lib/paginate';
 import { DEFAULT_THEME, type AlbumTheme } from '@/features/album-style/theme';
 import {
   DEFAULT_ADJUSTMENT,
@@ -46,7 +50,14 @@ export function useAlbumBook(photos: readonly Photo[]) {
   const [photoCaptions, setPhotoCaptions] = useState<Record<string, string>>({});
   const [stories, setStories] = useState<StoryInsertion[]>([]);
   const [theme, setThemeState] = useState<AlbumTheme>(DEFAULT_THEME);
-  const [composeMode, setComposeMode] = useState<ComposeMode>('aligned');
+  /**
+   * Modo de composição **por página**: uma página pode ter as fotos encaixadas
+   * no layout enquanto a seguinte tem tudo solto. Era uma chave do livro
+   * inteiro, mas a escolha é editorial e muda de página para página.
+   */
+  const [pageComposeModes, setPageComposeModes] = useState<
+    Record<string, ComposeMode>
+  >({});
   /**
    * Inclinação automática do modo espontâneo. Separada do modo porque uma
    * coisa é querer posicionar as fotos à mão, outra é querer todas tortas.
@@ -286,6 +297,18 @@ export function useAlbumBook(photos: readonly Photo[]) {
     });
   }, []);
 
+  const getComposeMode = useCallback(
+    (pageKey: string): ComposeMode => pageComposeModes[pageKey] ?? 'aligned',
+    [pageComposeModes],
+  );
+
+  const setPageComposeMode = useCallback(
+    (pageKey: string, mode: ComposeMode) => {
+      setPageComposeModes((current) => ({ ...current, [pageKey]: mode }));
+    },
+    [],
+  );
+
   /** Faz a foto pertencer ao grupo de uma página, mesmo sendo de outro dia. */
   const assignToGroup = useCallback((photoId: string, groupKey: string) => {
     setGroupKeys((current) => ({ ...current, [photoId]: groupKey }));
@@ -311,21 +334,21 @@ export function useAlbumBook(photos: readonly Photo[]) {
    */
   const addStoryHere = useCallback(() => {
     const right = pages[rightIndexOf(spread)];
-    let anchorKey = 'start';
+    let anchorPhotoId = STORY_ANCHOR_START;
     // Para onde navegar depois de inserir, quando dá para saber com certeza.
     let targetSpread: number | null = null;
 
     if (right?.kind === 'photos') {
-      anchorKey = right.key;
+      anchorPhotoId = right.photos.at(-1)?.id ?? STORY_ANCHOR_START;
       targetSpread = spread + 1;
     } else if (right?.kind === 'story' && right.story) {
-      anchorKey = right.story.anchorKey;
+      anchorPhotoId = right.story.anchorPhotoId;
       targetSpread = spread + 1;
     } else if (spread > 1) {
       const lastPhotoPage = [...pages].reverse().find((p) => p.kind === 'photos');
-      anchorKey = lastPhotoPage?.key ?? 'start';
+      anchorPhotoId = lastPhotoPage?.photos.at(-1)?.id ?? STORY_ANCHOR_START;
     } else {
-      // Na capa ou no verso dela: o texto abre o álbum, no primeiro spread.
+      // Na capa ou na folha de rosto: o texto abre o álbum, no primeiro spread.
       targetSpread = 1;
     }
 
@@ -334,10 +357,24 @@ export function useAlbumBook(photos: readonly Photo[]) {
         ? crypto.randomUUID()
         : `story_${Date.now()}`;
 
-    setStories((current) => [...current, { id, anchorKey, title: '', body: '' }]);
+    setStories((current) => [
+      ...current,
+      { id, anchorPhotoId, title: '', body: '' },
+    ]);
     if (targetSpread !== null) setSpread(targetSpread);
     return id;
   }, [pages, spread]);
+
+  /** Reancora as histórias depois de uma reordenação de páginas. */
+  const setStoryAnchors = useCallback((anchors: Record<string, string>) => {
+    setStories((current) =>
+      current.map((story) =>
+        anchors[story.id] !== undefined
+          ? { ...story, anchorPhotoId: anchors[story.id] }
+          : story,
+      ),
+    );
+  }, []);
 
   const updateStory = useCallback(
     (id: string, patch: Partial<Pick<StoryInsertion, 'title' | 'body'>>) => {
@@ -362,6 +399,7 @@ export function useAlbumBook(photos: readonly Photo[]) {
     setAdjustments({});
     setPlacements({});
     setGroupKeys({});
+    setPageComposeModes({});
   }, []);
 
   return {
@@ -383,6 +421,7 @@ export function useAlbumBook(photos: readonly Photo[]) {
     setPhotoCaption,
     stories,
     addStoryHere,
+    setStoryAnchors,
     updateStory,
     removeStory,
     theme,
@@ -396,8 +435,8 @@ export function useAlbumBook(photos: readonly Photo[]) {
     assignToGroup,
     clearGroup,
     resetPages,
-    composeMode,
-    setComposeMode,
+    getComposeMode,
+    setPageComposeMode,
     autoTiltEnabled,
     setAutoTiltEnabled,
     selectedPhotoId,

@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { AlbumBook } from '@/features/album-book/AlbumBook';
 import { useAlbumBook } from '@/features/album-book/useAlbumBook';
 import { AlbumGrid } from '@/features/album-builder/AlbumGrid';
@@ -16,6 +17,7 @@ export default function HomePage() {
   const { exportAlbum, isExporting, progress, error, exporterLabel } =
     useAlbumExport();
   const [view, setView] = useState<AlbumView>('grid');
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
 
   const hasPhotos = album.photos.length > 0;
   const isBookView = view === 'book' && hasPhotos;
@@ -66,16 +68,33 @@ export default function HomePage() {
               stories: book.stories,
             })
           }
-          onClear={album.clear}
+          onClear={() => setIsClearConfirmOpen(true)}
         />
       )}
 
+      <ConfirmDialog
+        open={isClearConfirmOpen}
+        title="Descartar este álbum?"
+        description={`As ${album.photos.length} foto(s) importadas, a ordem das páginas e os textos escritos serão perdidos. Os arquivos no seu computador continuam intactos.`}
+        confirmLabel="Descartar"
+        destructive
+        onConfirm={() => {
+          album.clear();
+          setIsClearConfirmOpen(false);
+          setView('grid');
+        }}
+        onCancel={() => setIsClearConfirmOpen(false)}
+      />
+
       <div className="space-y-6">
-        <PhotoDropzone
-          onFilesSelected={handleFilesSelected}
-          disabled={album.status.isImporting}
-          compact={hasPhotos}
-        />
+        {/* A área grande de arrastar só faz sentido no começo. Depois disso o
+            "+ Fotos" do depósito dá conta, e a tela respira. */}
+        {!hasPhotos && (
+          <PhotoDropzone
+            onFilesSelected={handleFilesSelected}
+            disabled={album.status.isImporting}
+          />
+        )}
 
         {album.status.isImporting && (
           <p className="text-sm text-white/60">
@@ -132,9 +151,12 @@ export default function HomePage() {
               albumName={album.name}
               photos={album.includedPhotos}
               trayPhotos={album.trayPhotos}
+              isImporting={album.status.isImporting}
               onSwapPhotos={album.swapPhotos}
               onPlaceAfter={album.placeAfter}
               onSendToTray={album.sendToTray}
+              onReorderPhotos={album.reorderIncluded}
+              onAddFiles={handleFilesSelected}
             />
           ) : (
             <AlbumGrid

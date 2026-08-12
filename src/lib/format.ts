@@ -29,6 +29,7 @@ export function formatDateTime(date: Date): string {
   return `${formatDate(date)} · ${formatTime(date)}`;
 }
 
+/** Dia por extenso: "terça-feira, 21 de outubro". */
 export function formatDayLabel(date: Date): string {
   return dayLabelFormatter.format(date);
 }

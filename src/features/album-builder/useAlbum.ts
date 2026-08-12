@@ -177,6 +177,26 @@ export function useAlbum() {
     setIsManuallyOrdered(true);
   }, []);
 
+  /**
+   * Reescreve a ordem das fotos do álbum. É assim que a reordenação de páginas
+   * se aplica: a ordem da lista é que define o que cai em cada página.
+   * As fotos do depósito ficam onde estão — não são paginadas.
+   */
+  const reorderIncluded = useCallback((orderedIds: readonly string[]) => {
+    setPhotos((prev) => {
+      const byId = new Map(prev.map((photo) => [photo.id, photo]));
+      const wanted = new Set(orderedIds);
+
+      const reordered = orderedIds
+        .map((id) => byId.get(id))
+        .filter((photo): photo is Photo => photo !== undefined);
+
+      const untouched = prev.filter((photo) => !wanted.has(photo.id));
+      return [...reordered, ...untouched];
+    });
+    setIsManuallyOrdered(true);
+  }, []);
+
   const sortByDate = useCallback((direction: SortDirection = 'asc') => {
     setSortDirection(direction);
     setPhotos((prev) => sortPhotosChronologically(prev, direction));
@@ -224,6 +244,7 @@ export function useAlbum() {
     placeAfter,
     movePhoto,
     swapPhotos,
+    reorderIncluded,
     sortByDate,
     clear,
   };

@@ -32,7 +32,9 @@ export interface BookPageProps {
   albumMeta: { firstDate: Date | null; lastDate: Date | null; photoCount: number };
   caption: string | undefined;
   frame: FrameId;
-  composeMode: ComposeMode;
+  /** Modo de composição desta página. */
+  getComposeMode: (pageKey: string) => ComposeMode;
+  onChangeComposeMode: (pageKey: string, mode: ComposeMode) => void;
   /** Inclinação automática das fotos que o usuário ainda não girou. */
   autoTiltEnabled: boolean;
   selectedPhotoId: string | null;
@@ -133,7 +135,7 @@ function GutterShadow({ side }: { side: PageSide }) {
 }
 
 export function BookPage(props: BookPageProps) {
-  const { page, side, albumName, albumMeta, interactive, composeMode } = props;
+  const { page, side, albumName, albumMeta, interactive } = props;
   const rounded = side === 'left' ? 'rounded-l-[6px]' : 'rounded-r-[6px]';
 
   // Sem página: nada mesmo. É isso que deixa as capas isoladas nas pontas.
@@ -261,6 +263,7 @@ export function BookPage(props: BookPageProps) {
   }
 
   const layout = PAGE_LAYOUTS[page.layoutId];
+  const composeMode = props.getComposeMode(page.key);
   const isFree = composeMode === 'free';
   const dayLabel = page.date ? formatDayLabel(page.date) : '';
 
@@ -270,35 +273,60 @@ export function BookPage(props: BookPageProps) {
       style={paperStyle}
       onPointerDown={() => interactive && props.onSelectPhoto(null)}
     >
-      <header className="flex items-start justify-between gap-2 px-5 pt-4">
-        <div className="min-w-0">
-          {page.dayNumber !== null && (
-            <p
-              className="text-[10px] uppercase tracking-[0.25em]"
-              style={{ color: 'var(--paper-accent)' }}
-            >
-              Dia {page.dayNumber}
-              {page.totalPagesOfDay > 1 &&
-                ` · ${page.pageOfDay}/${page.totalPagesOfDay}`}
-            </p>
-          )}
-          <input
-            value={props.caption ?? ''}
-            onChange={(event) => props.onChangeCaption(page.key, event.target.value)}
-            onPointerDown={(event) => event.stopPropagation()}
-            disabled={!interactive}
-            placeholder={dayLabel}
-            aria-label="Legenda da página"
-            className="w-full select-text truncate border-0 bg-transparent text-sm outline-none placeholder:text-current placeholder:opacity-35"
-          />
-        </div>
+      <header className="relative px-5 pt-4">
+        {page.dayNumber !== null && (
+          <p
+            className="truncate text-[10px] uppercase tracking-[0.2em]"
+            style={{ color: 'var(--paper-accent)' }}
+          >
+            Dia {page.dayNumber}
+            {page.totalPagesOfDay > 1 &&
+              ` · ${page.pageOfDay}/${page.totalPagesOfDay}`}
+          </p>
+        )}
+        {/* O recuo só entra quando os controles aparecem: em repouso a data
+            por extenso usa a página inteira e não é cortada. */}
+        <input
+          value={props.caption ?? ''}
+          onChange={(event) => props.onChangeCaption(page.key, event.target.value)}
+          onPointerDown={(event) => event.stopPropagation()}
+          disabled={!interactive}
+          placeholder={dayLabel}
+          aria-label="Legenda da página"
+          className="w-full select-text truncate border-0 bg-transparent pr-0 text-[13px] leading-6 outline-none transition-[padding] duration-200 placeholder:text-current placeholder:opacity-35 group-hover/page:pr-24"
+        />
 
-        {interactive && !isFree && (
-          <div className="shrink-0 opacity-0 transition focus-within:opacity-100 group-hover/page:opacity-100">
-            <LayoutPicker
-              value={page.layoutId}
-              onChange={(layoutId) => props.onChangeLayout(page.key, layoutId)}
-            />
+        {/* Fora do fluxo: no fluxo, ele roubava a largura do campo de legenda
+            e a data ficava cortada mesmo com a página inteira livre. */}
+        {interactive && (
+          <div className="absolute right-4 top-3 flex items-center gap-1.5 opacity-0 transition focus-within:opacity-100 group-hover/page:opacity-100">
+            {!isFree && (
+              <LayoutPicker
+                value={page.layoutId}
+                onChange={(layoutId) => props.onChangeLayout(page.key, layoutId)}
+              />
+            )}
+            <button
+              type="button"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={() =>
+                props.onChangeComposeMode(page.key, isFree ? 'aligned' : 'free')
+              }
+              aria-pressed={isFree}
+              title={
+                isFree
+                  ? 'Esta página está livre: arraste para mover, ◢ redimensiona, ↻ gira'
+                  : 'Nesta página as fotos seguem o layout — clique para soltá-las'
+              }
+              className={[
+                'rounded-full px-2.5 py-1.5 text-[11px] font-medium shadow-sm ring-1 ring-black/5 transition',
+                isFree
+                  ? 'bg-neutral-900 text-amber-300'
+                  : 'bg-white/80 text-neutral-500 hover:text-neutral-800',
+              ].join(' ')}
+            >
+              {isFree ? '✥ livre' : '▦ layout'}
+            </button>
           </div>
         )}
       </header>

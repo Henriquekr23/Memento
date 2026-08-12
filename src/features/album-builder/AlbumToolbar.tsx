@@ -39,24 +39,53 @@ export function AlbumToolbar({
 }: AlbumToolbarProps) {
   return (
     <div className="sticky top-0 z-20 -mx-4 mb-6 border-b border-white/10 bg-neutral-950/85 px-4 py-4 backdrop-blur">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-64 flex-1">
-          <label
-            htmlFor="album-name"
-            className="mb-1 block text-xs font-medium uppercase tracking-wide text-white/40"
-          >
-            Nome do álbum
-          </label>
-          <input
-            id="album-name"
-            value={name}
-            onChange={(event) => onNameChange(event.target.value)}
-            placeholder="Ex: Chile, julho de 2026"
-            className="w-full rounded-lg border border-white/15 bg-white/[0.04] px-3 py-2 text-lg font-medium text-white outline-none transition placeholder:text-white/25 focus:border-amber-400"
-          />
+      {/* Nome em linha própria, e à direita só o que existe nos dois modos.
+          Com os botões da Grade no meio, o par Grade/Álbum trocava de lugar a
+          cada alternância — e o alvo do clique fugia do cursor. */}
+      <div>
+        <label
+          htmlFor="album-name"
+          className="mb-1 block text-xs font-medium uppercase tracking-wide text-white/40"
+        >
+          Nome do álbum
+        </label>
+        <input
+          id="album-name"
+          value={name}
+          onChange={(event) => onNameChange(event.target.value)}
+          placeholder="Ex: Chile, julho de 2026"
+          className="w-full rounded-lg border border-white/15 bg-white/[0.04] px-3 py-2 text-lg font-medium text-white outline-none transition placeholder:text-white/25 focus:border-amber-400"
+        />
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Ordenar e limpar são operações de curadoria: vivem na Grade. */}
+          {view === 'grid' && (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  onSortByDate(sortDirection === 'asc' ? 'desc' : 'asc')
+                }
+                title="Reordenar tudo por data e hora"
+                className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/80 transition hover:border-white/35 hover:text-white"
+              >
+                {sortDirection === 'asc' ? '↑ Mais antigas' : '↓ Mais recentes'}
+              </button>
+
+              <button
+                type="button"
+                onClick={onClear}
+                className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/60 transition hover:border-red-400/50 hover:text-red-300"
+              >
+                Limpar
+              </button>
+            </>
+          )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           <div className="flex items-center rounded-full border border-white/15 p-0.5">
             {(['grid', 'book'] as const).map((option) => (
               <button
@@ -75,23 +104,6 @@ export function AlbumToolbar({
               </button>
             ))}
           </div>
-
-          <button
-            type="button"
-            onClick={() => onSortByDate(sortDirection === 'asc' ? 'desc' : 'asc')}
-            title="Reordenar tudo por data e hora"
-            className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/80 transition hover:border-white/35 hover:text-white"
-          >
-            {sortDirection === 'asc' ? '↑ Mais antigas' : '↓ Mais recentes'}
-          </button>
-
-          <button
-            type="button"
-            onClick={onClear}
-            className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/60 transition hover:border-red-400/50 hover:text-red-300"
-          >
-            Limpar
-          </button>
 
           <button
             type="button"

@@ -291,7 +291,11 @@ export function PhotoSlot({
             src={photo.previewUrl}
             alt={photo.fileName}
             draggable={false}
-            loading="lazy"
+            // Nada de lazy aqui: são no máximo duas páginas na tela, os
+            // arquivos já estão em memória, e o carregamento tardio fazia a
+            // foto piscar em branco a cada virada.
+            loading="eager"
+            decoding="sync"
             style={{
               objectPosition: `${adjustment.focusX}% ${adjustment.focusY}%`,
               transform: `scale(${adjustment.zoom})`,

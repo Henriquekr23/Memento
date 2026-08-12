@@ -11,6 +11,10 @@ import {
 interface StylePanelProps {
   theme: AlbumTheme;
   onChange: (patch: Partial<AlbumTheme>) => void;
+  /** Inclinação automática das fotos — só faz sentido no modo espontâneo. */
+  autoTiltEnabled: boolean;
+  onAutoTiltChange: (enabled: boolean) => void;
+  onResetPages: () => void;
   onClose: () => void;
 }
 
@@ -31,7 +35,14 @@ function Section({
   );
 }
 
-export function StylePanel({ theme, onChange, onClose }: StylePanelProps) {
+export function StylePanel({
+  theme,
+  onChange,
+  autoTiltEnabled,
+  onAutoTiltChange,
+  onResetPages,
+  onClose,
+}: StylePanelProps) {
   return (
     <div className="grid gap-5 rounded-2xl border border-white/10 bg-neutral-900/80 p-4 backdrop-blur sm:grid-cols-2 lg:grid-cols-4">
       <Section title="Capa">
@@ -75,6 +86,20 @@ export function StylePanel({ theme, onChange, onClose }: StylePanelProps) {
       </Section>
 
       <Section title="Fotos">
+        <button
+          type="button"
+          onClick={() => onAutoTiltChange(!autoTiltEnabled)}
+          aria-pressed={autoTiltEnabled}
+          title="Inclina levemente as fotos das páginas livres que você ainda não girou"
+          className={[
+            'rounded-full px-3 py-1.5 text-xs transition',
+            autoTiltEnabled
+              ? 'bg-white/90 font-medium text-neutral-900'
+              : 'border border-white/15 text-white/60 hover:text-white',
+          ].join(' ')}
+        >
+          Tortinhas
+        </button>
         {FRAME_OPTIONS.map((option) => (
           <button
             key={option.id}
@@ -127,6 +152,15 @@ export function StylePanel({ theme, onChange, onClose }: StylePanelProps) {
             </button>
           ))}
         </div>
+
+        <button
+          type="button"
+          onClick={onResetPages}
+          title="Volta layouts, posições e enquadramentos ao automático (o texto fica)"
+          className="mt-2 text-[11px] text-white/40 underline-offset-2 transition hover:text-white/70 hover:underline"
+        >
+          refazer páginas
+        </button>
       </div>
     </div>
   );

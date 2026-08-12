@@ -112,7 +112,7 @@ function downloadBlob(blob: Blob, fileName: string): void {
 
 export const zipAlbumExporter: AlbumExporter = {
   id: 'zip',
-  label: 'Baixar ZIP',
+  label: 'Baixar',
   async export(album, onProgress) {
     const blob = await buildAlbumZip(album, onProgress);
     downloadBlob(blob, `${slugify(album.name, 'meu-album')}.zip`);

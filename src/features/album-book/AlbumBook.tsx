@@ -24,10 +24,12 @@ import { StylePanel } from '@/features/album-style/StylePanel';
 import { themeToStyle } from '@/features/album-style/theme';
 import {
   MAX_PHOTOS_PER_PAGE,
+  contentPagesOf,
   findPageOfPhoto,
   findSlotRect,
   findSpreadOfPhoto,
   layoutForCount,
+  reorderContentPages,
   type AlbumPage,
 } from '@/lib/paginate';
 import type { Photo } from '@/types/photo';
@@ -39,6 +41,7 @@ import {
   type PageSide,
 } from './bookGeometry';
 import { BookPage, pageKeyFromDropId } from './BookPage';
+import { PageStrip } from './PageStrip';
 import { PhotoInspector } from './PhotoInspector';
 import {
   PhotoTray,
@@ -55,10 +58,14 @@ interface AlbumBookProps {
   photos: Photo[];
   /** Fotos importadas que ainda não estão em nenhuma página. */
   trayPhotos: Photo[];
+  isImporting: boolean;
   onSwapPhotos: (aId: string, bId: string) => void;
   /** Traz uma foto do depósito para a ordem, logo depois de outra. */
   onPlaceAfter: (photoId: string, afterPhotoId: string | null) => void;
   onSendToTray: (photoId: string) => void;
+  /** Reescreve a ordem das fotos do álbum (usado ao reordenar páginas). */
+  onReorderPhotos: (orderedIds: string[]) => void;
+  onAddFiles: (files: File[]) => void;
 }
 
 /** Faixa da largura do livro que conta como "borda" para clique de virar. */
@@ -66,26 +73,58 @@ const EDGE_RATIO = 0.12;
 const CLICK_TOLERANCE_PX = 4;
 const EASE = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
 
-/** Lombada com espessura: as folhas que sobram de cada lado. */
-function PageEdges({ side, remaining }: { side: PageSide; remaining: number }) {
-  const layers = Math.max(0, Math.min(7, Math.ceil(remaining / 3)));
+/**
+ * Escurecimento da folha em movimento: mais forte junto à lombada, que é onde
+ * o papel se dobra e recebe menos luz. Preto chapado deixava a página com cara
+ * de cartão apagando, não de folha virando.
+ */
+function foldGradient(side: PageSide): string {
+  const towardsSpine = side === 'right' ? 'left' : 'right';
+  return `linear-gradient(to ${towardsSpine}, rgba(0,0,0,0.04), rgba(0,0,0,0.62))`;
+}
+
+/**
+ * Espessura do livro: as folhas que sobram de cada lado.
+ *
+ * Só aparece com o álbum aberto. De frente para um livro fechado você vê a
+ * capa e mais nada — as folhas estão atrás dela. Desenhar a espessura ali
+ * criava justamente aquela faixa clara colada na capa, que parecia uma margem
+ * sobrando de um lado ou do outro, dependendo de onde o álbum fechava.
+ */
+function PageEdges({
+  side,
+  remaining,
+  openness,
+}: {
+  side: PageSide;
+  remaining: number;
+  openness: number;
+}) {
+  if (remaining <= 0 || openness <= 0.01) return null;
+
+  const thickness = Math.min(9, Math.max(2, Math.round(remaining / 3)));
+  const direction = side === 'left' ? 'left' : 'right';
+
   return (
     // inset-0 (e não inset-y-0): a caixa precisa ter a largura do livro, senão
     // as folhas do lado direito iriam parar na lombada.
-    <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
-      {Array.from({ length: layers }, (_, index) => (
-        <span
-          key={index}
-          style={{
-            [side]: `${-(index + 1) * 2}px`,
-            top: `${(index + 1) * 1.5}px`,
-            bottom: `${(index + 1) * 1.5}px`,
-            opacity: 1 - index * 0.11,
-            background: 'var(--paper-base)',
-          }}
-          className="absolute w-[3px] rounded-[1px] shadow-[0_1px_2px_rgba(0,0,0,0.25)]"
-        />
-      ))}
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 z-0"
+      style={{ opacity: openness }}
+    >
+      <span
+        style={{
+          [side]: `${-thickness}px`,
+          top: '3px',
+          bottom: '3px',
+          width: `${thickness}px`,
+          backgroundImage: `repeating-linear-gradient(to ${direction}, var(--paper-base) 0 1px, rgba(0,0,0,0.4) 1px 2px)`,
+          borderRadius: side === 'left' ? '3px 0 0 3px' : '0 3px 3px 0',
+          boxShadow: 'inset 0 0 5px rgba(0,0,0,0.45)',
+        }}
+        className="absolute"
+      />
     </div>
   );
 }
@@ -95,9 +134,12 @@ export function AlbumBook({
   albumName,
   photos,
   trayPhotos,
+  isImporting,
   onSwapPhotos,
   onPlaceAfter,
   onSendToTray,
+  onReorderPhotos,
+  onAddFiles,
 }: AlbumBookProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const gestureRef = useRef<{
@@ -131,6 +173,13 @@ export function AlbumBook({
     () => photos.find((photo) => photo.id === book.selectedPhotoId) ?? null,
     [photos, book.selectedPhotoId],
   );
+
+  // Os controles finos seguem o modo da página onde a foto está.
+  const selectedPhotoComposeMode = useMemo(() => {
+    if (!selectedPhoto) return 'aligned' as const;
+    const page = findPageOfPhoto(pages, selectedPhoto.id);
+    return page ? book.getComposeMode(page.key) : ('aligned' as const);
+  }, [selectedPhoto, pages, book]);
 
   // ── Gesto de folhear ────────────────────────────────────────────────────
   const handlePointerDown = useCallback(
@@ -332,11 +381,51 @@ export function AlbumBook({
     book.setSelectedPhotoId(photoId);
   }, [pages, book]);
 
+  /**
+   * Decodifica adiantado as fotos dos spreads vizinhos.
+   * Os arquivos já estão em memória, mas sem isso o navegador só decodifica na
+   * hora de pintar — e a foto piscava em branco no meio da virada.
+   */
+  useEffect(() => {
+    const urls = new Set<string>();
+    for (const offset of [-1, 0, 1, 2]) {
+      const target = spread + offset;
+      for (const index of [leftIndexOf(target), rightIndexOf(target)]) {
+        for (const photo of pages[index]?.photos ?? []) urls.add(photo.previewUrl);
+      }
+    }
+    for (const url of urls) {
+      const image = new Image();
+      image.decoding = 'async';
+      image.src = url;
+    }
+  }, [pages, spread]);
+
+  /** Reordenar páginas = reescrever a ordem das fotos e reancorar os textos. */
+  const handleReorderPages = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      const { photoOrder, storyAnchors } = reorderContentPages(
+        pages,
+        fromIndex,
+        toIndex,
+      );
+      if (photoOrder.length === 0 && Object.keys(storyAnchors).length === 0) {
+        return;
+      }
+      onReorderPhotos(photoOrder);
+      book.setStoryAnchors(storyAnchors);
+    },
+    [pages, onReorderPhotos, book],
+  );
+
+  const contentPages = useMemo(() => contentPagesOf(pages), [pages]);
+
   const pageProps = {
     albumName,
     albumMeta,
     frame: book.theme.frame,
-    composeMode: book.composeMode,
+    getComposeMode: book.getComposeMode,
+    onChangeComposeMode: book.setPageComposeMode,
     autoTiltEnabled: book.autoTiltEnabled,
     selectedPhotoId: book.selectedPhotoId,
     photoCaptions: book.photoCaptions,
@@ -398,38 +487,6 @@ export function AlbumBook({
           </button>
           <button
             type="button"
-            onClick={() =>
-              book.setComposeMode(book.composeMode === 'aligned' ? 'free' : 'aligned')
-            }
-            aria-pressed={book.composeMode === 'free'}
-            title={
-              book.composeMode === 'aligned'
-                ? 'Fotos encaixadas nos slots do layout'
-                : 'Arraste para mover e use ◢ para redimensionar cada foto'
-            }
-            className={[
-              'rounded-full px-4 py-1.5 text-xs transition',
-              book.composeMode === 'free'
-                ? 'bg-amber-400 font-medium text-neutral-950'
-                : 'border border-white/15 text-white/70 hover:border-white/35 hover:text-white',
-            ].join(' ')}
-          >
-            {book.composeMode === 'aligned' ? 'Alinhado' : 'Espontâneo'}
-          </button>
-
-          {book.composeMode === 'free' && (
-            <button
-              type="button"
-              onClick={() => book.setAutoTiltEnabled(!book.autoTiltEnabled)}
-              aria-pressed={book.autoTiltEnabled}
-              title="Inclinação automática das fotos que você ainda não girou"
-              className="rounded-full border border-white/15 px-4 py-1.5 text-xs text-white/70 transition hover:border-white/35 hover:text-white"
-            >
-              {book.autoTiltEnabled ? 'Tortinhas' : 'Retas'}
-            </button>
-          )}
-          <button
-            type="button"
             onClick={() => setIsStyleOpen((value) => !value)}
             aria-pressed={isStyleOpen}
             className={[
@@ -441,14 +498,6 @@ export function AlbumBook({
           >
             Estilo
           </button>
-          <button
-            type="button"
-            onClick={book.resetPages}
-            title="Volta layouts e enquadramentos ao automático (o texto fica)"
-            className="rounded-full border border-white/15 px-4 py-1.5 text-xs text-white/50 transition hover:border-white/35 hover:text-white"
-          >
-            Refazer páginas
-          </button>
         </div>
       </div>
 
@@ -456,19 +505,10 @@ export function AlbumBook({
         <StylePanel
           theme={book.theme}
           onChange={book.setTheme}
+          autoTiltEnabled={book.autoTiltEnabled}
+          onAutoTiltChange={book.setAutoTiltEnabled}
+          onResetPages={book.resetPages}
           onClose={() => setIsStyleOpen(false)}
-        />
-      )}
-
-      {book.spreadCount > 2 && (
-        <input
-          type="range"
-          min={0}
-          max={book.spreadCount - 1}
-          value={spread}
-          onChange={(event) => book.goToSpread(Number(event.target.value))}
-          aria-label="Navegar pelo álbum"
-          className="h-1 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-amber-400"
         />
       )}
 
@@ -479,7 +519,12 @@ export function AlbumBook({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setDraggingPhotoId(null)}
       >
-        <PhotoTray photos={trayPhotos} onPlace={placeFromTray} />
+        <PhotoTray
+          photos={trayPhotos}
+          isImporting={isImporting}
+          onPlace={placeFromTray}
+          onAddFiles={onAddFiles}
+        />
 
         <div
           className="mt-4 select-none"
@@ -496,10 +541,15 @@ export function AlbumBook({
             style={{ transformStyle: 'preserve-3d' }}
             className="relative mx-auto aspect-[8/5] w-full max-w-5xl cursor-grab touch-none active:cursor-grabbing"
           >
-            <PageEdges side="left" remaining={leftIndexOf(spread) + 1} />
+            <PageEdges
+              side="left"
+              remaining={leftIndexOf(spread) + 1}
+              openness={view.openness}
+            />
             <PageEdges
               side="right"
               remaining={pages.length - rightIndexOf(spread) - 1}
+              openness={view.openness}
             />
 
             {/* Páginas paradas */}
@@ -570,6 +620,7 @@ export function AlbumBook({
                   style={{
                     backfaceVisibility: 'hidden',
                     transform: 'translateZ(0.5px)',
+                    boxShadow: '0 24px 48px -18px rgba(0,0,0,0.9)',
                   }}
                 >
                   <BookPage
@@ -585,8 +636,11 @@ export function AlbumBook({
                   />
                   <div
                     aria-hidden
-                    className="pointer-events-none absolute inset-0 bg-black"
-                    style={{ opacity: turn.progress * 0.5 }}
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      background: foldGradient(view.leaf.frontSide),
+                      opacity: turn.progress,
+                    }}
                   />
                 </div>
 
@@ -595,6 +649,7 @@ export function AlbumBook({
                   style={{
                     backfaceVisibility: 'hidden',
                     transform: 'rotateY(180deg) translateZ(0.5px)',
+                    boxShadow: '0 24px 48px -18px rgba(0,0,0,0.9)',
                   }}
                 >
                   <BookPage
@@ -608,18 +663,39 @@ export function AlbumBook({
                   />
                   <div
                     aria-hidden
-                    className="pointer-events-none absolute inset-0 bg-black"
-                    style={{ opacity: (1 - turn.progress) * 0.5 }}
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      background: foldGradient(view.leaf.backSide),
+                      opacity: 1 - turn.progress,
+                    }}
                   />
                 </div>
               </div>
             )}
 
-            {/* Vinco central */}
+            {/* Sombra que a folha levantada projeta na página de baixo. Nasce
+                na lombada e é mais forte no meio do giro, quando a folha está
+                perpendicular à página. */}
+            {turn && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 z-[16] w-1/2"
+                style={{
+                  left: turn.direction === 'next' ? 0 : '50%',
+                  background: `linear-gradient(to ${
+                    turn.direction === 'next' ? 'left' : 'right'
+                  }, rgba(0,0,0,0.6), transparent 65%)`,
+                  opacity: Math.sin(turn.progress * Math.PI) * 0.9,
+                }}
+              />
+            )}
+
+            {/* Vinco central. Fica abaixo da folha que gira (z-20): acima
+                dela, a sombra ficava parada cortando a página em movimento. */}
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-y-0 left-1/2 z-30 w-6 -translate-x-1/2 bg-gradient-to-r from-transparent via-black/35 to-transparent"
-              style={{ opacity: 0.45 + view.openness * 0.55 }}
+              className="pointer-events-none absolute inset-y-0 left-1/2 z-[15] w-6 -translate-x-1/2 bg-gradient-to-r from-transparent via-black/35 to-transparent"
+              style={{ opacity: view.openness }}
             />
           </div>
         </div>
@@ -638,6 +714,20 @@ export function AlbumBook({
         </DragOverlay>
       </DndContext>
 
+      <PageStrip
+        pages={contentPages}
+        currentSpread={spread}
+        spreadOfPage={(page) => {
+          const index = pages.indexOf(page);
+          return index === -1 ? null : Math.ceil(index / 2);
+        }}
+        onReorder={handleReorderPages}
+        onSelectPage={(page) => {
+          const index = pages.indexOf(page);
+          if (index !== -1) book.goToSpread(Math.ceil(index / 2));
+        }}
+      />
+
       {selectedPhoto ? (
         <PhotoInspector
           photo={selectedPhoto}
@@ -646,7 +736,7 @@ export function AlbumBook({
             book.getPlacement(selectedPhoto.id) ??
             findSlotRect(pages, selectedPhoto.id)
           }
-          composeMode={book.composeMode}
+          composeMode={selectedPhotoComposeMode}
           autoTiltEnabled={book.autoTiltEnabled}
           onAdjust={book.updateAdjustment}
           onPlace={book.setPlacement}
@@ -661,9 +751,7 @@ export function AlbumBook({
         <p className="text-center text-xs text-white/35">
           {spread === 0
             ? 'Clique na capa para abrir o álbum'
-            : book.composeMode === 'free'
-              ? 'Arraste a foto para movê-la pela página · ◢ no canto redimensiona · a borda da página vira a folha'
-              : 'Arraste a página para folhear · ← → também viram · clique numa foto para ajustar'}
+            : 'Arraste a página para folhear · ← → também viram · clique numa foto para ajustar · o canto da página escolhe entre layout e livre'}
         </p>
       )}
     </div>

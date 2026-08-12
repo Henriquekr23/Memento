@@ -60,7 +60,9 @@ página, que é metade da experiência aqui.
   página aparece onde durante a virada". É a parte que mais quebra ao mexer no
   visual, e assim dá para testar sem navegador.
 - **Espessura**: as folhas restantes de cada lado viram tirinhas na borda, então
-  o livro visivelmente "engorda" de um lado conforme você avança.
+  o livro visivelmente "engorda" de um lado conforme você avança. Ela some junto
+  com a abertura: de frente para um livro fechado você vê a capa e mais nada —
+  as folhas estão atrás dela.
 - **Paginação** (`lib/paginate.ts`): cada dia da viagem começa numa página nova,
   e o layout padrão sai da quantidade de fotos que sobrou naquele dia
   (4→quad, 3→trio, 2→empilhadas, 1→página inteira). Trocar o layout de uma
@@ -81,7 +83,11 @@ página, que é metade da experiência aqui.
 
 ### Alinhado vs. espontâneo
 
-| | Alinhado | Espontâneo |
+A escolha é **por página**, no canto superior direito dela (▦ layout ↔ ✥ livre):
+compor é decisão editorial e muda de página para página — uma abertura pode ter
+quatro fotos alinhadas e a seguinte, uma colagem solta.
+
+| | Alinhado (▦) | Livre (✥) |
 | --- | --- | --- |
 | Posição | encaixada no slot do layout | livre, arrastando a foto |
 | Tamanho | do slot | alça ◢ no canto, ou o controle "Tamanho" |
@@ -104,6 +110,23 @@ remontaria as páginas seguintes.
 A prévia arrastada é renderizada num `DragOverlay` (portal fora da página).
 Sem isso a foto não acompanhava o cursor e ainda era cortada pelo
 `overflow: hidden` da folha.
+
+### Tira de páginas
+
+A faixa embaixo do livro mostra o miolo inteiro em miniatura: clique para ir até
+a página, arraste para reordenar. Ela substituiu o slider de navegação.
+
+Reordenar página é reescrever a ordem das fotos — que continua sendo a fonte de
+verdade — e reancorar os textos. Para isso a página de história deixou de ser
+ancorada na *chave da página* e passou a ser ancorada no **id de uma foto**: a
+foto é a única coisa que continua a mesma quando o layout muda, a paginação
+recalcula ou o usuário reordena. Se a foto âncora vai para o depósito, a
+história cai no fim do álbum em vez de sumir.
+
+Consequência conhecida: legenda e layout escolhidos para uma página são
+guardados pela chave da página, que depende da posição. Reordenar pode fazer
+esses dois trocarem de página. Os ajustes por foto (posição, enquadramento,
+rotação, legenda) e o texto das histórias não são afetados.
 
 ### Depósito de fotos
 
