@@ -6,9 +6,12 @@ import { buildAlbumPages, type StoryInsertion } from '@/lib/paginate';
 import { DEFAULT_THEME, type AlbumTheme } from '@/features/album-style/theme';
 import {
   DEFAULT_ADJUSTMENT,
+  clampRect,
+  type ComposeMode,
   type PageLayoutId,
   type PhotoAdjustment,
-  type TiltMode,
+  type PhotoPlacement,
+  type SlotRect,
 } from '@/types/page';
 import type { Photo } from '@/types/photo';
 
@@ -43,12 +46,23 @@ export function useAlbumBook(photos: readonly Photo[]) {
   const [photoCaptions, setPhotoCaptions] = useState<Record<string, string>>({});
   const [stories, setStories] = useState<StoryInsertion[]>([]);
   const [theme, setThemeState] = useState<AlbumTheme>(DEFAULT_THEME);
-  const [tiltMode, setTiltMode] = useState<TiltMode>('aligned');
+  const [composeMode, setComposeMode] = useState<ComposeMode>('aligned');
+  /**
+   * Inclinação automática do modo espontâneo. Separada do modo porque uma
+   * coisa é querer posicionar as fotos à mão, outra é querer todas tortas.
+   */
+  const [autoTiltEnabled, setAutoTiltEnabled] = useState(true);
+  const [placements, setPlacements] = useState<Record<string, PhotoPlacement>>({});
+  /** Foto → grupo de página, quando o usuário a colocou numa página à mão. */
+  const [groupKeys, setGroupKeys] = useState<Record<string, string>>({});
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
 
+  /** Contador de empilhamento: quem foi mexido por último fica por cima. */
+  const zCounterRef = useRef(1);
+
   const pages = useMemo(
-    () => buildAlbumPages(photos, { layoutOverrides, stories }),
-    [photos, layoutOverrides, stories],
+    () => buildAlbumPages(photos, { layoutOverrides, stories, groupKeys }),
+    [photos, layoutOverrides, stories, groupKeys],
   );
 
   const spreadCount = spreadCountOf(pages.length);
@@ -240,6 +254,51 @@ export function useAlbumBook(photos: readonly Photo[]) {
     });
   }, []);
 
+  // ── Posição livre na página (modo espontâneo) ───────────────────────────
+  const getPlacement = useCallback(
+    (photoId: string): PhotoPlacement | null => placements[photoId] ?? null,
+    [placements],
+  );
+
+  /**
+   * Move/redimensiona uma foto. `fallbackRect` é o slot do layout: a primeira
+   * vez que o usuário mexe numa foto, ela sai exatamente de onde já estava, em
+   * vez de pular para um canto.
+   */
+  const setPlacement = useCallback(
+    (photoId: string, rect: SlotRect, options?: { bringToFront?: boolean }) => {
+      setPlacements((current) => {
+        const previous = current[photoId];
+        const z = options?.bringToFront
+          ? (zCounterRef.current += 1)
+          : (previous?.z ?? 1);
+        return { ...current, [photoId]: { ...clampRect(rect), z } };
+      });
+    },
+    [],
+  );
+
+  const resetPlacement = useCallback((photoId: string) => {
+    setPlacements((current) => {
+      const next = { ...current };
+      delete next[photoId];
+      return next;
+    });
+  }, []);
+
+  /** Faz a foto pertencer ao grupo de uma página, mesmo sendo de outro dia. */
+  const assignToGroup = useCallback((photoId: string, groupKey: string) => {
+    setGroupKeys((current) => ({ ...current, [photoId]: groupKey }));
+  }, []);
+
+  const clearGroup = useCallback((photoId: string) => {
+    setGroupKeys((current) => {
+      const next = { ...current };
+      delete next[photoId];
+      return next;
+    });
+  }, []);
+
   const setPhotoCaption = useCallback((photoId: string, caption: string) => {
     setPhotoCaptions((current) => ({ ...current, [photoId]: caption }));
   }, []);
@@ -301,6 +360,8 @@ export function useAlbumBook(photos: readonly Photo[]) {
   const resetPages = useCallback(() => {
     setLayoutOverrides({});
     setAdjustments({});
+    setPlacements({});
+    setGroupKeys({});
   }, []);
 
   return {
@@ -329,9 +390,16 @@ export function useAlbumBook(photos: readonly Photo[]) {
     getAdjustment,
     updateAdjustment,
     resetAdjustment,
+    getPlacement,
+    setPlacement,
+    resetPlacement,
+    assignToGroup,
+    clearGroup,
     resetPages,
-    tiltMode,
-    setTiltMode,
+    composeMode,
+    setComposeMode,
+    autoTiltEnabled,
+    setAutoTiltEnabled,
     selectedPhotoId,
     setSelectedPhotoId,
   };

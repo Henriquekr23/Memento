@@ -71,9 +71,18 @@ export interface ImportResult {
   photos: Photo[];
   /** Arquivos ignorados por não serem imagens suportadas. */
   rejectedFileNames: string[];
+  /** Arquivos ignorados por serem grandes demais para processar no navegador. */
+  oversizedFileNames: string[];
 }
 
 const CONCURRENCY = 4;
+
+/**
+ * Limite por arquivo. Tudo roda na aba do usuário: um arquivo absurdo (ou um
+ * arquivo malformado se passando por imagem) derruba a aba inteira em vez de
+ * só falhar. Cabe RAW e foto de câmera profissional com folga.
+ */
+export const MAX_FILE_SIZE_BYTES = 80 * 1024 * 1024;
 
 /**
  * Lê os arquivos em pequenos lotes para não travar a aba com centenas de fotos.
@@ -84,10 +93,12 @@ export async function importPhotos(
 ): Promise<ImportResult> {
   const accepted: File[] = [];
   const rejectedFileNames: string[] = [];
+  const oversizedFileNames: string[] = [];
 
   for (const file of files) {
-    if (isSupportedImage(file)) accepted.push(file);
-    else rejectedFileNames.push(file.name);
+    if (!isSupportedImage(file)) rejectedFileNames.push(file.name);
+    else if (file.size > MAX_FILE_SIZE_BYTES) oversizedFileNames.push(file.name);
+    else accepted.push(file);
   }
 
   const photos: Photo[] = new Array(accepted.length);
@@ -107,5 +118,5 @@ export async function importPhotos(
     Array.from({ length: Math.min(CONCURRENCY, accepted.length) }, worker),
   );
 
-  return { photos, rejectedFileNames };
+  return { photos, rejectedFileNames, oversizedFileNames };
 }

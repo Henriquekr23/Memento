@@ -28,7 +28,7 @@ export function StoryPage({
         placeholder="Título"
         aria-label="Título da página de texto"
         style={{ color: 'var(--paper-ink)' }}
-        className="w-full shrink-0 border-0 bg-transparent text-xl font-semibold outline-none placeholder:text-current placeholder:opacity-25"
+        className="w-full shrink-0 select-text border-0 bg-transparent text-xl font-semibold outline-none placeholder:text-current placeholder:opacity-25"
       />
 
       <span
@@ -45,7 +45,7 @@ export function StoryPage({
         placeholder="Escreva o que aconteceu neste trecho da viagem…"
         aria-label="Texto da página"
         style={{ color: 'var(--paper-ink)' }}
-        className="min-h-0 w-full flex-1 resize-none border-0 bg-transparent text-sm leading-relaxed outline-none placeholder:text-current placeholder:opacity-25"
+        className="min-h-0 w-full flex-1 select-text resize-none border-0 bg-transparent text-sm leading-relaxed outline-none placeholder:text-current placeholder:opacity-25"
       />
 
       {interactive && (

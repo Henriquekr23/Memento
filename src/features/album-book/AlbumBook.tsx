@@ -2,11 +2,14 @@
 
 import {
   DndContext,
+  DragOverlay,
+  KeyboardSensor,
   PointerSensor,
   closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core';
 import {
   useCallback,
@@ -19,6 +22,14 @@ import {
 
 import { StylePanel } from '@/features/album-style/StylePanel';
 import { themeToStyle } from '@/features/album-style/theme';
+import {
+  MAX_PHOTOS_PER_PAGE,
+  findPageOfPhoto,
+  findSlotRect,
+  findSpreadOfPhoto,
+  layoutForCount,
+  type AlbumPage,
+} from '@/lib/paginate';
 import type { Photo } from '@/types/photo';
 
 import {
@@ -27,16 +38,27 @@ import {
   rightIndexOf,
   type PageSide,
 } from './bookGeometry';
-import { BookPage } from './BookPage';
+import { BookPage, pageKeyFromDropId } from './BookPage';
 import { PhotoInspector } from './PhotoInspector';
+import {
+  PhotoTray,
+  TRAY_DROP_ID,
+  isTrayDragId,
+  photoIdFromDragId,
+} from './PhotoTray';
 import { TURN_DURATION_MS, type AlbumBookState, type TurnDirection } from './useAlbumBook';
 
 interface AlbumBookProps {
   book: AlbumBookState;
   albumName: string;
+  /** Fotos que estão no álbum, na ordem. */
   photos: Photo[];
+  /** Fotos importadas que ainda não estão em nenhuma página. */
+  trayPhotos: Photo[];
   onSwapPhotos: (aId: string, bId: string) => void;
-  onRemoveFromAlbum: (photoId: string) => void;
+  /** Traz uma foto do depósito para a ordem, logo depois de outra. */
+  onPlaceAfter: (photoId: string, afterPhotoId: string | null) => void;
+  onSendToTray: (photoId: string) => void;
 }
 
 /** Faixa da largura do livro que conta como "borda" para clique de virar. */
@@ -72,8 +94,10 @@ export function AlbumBook({
   book,
   albumName,
   photos,
+  trayPhotos,
   onSwapPhotos,
-  onRemoveFromAlbum,
+  onPlaceAfter,
+  onSendToTray,
 }: AlbumBookProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const gestureRef = useRef<{
@@ -83,6 +107,7 @@ export function AlbumBook({
     moved: boolean;
   } | null>(null);
   const [isStyleOpen, setIsStyleOpen] = useState(false);
+  const [draggingPhotoId, setDraggingPhotoId] = useState<string | null>(null);
 
   const { pages, spread, turn } = book;
   const view = useMemo(
@@ -113,6 +138,11 @@ export function AlbumBook({
       if (event.button !== 0) return;
       const node = rootRef.current;
       if (!node) return;
+
+      // Sem isto o navegador começa a selecionar texto no meio do arraste e o
+      // livro fica todo azul enquanto o usuário folheia. Os campos de texto
+      // param a propagação antes daqui, então continuam selecionáveis.
+      event.preventDefault();
 
       const rect = node.getBoundingClientRect();
       const x = event.clientX - rect.left;
@@ -173,38 +203,163 @@ export function AlbumBook({
   // ── Trocar fotos de lugar ───────────────────────────────────────────────
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
   );
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    onSwapPhotos(String(active.id), String(over.id));
+  /**
+   * Coloca uma foto do depósito numa página.
+   *
+   * Três coisas acontecem juntas, e nessa ordem importa pouco porque tudo é
+   * recalculado no próximo render:
+   * 1. a foto passa a pertencer ao grupo daquela página (senão, sendo de outro
+   *    dia, ela abriria uma página nova em vez de entrar nesta);
+   * 2. o layout da página cresce só o necessário para caber mais uma;
+   * 3. a foto entra na ordem logo depois da última foto da página.
+   */
+  const placePhotoOnPage = useCallback(
+    (photoId: string, page: AlbumPage) => {
+      if (page.kind !== 'photos' || page.photos.length >= MAX_PHOTOS_PER_PAGE) {
+        return;
+      }
+      if (page.groupKey) book.assignToGroup(photoId, page.groupKey);
+      book.setPageLayout(
+        page.key,
+        layoutForCount(page.photos.length + 1, page.layoutId),
+      );
+      onPlaceAfter(photoId, page.photos.at(-1)?.id ?? null);
+    },
+    [book, onPlaceAfter],
+  );
+
+  /** Tira a foto da página e devolve ao depósito, sem perder o arquivo. */
+  const sendPhotoToTray = useCallback(
+    (photoId: string) => {
+      book.clearGroup(photoId);
+      book.resetPlacement(photoId);
+      book.setSelectedPhotoId(null);
+      onSendToTray(photoId);
+    },
+    [book, onSendToTray],
+  );
+
+  function handleDragStart(event: DragStartEvent) {
+    setDraggingPhotoId(photoIdFromDragId(String(event.active.id)));
   }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setDraggingPhotoId(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    const photoId = photoIdFromDragId(activeId);
+
+    // Soltou no depósito: sai da página, sem apagar o arquivo.
+    if (overId === TRAY_DROP_ID) {
+      if (!isTrayDragId(activeId)) sendPhotoToTray(photoId);
+      return;
+    }
+
+    // Veio do depósito: o alvo pode ser a página inteira ou uma foto dela.
+    if (isTrayDragId(activeId)) {
+      const droppedPageKey = pageKeyFromDropId(overId);
+      const page = droppedPageKey
+        ? (pages.find((item) => item.key === droppedPageKey) ?? null)
+        : findPageOfPhoto(pages, overId);
+      if (page) placePhotoOnPage(photoId, page);
+      return;
+    }
+
+    // Já estava no álbum: soltar sobre outra foto troca as duas de lugar.
+    if (pageKeyFromDropId(overId) !== null || photoId === overId) return;
+    onSwapPhotos(photoId, overId);
+  }
+
+  const draggingPhoto = draggingPhotoId
+    ? ([...photos, ...trayPhotos].find((photo) => photo.id === draggingPhotoId) ??
+      null)
+    : null;
+
+  // A página que recebe o clique do depósito: a da direita quando dá, senão a
+  // da esquerda — é onde o olho do usuário está.
+  const openPage = useMemo(() => {
+    const candidates = [view.rightStatic, view.leftStatic];
+    return (
+      candidates.find(
+        (page) =>
+          page?.kind === 'photos' && page.photos.length < MAX_PHOTOS_PER_PAGE,
+      ) ?? null
+    );
+  }, [view.leftStatic, view.rightStatic]);
+
+  /**
+   * Clique numa foto do depósito.
+   *
+   * Antes isso não fazia nada quando o álbum estava fechado na capa, e parecia
+   * que o depósito não funcionava. Agora sempre há um destino: a página aberta,
+   * senão a primeira com espaço, senão uma página nova no fim — e o álbum vira
+   * até lá para o usuário ver onde a foto caiu.
+   */
+  const pendingFocusRef = useRef<string | null>(null);
+
+  const placeFromTray = useCallback(
+    (photoId: string) => {
+      const target =
+        openPage ??
+        pages.find(
+          (page) =>
+            page.kind === 'photos' && page.photos.length < MAX_PHOTOS_PER_PAGE,
+        ) ??
+        null;
+
+      if (target) placePhotoOnPage(photoId, target);
+      else onPlaceAfter(photoId, photos.at(-1)?.id ?? null);
+
+      pendingFocusRef.current = photoId;
+    },
+    [openPage, pages, photos, placePhotoOnPage, onPlaceAfter],
+  );
+
+  // Depois que a paginação foi recalculada, leva o álbum até a foto colocada.
+  useEffect(() => {
+    const photoId = pendingFocusRef.current;
+    if (!photoId) return;
+    const target = findSpreadOfPhoto(pages, photoId);
+    if (target === null) return;
+    pendingFocusRef.current = null;
+    book.goToSpread(target);
+    book.setSelectedPhotoId(photoId);
+  }, [pages, book]);
 
   const pageProps = {
     albumName,
     albumMeta,
     frame: book.theme.frame,
-    tiltMode: book.tiltMode,
+    composeMode: book.composeMode,
+    autoTiltEnabled: book.autoTiltEnabled,
     selectedPhotoId: book.selectedPhotoId,
     photoCaptions: book.photoCaptions,
     getAdjustment: book.getAdjustment,
+    getPlacement: book.getPlacement,
     onAdjust: book.updateAdjustment,
+    onPlace: book.setPlacement,
     onSelectPhoto: book.setSelectedPhotoId,
     onChangeLayout: book.setPageLayout,
     onChangeCaption: book.setPageCaption,
     onChangePhotoCaption: book.setPhotoCaption,
     onChangeStory: book.updateStory,
     onRemoveStory: book.removeStory,
+    onSendToTray: sendPhotoToTray,
   };
 
   const animating = Boolean(turn?.animating);
   const leafTransition = animating
     ? `transform ${TURN_DURATION_MS}ms ${EASE}`
     : 'none';
-  // Fechado, o livro fica centralizado numa página só; ao abrir, desliza para a
-  // esquerda no mesmo ritmo em que a capa gira.
-  const shift = -25 * (1 - view.openness);
+  // Fechado, o livro fica centralizado numa capa só — à direita no começo, à
+  // esquerda no fim. A conta de quanto deslocar vem da geometria.
+  const shift = view.offset;
 
   return (
     <div className="space-y-4" style={themeToStyle(book.theme)}>
@@ -244,13 +399,35 @@ export function AlbumBook({
           <button
             type="button"
             onClick={() =>
-              book.setTiltMode(book.tiltMode === 'aligned' ? 'scattered' : 'aligned')
+              book.setComposeMode(book.composeMode === 'aligned' ? 'free' : 'aligned')
             }
-            title="Inclinação das fotos"
-            className="rounded-full border border-white/15 px-4 py-1.5 text-xs text-white/70 transition hover:border-white/35 hover:text-white"
+            aria-pressed={book.composeMode === 'free'}
+            title={
+              book.composeMode === 'aligned'
+                ? 'Fotos encaixadas nos slots do layout'
+                : 'Arraste para mover e use ◢ para redimensionar cada foto'
+            }
+            className={[
+              'rounded-full px-4 py-1.5 text-xs transition',
+              book.composeMode === 'free'
+                ? 'bg-amber-400 font-medium text-neutral-950'
+                : 'border border-white/15 text-white/70 hover:border-white/35 hover:text-white',
+            ].join(' ')}
           >
-            {book.tiltMode === 'aligned' ? 'Alinhado' : 'Espontâneo'}
+            {book.composeMode === 'aligned' ? 'Alinhado' : 'Espontâneo'}
           </button>
+
+          {book.composeMode === 'free' && (
+            <button
+              type="button"
+              onClick={() => book.setAutoTiltEnabled(!book.autoTiltEnabled)}
+              aria-pressed={book.autoTiltEnabled}
+              title="Inclinação automática das fotos que você ainda não girou"
+              className="rounded-full border border-white/15 px-4 py-1.5 text-xs text-white/70 transition hover:border-white/35 hover:text-white"
+            >
+              {book.autoTiltEnabled ? 'Tortinhas' : 'Retas'}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setIsStyleOpen((value) => !value)}
@@ -298,9 +475,14 @@ export function AlbumBook({
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onDragCancel={() => setDraggingPhotoId(null)}
       >
+        <PhotoTray photos={trayPhotos} onPlace={placeFromTray} />
+
         <div
+          className="mt-4 select-none"
           style={{
             perspective: '2600px',
             perspectiveOrigin: '50% 45%',
@@ -372,9 +554,23 @@ export function AlbumBook({
                   willChange: 'transform',
                 }}
               >
+                {/* Miolo opaco da folha: papel não é translúcido, e isso evita
+                    qualquer vazamento pelos cantos arredondados. */}
+                <div
+                  aria-hidden
+                  className="absolute inset-0 rounded-[6px]"
+                  style={{ background: 'var(--paper-base)' }}
+                />
+
+                {/* As duas faces são afastadas meio pixel no eixo Z. Coplanares
+                    elas brigam pelo mesmo pixel (z-fighting) e a foto da frente
+                    vaza por cima da contracapa no meio da virada. */}
                 <div
                   className="absolute inset-0"
-                  style={{ backfaceVisibility: 'hidden' }}
+                  style={{
+                    backfaceVisibility: 'hidden',
+                    transform: 'translateZ(0.5px)',
+                  }}
                 >
                   <BookPage
                     {...pageProps}
@@ -398,7 +594,7 @@ export function AlbumBook({
                   className="absolute inset-0"
                   style={{
                     backfaceVisibility: 'hidden',
-                    transform: 'rotateY(180deg)',
+                    transform: 'rotateY(180deg) translateZ(0.5px)',
                   }}
                 >
                   <BookPage
@@ -427,23 +623,47 @@ export function AlbumBook({
             />
           </div>
         </div>
+
+        {/* A prévia arrastada vive num portal, fora da página: sem ela a foto
+            não acompanhava o cursor e ainda era cortada pelo limite da folha. */}
+        <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2,0.8,0.3,1)' }}>
+          {draggingPhoto && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={draggingPhoto.previewUrl}
+              alt=""
+              className="h-36 w-36 rotate-3 cursor-grabbing rounded-[3px] border-[3px] border-white object-cover shadow-2xl"
+            />
+          )}
+        </DragOverlay>
       </DndContext>
 
       {selectedPhoto ? (
         <PhotoInspector
           photo={selectedPhoto}
           adjustment={book.getAdjustment(selectedPhoto.id)}
-          tiltMode={book.tiltMode}
+          rect={
+            book.getPlacement(selectedPhoto.id) ??
+            findSlotRect(pages, selectedPhoto.id)
+          }
+          composeMode={book.composeMode}
+          autoTiltEnabled={book.autoTiltEnabled}
           onAdjust={book.updateAdjustment}
-          onReset={book.resetAdjustment}
-          onRemoveFromAlbum={onRemoveFromAlbum}
+          onPlace={book.setPlacement}
+          onReset={(photoId) => {
+            book.resetAdjustment(photoId);
+            book.resetPlacement(photoId);
+          }}
+          onSendToTray={sendPhotoToTray}
           onClose={() => book.setSelectedPhotoId(null)}
         />
       ) : (
         <p className="text-center text-xs text-white/35">
           {spread === 0
             ? 'Clique na capa para abrir o álbum'
-            : 'Arraste a página para folhear · ← → também viram · clique numa foto para ajustar'}
+            : book.composeMode === 'free'
+              ? 'Arraste a foto para movê-la pela página · ◢ no canto redimensiona · a borda da página vira a folha'
+              : 'Arraste a página para folhear · ← → também viram · clique numa foto para ajustar'}
         </p>
       )}
     </div>

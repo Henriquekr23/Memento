@@ -22,7 +22,21 @@
 
 # misc
 .DS_Store
+Thumbs.db
 *.pem
+*.key
+*.p12
+*.local
+# arquivos-fantasma que sobram quando a pasta é montada por outro processo
+.fuse_hidden*
+
+# editores
+.idea/
+*.swp
+
+# material de teste local (fotos de verdade nunca devem ir para o repositório)
+/local/
+/fotos-teste/
 
 # debug
 npm-debug.log*
@@ -30,8 +44,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
+# Nunca versionar. E lembrar, na Fase 2: tudo que começa com NEXT_PUBLIC_ é
+# embutido no bundle e fica visível para qualquer visitante — segredo (como a
+# service_role key do Supabase) jamais pode usar esse prefixo.
 .env*
+!.env.example
 
 # vercel
 .vercel

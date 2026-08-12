@@ -2,7 +2,6 @@ import JSZip from 'jszip';
 
 import {
   fileNameTimestamp,
-  formatCoordinates,
   formatDateTime,
   sanitizeFileName,
   slugify,
@@ -45,14 +44,11 @@ export function buildIndexFile(album: AlbumSnapshot): string {
       `     Dia ${day ?? '?'} · ${formatDateTime(photo.timestamp)}` +
         (photo.timestampSource === 'file' ? ' (data do arquivo, sem EXIF)' : ''),
     );
-    if (photo.exif.gps) {
-      lines.push(
-        `     GPS: ${formatCoordinates(
-          photo.exif.gps.latitude,
-          photo.exif.gps.longitude,
-        )}`,
-      );
-    }
+    // Coordenada exata de propósito fora daqui: o ZIP costuma ser o arquivo
+    // que a pessoa compartilha, e um índice em texto puro com a localização de
+    // cada foto é o jeito mais fácil de vazar onde ela mora. Quem precisar do
+    // dado continua tendo ele no EXIF da própria foto.
+    if (photo.exif.gps) lines.push('     Tem coordenadas de GPS no EXIF');
     if (photo.exif.cameraModel) {
       lines.push(
         `     Câmera: ${[photo.exif.cameraMake, photo.exif.cameraModel]
@@ -109,7 +105,9 @@ function downloadBlob(blob: Blob, fileName: string): void {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  // Revogar no mesmo tique cancela o download em alguns navegadores: a URL
+  // morre antes de o download começar de fato. Um tique depois é seguro.
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export const zipAlbumExporter: AlbumExporter = {

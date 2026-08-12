@@ -15,8 +15,10 @@ import type { TurnState } from './useAlbumBook';
  *     esquerda(s) = 2s - 1        direita(s) = 2s
  *
  * No spread 0 a esquerda cai em -1, ou seja, não existe — é exatamente o que
- * queremos. Virando para frente a folha da direita gira em torno da lombada e
- * o verso dela vira a esquerda do spread seguinte; para trás é o espelho.
+ * queremos. No último spread a direita cai fora do array e a contracapa fica
+ * sozinha à esquerda: o álbum fecha do outro lado. Virando para frente a folha
+ * da direita gira em torno da lombada e o verso dela vira a esquerda do spread
+ * seguinte; para trás é o espelho.
  */
 
 export type PageSide = 'left' | 'right';
@@ -47,23 +49,48 @@ export interface SpreadView {
   leaf: LeafView | null;
   /** Graus de rotação da folha: negativo vira para a esquerda. */
   angle: number;
-  /** 0 = álbum fechado (só a capa), 1 = aberto. Valores no meio = virando. */
+  /** 0 = álbum fechado (uma capa só), 1 = aberto. No meio = virando. */
   openness: number;
+  /**
+   * Quanto deslocar o livro, em % da largura, para a capa visível ficar
+   * centralizada. Negativo no começo (capa à direita) e positivo no fim
+   * (contracapa à esquerda).
+   */
+  offset: number;
 }
 
 function at(pages: readonly AlbumPage[], index: number): AlbumPage | null {
   return pages[index] ?? null;
 }
 
+/** Meia página: o quanto o livro anda para centralizar uma capa isolada. */
+const HALF_PAGE_PERCENT = 25;
+
 /**
- * Quanto o álbum está aberto. Fechado, o livro aparece centralizado com uma
- * página só; ao virar a capa ele desliza para a esquerda no mesmo ritmo da
- * folha, e é isso que dá a sensação de abrir o álbum.
+ * Deslocamento do livro. Fechado, ele aparece centralizado com uma página só;
+ * ao virar a capa desliza no mesmo ritmo da folha, e é isso que dá a sensação
+ * de abrir (e, no fim, de fechar) o álbum.
  */
-function opennessOf(spread: number, turn: TurnState | null): number {
-  if (spread === 0) return turn?.direction === 'next' ? turn.progress : 0;
-  if (spread === 1 && turn?.direction === 'prev') return 1 - turn.progress;
-  return 1;
+function offsetOf(
+  spread: number,
+  lastSpread: number,
+  turn: TurnState | null,
+): number {
+  const closing = turn?.progress ?? 0;
+
+  if (spread === 0) {
+    return -HALF_PAGE_PERCENT * (turn?.direction === 'next' ? 1 - closing : 1);
+  }
+  if (spread === 1 && turn?.direction === 'prev') {
+    return -HALF_PAGE_PERCENT * closing;
+  }
+  if (spread === lastSpread) {
+    return HALF_PAGE_PERCENT * (turn?.direction === 'prev' ? 1 - closing : 1);
+  }
+  if (spread === lastSpread - 1 && turn?.direction === 'next') {
+    return HALF_PAGE_PERCENT * closing;
+  }
+  return 0;
 }
 
 export function resolveSpreadView(
@@ -73,7 +100,8 @@ export function resolveSpreadView(
 ): SpreadView {
   const left = leftIndexOf(spread);
   const right = rightIndexOf(spread);
-  const openness = opennessOf(spread, turn);
+  const offset = offsetOf(spread, spreadCountOf(pages.length) - 1, turn);
+  const openness = 1 - Math.abs(offset) / HALF_PAGE_PERCENT;
 
   if (!turn) {
     return {
@@ -82,6 +110,7 @@ export function resolveSpreadView(
       leaf: null,
       angle: 0,
       openness,
+      offset,
     };
   }
 
@@ -97,6 +126,7 @@ export function resolveSpreadView(
       },
       angle: -turn.progress * 180,
       openness,
+      offset,
     };
   }
 
@@ -111,5 +141,6 @@ export function resolveSpreadView(
     },
     angle: turn.progress * 180,
     openness,
+    offset,
   };
 }

@@ -46,11 +46,12 @@ papel de forma mais realista, mas está sem manutenção desde 2022 e captura o
 arraste da página inteira — o que inviabilizaria arrastar fotos *dentro* da
 página, que é metade da experiência aqui.
 
-- **O álbum abre fechado**, mostrando só a capa, centralizada. Isso sai de uma
-  única fórmula em `bookGeometry.ts`: `esquerda(s) = 2s-1`, `direita(s) = 2s`.
-  No spread 0 a esquerda cai em −1, ou seja, não existe — a capa fica sozinha à
-  direita. Enquanto a capa gira, o livro inteiro desliza para a esquerda no
-  mesmo ritmo (`openness`), e é isso que dá a sensação de abrir o álbum.
+- **O álbum abre e fecha nas duas capas.** Uma fórmula só, em `bookGeometry.ts`:
+  `esquerda(s) = 2s-1`, `direita(s) = 2s`. No primeiro spread a esquerda cai em
+  −1 e a capa fica sozinha à direita; no último, a direita cai fora do array e
+  a contracapa fica sozinha à esquerda. Enquanto a capa gira, o livro desliza
+  no mesmo ritmo (`offset`) para centralizar a capa visível — é isso que dá a
+  sensação de abrir e, no fim, de fechar o álbum.
 - **Folhear** é um gesto contínuo: arrastar em qualquer parte livre da página
   gira a folha acompanhando o dedo/mouse; soltar antes de 30% ela volta.
   Clique seco na borda externa, setas ← → e a barra de navegação também viram.
@@ -64,16 +65,77 @@ página, que é metade da experiência aqui.
   e o layout padrão sai da quantidade de fotos que sobrou naquele dia
   (4→quad, 3→trio, 2→empilhadas, 1→página inteira). Trocar o layout de uma
   página re-encaixa as fotos seguintes sem perder nenhuma.
+- **Nunca sobra página vazia no fim.** O total de páginas precisa ser par para
+  as duas capas ficarem isoladas. Quando o miolo dá número par, a página que
+  falta entra **no começo**, como guarda atrás da capa, e a folha de rosto passa
+  para a seguinte — que é exatamente onde um álbum de verdade tem uma guarda.
+  Com uma foto só, o álbum fica: capa · (folha de rosto | foto) · contracapa.
+- **Layout é dado, não CSS.** Cada template é uma lista de retângulos em % da
+  área útil (`PAGE_LAYOUTS`), e toda foto é posicionada por esses números. A
+  mesma geometria serve para desenhar a página alinhada, para animar a troca de
+  layout e para dar o ponto de partida do modo espontâneo. Template novo é um
+  objeto a mais nesse arquivo.
 - **Enquadrar** usa `object-position`, que o navegador já clampa: por mais que o
   usuário arraste, nunca sobra buraco branco na foto. O zoom usa
   `transform-origin` no mesmo ponto de foco, então ampliar também não abre gap.
-- **Dois gestos que não brigam**: arrastar a foto reenquadra; arrastar pela alça
-  ⠿ troca a foto de lugar com outra. Soltar sobre outra foto **troca** as duas
-  em vez de inserir — inserir empurraria todo o resto e remontaria as páginas
-  seguintes.
-- **Espontâneo vs. alinhado**: no modo espontâneo cada foto ganha uma inclinação
-  derivada do próprio id (estável entre renders, não sorteada), como fotos
-  coladas à mão.
+
+### Alinhado vs. espontâneo
+
+| | Alinhado | Espontâneo |
+| --- | --- | --- |
+| Posição | encaixada no slot do layout | livre, arrastando a foto |
+| Tamanho | do slot | alça ◢ no canto, ou o controle "Tamanho" |
+| Arrastar a foto | reenquadra | move pela página |
+| Trocar de lugar | alça ⠿ (solta sobre outra foto e as duas trocam) | desnecessário |
+| Girar | controle "Girar" | alça ↻ (clique duplo endireita) |
+| Inclinação padrão | reta | leve, derivada do id da foto — desligável no botão "Tortinhas/Retas" |
+
+A inclinação automática é uma opção separada do modo justamente porque uma
+coisa é querer posicionar as fotos à mão, outra é querer todas tortas. E o
+ângulo escolhido pelo usuário sempre vence o automático, **inclusive quando é
+zero**: quem endireitou uma foto não quer que ela volte a torta. Arrastando a
+alça, há um ímã de 2,5° no zero, então deixar reta no gesto é fácil.
+
+Trocar de modo não destrói nada: as posições livres ficam guardadas e voltam
+quando o usuário volta para o espontâneo. E soltar uma foto sobre outra
+**troca** as duas em vez de inserir — inserir empurraria todo o resto e
+remontaria as páginas seguintes.
+
+A prévia arrastada é renderizada num `DragOverlay` (portal fora da página).
+Sem isso a foto não acompanhava o cursor e ainda era cortada pelo
+`overflow: hidden` da folha.
+
+### Depósito de fotos
+
+A faixa acima do livro é o depósito: fotos importadas que não estão em nenhuma
+página. Fica sempre visível no modo Álbum, mesmo vazio — é o que torna o
+caminho de ida e volta descobrível.
+
+- **Tirar da página:** o ↑ no canto da foto, ou arrastar a foto até o depósito.
+- **Colocar na página:** clicar na foto do depósito, ou arrastar até a página
+  que quiser (a página acende em âmbar; em vermelho se já estiver cheia).
+
+O clique **sempre** tem um destino: a página aberta, senão a primeira com
+espaço, senão uma página nova no fim — e o álbum vira até lá e seleciona a foto.
+Antes, com o álbum fechado na capa não havia página aberta e o clique não fazia
+nada, o que parecia um depósito quebrado.
+
+Duas decisões por trás disso:
+
+- **Depósito é o mesmo estado que "foto não incluída" do modo Grade.** Em vez de
+  criar uma lista paralela, o depósito só dá cara de bancada de trabalho a um
+  estado que já existia — os dois modos continuam contando a mesma história.
+- **A ordem da lista continua sendo a fonte de verdade da sequência.** "Colocar
+  na página X" é, no fundo, entrar na ordem logo depois das fotos dela. Isso
+  esbarrava numa regra antiga: foto de outro dia abriria uma página nova em vez
+  de entrar naquela. Daí o `groupKeys` — a foto passa a pertencer ao grupo
+  daquela página. É uma linha na paginação (`groupKeyOf`) em vez de um segundo
+  modelo de dados para composição manual.
+
+O limite de 4 fotos por página não é um número solto: é a capacidade do maior
+layout (`MAX_PHOTOS_PER_PAGE` sai de `PAGE_LAYOUTS`). Ao receber uma foto, a
+página cresce só o necessário — de `single` para `duo`, de `duo` para `trio` — e
+recusa a quinta, mostrando o aviso na própria página.
 
 ## Estilo e texto
 
@@ -116,6 +178,16 @@ navegador.
 - **Object URLs são revogados** ao remover foto, limpar o álbum e desmontar o
   componente, senão centenas de fotos vazam memória na aba.
 
+## Segurança
+
+Modelo de ameaças, o que foi verificado e o que ficou em aberto: **[SECURITY.md](SECURITY.md)**.
+
+Resumo: não existe servidor nem segredo para proteger nesta fase, então o
+esforço foi em (1) tornar verificável a promessa de que as fotos não saem da
+máquina — `connect-src 'self'` na CSP faz o próprio navegador bloquear
+qualquer envio, mesmo que uma dependência tentasse; (2) não vazar localização
+no ZIP compartilhado; (3) não derrubar a aba com arquivo grande demais.
+
 ## Caminho para a Fase 2
 
 A migração não deve tocar em `exif-reader`, `lib/` nem na UI do
@@ -126,3 +198,10 @@ A migração não deve tocar em `exif-reader`, `lib/` nem na UI do
   `useAlbumExport()` substitui o ZIP sem mudar componente nenhum.
 - `useAlbum` concentra todo o estado do álbum; a persistência entra como um
   efeito adicional, sem alterar o formato do estado.
+- O estado editorial do livro (layouts, posições livres, legendas, histórias,
+  tema) vive em `useAlbumBook` e é serializável: são todos objetos simples
+  indexados por chave estável, prontos para virar uma linha de banco.
+
+E o item de segurança que **não** pode ser esquecido lá: ligar Row Level
+Security desde a primeira tabela do Supabase. A chave anônima é pública por
+definição; sem RLS ela dá acesso ao banco inteiro.

@@ -93,6 +93,13 @@ export default function HomePage() {
           </p>
         )}
 
+        {album.status.oversizedFileNames.length > 0 && (
+          <p className="text-sm text-amber-300/80">
+            {album.status.oversizedFileNames.length} arquivo(s) ignorado(s) por
+            passarem de 80 MB — grandes demais para abrir no navegador.
+          </p>
+        )}
+
         {isExporting && progress && (
           <p className="text-sm text-white/60">
             Montando o álbum… {progress.processed}/{progress.total}
@@ -124,8 +131,10 @@ export default function HomePage() {
               book={book}
               albumName={album.name}
               photos={album.includedPhotos}
+              trayPhotos={album.trayPhotos}
               onSwapPhotos={album.swapPhotos}
-              onRemoveFromAlbum={album.toggleIncluded}
+              onPlaceAfter={album.placeAfter}
+              onSendToTray={album.sendToTray}
             />
           ) : (
             <AlbumGrid

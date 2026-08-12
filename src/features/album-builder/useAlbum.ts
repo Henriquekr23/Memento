@@ -18,12 +18,14 @@ export interface ImportStatus {
   isImporting: boolean;
   progress: ImportProgress | null;
   rejectedFileNames: string[];
+  oversizedFileNames: string[];
 }
 
 const INITIAL_STATUS: ImportStatus = {
   isImporting: false,
   progress: null,
   rejectedFileNames: [],
+  oversizedFileNames: [],
 };
 
 export function useAlbum() {
@@ -47,11 +49,14 @@ export function useAlbum() {
 
   const addFiles = useCallback(
     async (files: File[]) => {
-      setStatus({ isImporting: true, progress: null, rejectedFileNames: [] });
+      setStatus({ ...INITIAL_STATUS, isImporting: true });
 
-      const { photos: imported, rejectedFileNames } = await importPhotos(
-        files,
-        (progress) => setStatus((prev) => ({ ...prev, progress })),
+      const {
+        photos: imported,
+        rejectedFileNames,
+        oversizedFileNames,
+      } = await importPhotos(files, (progress) =>
+        setStatus((prev) => ({ ...prev, progress })),
       );
 
       imported.forEach((photo) => previewUrlsRef.current.add(photo.previewUrl));
@@ -69,7 +74,12 @@ export function useAlbum() {
           : sortPhotosChronologically([...prev, ...unique], sortDirection);
       });
 
-      setStatus({ isImporting: false, progress: null, rejectedFileNames });
+      setStatus({
+        isImporting: false,
+        progress: null,
+        rejectedFileNames,
+        oversizedFileNames,
+      });
     },
     [isManuallyOrdered, sortDirection],
   );
@@ -92,6 +102,45 @@ export function useAlbum() {
       ),
     );
   }, []);
+
+  /** Tira a foto do álbum sem apagá-la: ela volta para o depósito. */
+  const sendToTray = useCallback((id: string) => {
+    setPhotos((prev) =>
+      prev.map((photo) =>
+        photo.id === id ? { ...photo, included: false } : photo,
+      ),
+    );
+  }, []);
+
+  /**
+   * Traz a foto do depósito para o álbum, logo depois de outra foto.
+   * A ordem da lista é o que define em que página a foto cai, então "colocar
+   * na página X" é, no fundo, "entrar na ordem junto com as fotos dela".
+   */
+  const placeAfter = useCallback(
+    (photoId: string, afterPhotoId: string | null) => {
+      setPhotos((prev) => {
+        const from = prev.findIndex((photo) => photo.id === photoId);
+        if (from === -1) return prev;
+
+        const next = [...prev];
+        const [photo] = next.splice(from, 1);
+        const placed = { ...photo, included: true };
+
+        if (afterPhotoId === null) {
+          next.unshift(placed);
+          return next;
+        }
+
+        const to = next.findIndex((item) => item.id === afterPhotoId);
+        if (to === -1) next.push(placed);
+        else next.splice(to + 1, 0, placed);
+        return next;
+      });
+      setIsManuallyOrdered(true);
+    },
+    [],
+  );
 
   const movePhoto = useCallback((fromId: string, toId: string) => {
     if (fromId === toId) return;
@@ -147,6 +196,12 @@ export function useAlbum() {
     [photos],
   );
 
+  /** Depósito: fotos importadas que não estão em nenhuma página. */
+  const trayPhotos = useMemo(
+    () => photos.filter((photo) => !photo.included),
+    [photos],
+  );
+
   const withoutExifDateCount = useMemo(
     () => photos.filter((photo) => photo.timestampSource === 'file').length,
     [photos],
@@ -157,6 +212,7 @@ export function useAlbum() {
     setName,
     photos,
     includedPhotos,
+    trayPhotos,
     withoutExifDateCount,
     status,
     sortDirection,
@@ -164,6 +220,8 @@ export function useAlbum() {
     addFiles,
     removePhoto,
     toggleIncluded,
+    sendToTray,
+    placeAfter,
     movePhoto,
     swapPhotos,
     sortByDate,

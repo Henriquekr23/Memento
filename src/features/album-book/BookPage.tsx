@@ -1,19 +1,28 @@
 'use client';
 
+import { useDroppable } from '@dnd-kit/core';
+
 import type { FrameId } from '@/features/album-style/theme';
 import { formatDate, formatDayLabel } from '@/lib/format';
-import type { AlbumPage, StoryInsertion } from '@/lib/paginate';
+import {
+  MAX_PHOTOS_PER_PAGE,
+  type AlbumPage,
+  type StoryInsertion,
+} from '@/lib/paginate';
 import {
   PAGE_LAYOUTS,
   resolveRotation,
+  type ComposeMode,
   type PageLayoutId,
   type PhotoAdjustment,
-  type TiltMode,
+  type PhotoPlacement,
+  type SlotRect,
 } from '@/types/page';
 
 import type { PageSide } from './bookGeometry';
 import { LayoutPicker } from './LayoutPicker';
 import { PhotoSlot } from './PhotoSlot';
+import { isTrayDragId } from './PhotoTray';
 import { StoryPage } from './StoryPage';
 
 export interface BookPageProps {
@@ -23,13 +32,21 @@ export interface BookPageProps {
   albumMeta: { firstDate: Date | null; lastDate: Date | null; photoCount: number };
   caption: string | undefined;
   frame: FrameId;
-  tiltMode: TiltMode;
+  composeMode: ComposeMode;
+  /** Inclinação automática das fotos que o usuário ainda não girou. */
+  autoTiltEnabled: boolean;
   selectedPhotoId: string | null;
   photoCaptions: Record<string, string>;
   /** Páginas embaixo da folha que está virando não recebem interação. */
   interactive: boolean;
   getAdjustment: (photoId: string) => PhotoAdjustment;
+  getPlacement: (photoId: string) => PhotoPlacement | null;
   onAdjust: (photoId: string, patch: Partial<PhotoAdjustment>) => void;
+  onPlace: (
+    photoId: string,
+    rect: SlotRect,
+    options?: { bringToFront?: boolean },
+  ) => void;
   onSelectPhoto: (photoId: string | null) => void;
   onChangeLayout: (pageKey: string, layoutId: PageLayoutId) => void;
   onChangeCaption: (pageKey: string, caption: string) => void;
@@ -39,10 +56,67 @@ export interface BookPageProps {
     patch: Partial<Pick<StoryInsertion, 'title' | 'body'>>,
   ) => void;
   onRemoveStory: (id: string) => void;
+  onSendToTray: (photoId: string) => void;
 }
 
 const PAPER_TEXTURE =
   'radial-gradient(circle at 18% 12%, rgba(255,255,255,0.5), transparent 45%), radial-gradient(circle at 82% 78%, rgba(0,0,0,0.05), transparent 55%)';
+
+/** Prefixo do id de drop de uma página inteira. */
+export const PAGE_DROP_PREFIX = 'page:';
+
+export function pageKeyFromDropId(id: string): string | null {
+  return id.startsWith(PAGE_DROP_PREFIX)
+    ? id.slice(PAGE_DROP_PREFIX.length)
+    : null;
+}
+
+/**
+ * Área útil da página, que também é alvo para as fotos vindas do depósito.
+ * Fica desabilitada nas páginas de baixo enquanto a folha vira.
+ */
+function PageDropArea({
+  pageKey,
+  photoCount,
+  disabled,
+  children,
+}: {
+  pageKey: string;
+  photoCount: number;
+  disabled: boolean;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver, active } = useDroppable({
+    id: `${PAGE_DROP_PREFIX}${pageKey}`,
+    disabled,
+  });
+
+  const isFull = photoCount >= MAX_PHOTOS_PER_PAGE;
+  // Só destaca quando a foto vem do depósito: arraste entre fotos do álbum é
+  // troca de lugar, e a página inteira não é alvo disso.
+  const isTarget = isOver && active !== null && isTrayDragId(String(active.id));
+
+  return (
+    <div ref={setNodeRef} className="relative min-h-0 flex-1">
+      {isTarget && (
+        <div
+          aria-hidden
+          className={[
+            'pointer-events-none absolute inset-2 z-50 rounded-lg border-2 border-dashed',
+            isFull ? 'border-red-400/70 bg-red-500/10' : 'border-amber-400 bg-amber-400/10',
+          ].join(' ')}
+        >
+          <span className="absolute inset-x-0 bottom-2 text-center text-[11px] font-medium text-neutral-900">
+            {isFull
+              ? `máximo de ${MAX_PHOTOS_PER_PAGE} fotos nesta página`
+              : 'soltar aqui'}
+          </span>
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
 
 function GutterShadow({ side }: { side: PageSide }) {
   return (
@@ -59,15 +133,13 @@ function GutterShadow({ side }: { side: PageSide }) {
 }
 
 export function BookPage(props: BookPageProps) {
-  const { page, side, albumName, albumMeta, interactive } = props;
+  const { page, side, albumName, albumMeta, interactive, composeMode } = props;
   const rounded = side === 'left' ? 'rounded-l-[6px]' : 'rounded-r-[6px]';
 
-  // Sem página: nada mesmo. É isso que deixa o álbum fechado com uma folha só.
+  // Sem página: nada mesmo. É isso que deixa as capas isoladas nas pontas.
   if (!page) return null;
 
-  const isHardCover = page.kind === 'cover' || page.kind === 'back';
-
-  if (isHardCover) {
+  if (page.kind === 'cover' || page.kind === 'back') {
     return (
       <div
         className={`relative h-full w-full overflow-hidden ${rounded}`}
@@ -105,9 +177,15 @@ export function BookPage(props: BookPageProps) {
             </span>
           </div>
         ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-center opacity-70">
-            <span className="text-[11px] tracking-[0.3em]">FIM DA VIAGEM</span>
-            <span className="text-[10px] opacity-70">
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
+            <span
+              className="h-px w-10"
+              style={{ background: 'var(--cover-accent)', opacity: 0.5 }}
+            />
+            <span className="text-[11px] tracking-[0.3em] opacity-70">
+              FIM DA VIAGEM
+            </span>
+            <span className="text-[10px] opacity-45">
               Memento · Keep the Journey
             </span>
           </div>
@@ -124,7 +202,7 @@ export function BookPage(props: BookPageProps) {
     fontFamily: 'var(--album-font)',
   } as const;
 
-  if (page.kind === 'inside-cover') {
+  if (page.kind === 'title') {
     return (
       <div
         className={`relative h-full w-full overflow-hidden ${rounded}`}
@@ -150,7 +228,8 @@ export function BookPage(props: BookPageProps) {
     );
   }
 
-  if (page.kind === 'blank') {
+  // Guarda: a única página sem conteúdo do álbum, logo atrás da capa.
+  if (page.kind === 'inside-cover') {
     return (
       <div
         className={`relative h-full w-full overflow-hidden ${rounded}`}
@@ -182,7 +261,7 @@ export function BookPage(props: BookPageProps) {
   }
 
   const layout = PAGE_LAYOUTS[page.layoutId];
-  const emptySlots = Math.max(0, layout.capacity - page.photos.length);
+  const isFree = composeMode === 'free';
   const dayLabel = page.date ? formatDayLabel(page.date) : '';
 
   return (
@@ -210,11 +289,11 @@ export function BookPage(props: BookPageProps) {
             disabled={!interactive}
             placeholder={dayLabel}
             aria-label="Legenda da página"
-            className="w-full truncate border-0 bg-transparent text-sm outline-none placeholder:text-current placeholder:opacity-35"
+            className="w-full select-text truncate border-0 bg-transparent text-sm outline-none placeholder:text-current placeholder:opacity-35"
           />
         </div>
 
-        {interactive && (
+        {interactive && !isFree && (
           <div className="shrink-0 opacity-0 transition focus-within:opacity-100 group-hover/page:opacity-100">
             <LayoutPicker
               value={page.layoutId}
@@ -224,40 +303,66 @@ export function BookPage(props: BookPageProps) {
         )}
       </header>
 
-      <div
-        className={`grid min-h-0 flex-1 gap-1 px-3 pb-1 pt-2 ${layout.gridClassName}`}
+      {/* Área útil: todo posicionamento de foto é em % dela. */}
+      <PageDropArea
+        pageKey={page.key}
+        photoCount={page.photos.length}
+        disabled={!interactive}
       >
-        {page.photos.map((photo, index) => (
-          <PhotoSlot
-            key={photo.id}
-            photo={photo}
-            adjustment={props.getAdjustment(photo.id)}
-            rotation={resolveRotation(
-              photo.id,
-              props.getAdjustment(photo.id),
-              props.tiltMode,
-            )}
-            frame={props.frame}
-            caption={props.photoCaptions[photo.id] ?? ''}
-            isSelected={interactive && props.selectedPhotoId === photo.id}
-            interactive={interactive}
-            className={layout.slotClassNames[index] ?? ''}
-            onSelect={props.onSelectPhoto}
-            onAdjust={props.onAdjust}
-            onCaptionChange={props.onChangePhotoCaption}
-          />
-        ))}
+        <div className="absolute inset-x-3 inset-y-1">
+          {page.photos.map((photo, index) => {
+            const slot =
+              layout.slots[index] ?? layout.slots[layout.slots.length - 1];
+            const placement = props.getPlacement(photo.id);
+            const rect = isFree && placement ? placement : slot;
 
-        {Array.from({ length: emptySlots }, (_, index) => (
-          <div
-            key={`empty-${index}`}
-            className={`m-2 rounded-[3px] border border-dashed opacity-25 ${
-              layout.slotClassNames[page.photos.length + index] ?? ''
-            }`}
-            style={{ borderColor: 'var(--paper-ink-soft)' }}
-          />
-        ))}
-      </div>
+            return (
+              <PhotoSlot
+                key={photo.id}
+                photo={photo}
+                adjustment={props.getAdjustment(photo.id)}
+                rotation={resolveRotation(
+                  photo.id,
+                  props.getAdjustment(photo.id),
+                  isFree && props.autoTiltEnabled,
+                )}
+                frame={props.frame}
+                caption={props.photoCaptions[photo.id] ?? ''}
+                isSelected={interactive && props.selectedPhotoId === photo.id}
+                interactive={interactive}
+                mode={composeMode}
+                rect={rect}
+                zIndex={(isFree && placement ? placement.z : 0) + index + 1}
+                onSelect={props.onSelectPhoto}
+                onAdjust={props.onAdjust}
+                onCaptionChange={props.onChangePhotoCaption}
+                onPlace={props.onPlace}
+                onSendToTray={props.onSendToTray}
+              />
+            );
+          })}
+
+          {!isFree &&
+            layout.slots.slice(page.photos.length).map((slot, index) => (
+              <div
+                key={`empty-${index}`}
+                style={{
+                  position: 'absolute',
+                  left: `${slot.x}%`,
+                  top: `${slot.y}%`,
+                  width: `${slot.w}%`,
+                  height: `${slot.h}%`,
+                }}
+                className="p-2"
+              >
+                <div
+                  className="h-full w-full rounded-[3px] border border-dashed opacity-25"
+                  style={{ borderColor: 'var(--paper-ink-soft)' }}
+                />
+              </div>
+            ))}
+        </div>
+      </PageDropArea>
 
       <footer className="flex items-center justify-between px-5 pb-3 text-[10px] opacity-30">
         <span>{side === 'left' ? page.number : ''}</span>

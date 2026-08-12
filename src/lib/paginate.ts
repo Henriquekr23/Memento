@@ -1,22 +1,36 @@
-import { PAGE_LAYOUTS, type PageLayoutId } from '@/types/page';
+import {
+  PAGE_LAYOUTS,
+  PAGE_LAYOUT_IDS,
+  type PageLayoutId,
+  type SlotRect,
+} from '@/types/page';
 import type { Photo } from '@/types/photo';
 
-import { buildTripDayIndex, toDayKey } from './sortPhotos';
+import { toDayKey } from './sortPhotos';
 
 /**
  * Paginação: transforma a lista ordenada de fotos nas páginas do álbum.
  * Função pura — nenhum estado de UI, fácil de testar.
  *
  * Ordem das páginas:
- *   capa · verso da capa · miolo (fotos e histórias) · [folha em branco] · contracapa
+ *   capa · [guarda] · folha de rosto · miolo · contracapa
  *
- * O total é sempre ímpar de propósito: a capa fica sozinha à direita no álbum
- * fechado, e a partir daí todo spread tem esquerda e direita (ver bookGeometry).
+ * O total é sempre par: a capa fica sozinha à direita no álbum fechado, todo
+ * spread do meio tem esquerda e direita, e no fim a contracapa fica sozinha à
+ * esquerda (ver bookGeometry).
+ *
+ * Quando o miolo tem um número par de páginas falta uma para fechar a conta.
+ * Essa página entra **no começo**, como guarda logo atrás da capa, e a folha de
+ * rosto passa para a página seguinte. Assim nunca sobra página vazia no fim do
+ * álbum: a única sem conteúdo é a que fica atrás da capa, que é justamente
+ * onde um álbum de verdade tem uma guarda.
  *
  * Regras do miolo:
  * - cada dia da viagem começa numa página nova (o álbum "respira" por dia);
  * - a ordem manual é respeitada: se o usuário jogou uma foto de outro dia no
  *   meio, ela abre uma nova sequência em vez de voltar para o dia dela;
+ * - `groupKeys` é a exceção: quando o usuário coloca uma foto numa página
+ *   específica, ela passa a pertencer àquele grupo mesmo sendo de outro dia;
  * - o layout de cada página pode ser trocado (`layoutOverrides`), e a
  *   quantidade de fotos da página segue a capacidade do layout escolhido.
  */
@@ -24,9 +38,9 @@ import { buildTripDayIndex, toDayKey } from './sortPhotos';
 export type AlbumPageKind =
   | 'cover'
   | 'inside-cover'
+  | 'title'
   | 'photos'
   | 'story'
-  | 'blank'
   | 'back';
 
 /** Página escrita pelo usuário, ancorada a uma página de fotos. */
@@ -44,6 +58,8 @@ export interface AlbumPage {
   kind: AlbumPageKind;
   layoutId: PageLayoutId;
   photos: Photo[];
+  /** Grupo ao qual a página pertence (dia da viagem, por padrão). */
+  groupKey: string | null;
   dayNumber: number | null;
   date: Date | null;
   pageOfDay: number;
@@ -53,6 +69,11 @@ export interface AlbumPage {
   story: StoryInsertion | null;
 }
 
+/** Máximo de fotos numa página, pelo maior layout disponível. */
+export const MAX_PHOTOS_PER_PAGE = Math.max(
+  ...PAGE_LAYOUT_IDS.map((id) => PAGE_LAYOUTS[id].capacity),
+);
+
 export function defaultLayoutFor(remaining: number): PageLayoutId {
   if (remaining <= 1) return 'single';
   if (remaining === 2) return 'duo-vertical';
@@ -60,31 +81,54 @@ export function defaultLayoutFor(remaining: number): PageLayoutId {
   return 'quad';
 }
 
-interface DayRun {
-  dayKey: string;
+/**
+ * Menor layout que comporta `count` fotos, preferindo continuar no layout atual
+ * quando ele já dá conta. Usado ao trazer uma foto da bandeja para a página.
+ */
+export function layoutForCount(
+  count: number,
+  current?: PageLayoutId,
+): PageLayoutId {
+  if (current && PAGE_LAYOUTS[current].capacity >= count) return current;
+  return defaultLayoutFor(count);
+}
+
+export function groupKeyOf(
+  photo: Photo,
+  groupKeys: Readonly<Record<string, string>> = {},
+): string {
+  return groupKeys[photo.id] ?? toDayKey(photo.timestamp);
+}
+
+interface PhotoRun {
+  groupKey: string;
   photos: Photo[];
 }
 
-/** Agrupa em sequências consecutivas do mesmo dia, preservando a ordem manual. */
-export function groupConsecutiveByDay(photos: readonly Photo[]): DayRun[] {
-  const runs: DayRun[] = [];
+/** Agrupa em sequências consecutivas do mesmo grupo, preservando a ordem. */
+export function groupConsecutive(
+  photos: readonly Photo[],
+  groupKeys: Readonly<Record<string, string>> = {},
+): PhotoRun[] {
+  const runs: PhotoRun[] = [];
 
   for (const photo of photos) {
-    const dayKey = toDayKey(photo.timestamp);
+    const key = groupKeyOf(photo, groupKeys);
     const current = runs[runs.length - 1];
-    if (current && current.dayKey === dayKey) current.photos.push(photo);
-    else runs.push({ dayKey, photos: [photo] });
+    if (current && current.groupKey === key) current.photos.push(photo);
+    else runs.push({ groupKey: key, photos: [photo] });
   }
 
   return runs;
 }
 
-function blankPage(key: string, kind: AlbumPageKind): AlbumPage {
+function emptyPage(key: string, kind: AlbumPageKind): AlbumPage {
   return {
     key,
     kind,
     layoutId: 'single',
     photos: [],
+    groupKey: null,
     dayNumber: null,
     date: null,
     pageOfDay: 0,
@@ -95,37 +139,49 @@ function blankPage(key: string, kind: AlbumPageKind): AlbumPage {
 }
 
 function storyPage(story: StoryInsertion): AlbumPage {
-  return { ...blankPage(`story:${story.id}`, 'story'), story };
+  return { ...emptyPage(`story:${story.id}`, 'story'), story };
 }
 
 export interface BuildAlbumPagesOptions {
   layoutOverrides?: Readonly<Record<string, PageLayoutId>>;
   stories?: readonly StoryInsertion[];
+  /** Fotos que o usuário colocou à mão numa página de outro grupo. */
+  groupKeys?: Readonly<Record<string, string>>;
 }
 
 function buildPhotoPages(
   photos: readonly Photo[],
   layoutOverrides: Readonly<Record<string, PageLayoutId>>,
+  groupKeys: Readonly<Record<string, string>>,
 ): AlbumPage[] {
-  const tripDays = buildTripDayIndex(photos);
+  const runs = groupConsecutive(photos, groupKeys);
+
+  // "Dia 1, 2, 3…" pela ordem cronológica dos grupos, não pela ordem no álbum.
+  const dayNumbers = new Map(
+    [...new Set(runs.map((run) => run.groupKey))]
+      .sort()
+      .map((key, index) => [key, index + 1] as const),
+  );
+
   const result: AlbumPage[] = [];
 
-  groupConsecutiveByDay(photos).forEach((run, runIndex) => {
+  runs.forEach((run, runIndex) => {
     const pagesOfRun: AlbumPage[] = [];
     let cursor = 0;
     let indexInRun = 0;
 
     while (cursor < run.photos.length) {
-      const key = `${run.dayKey}@${runIndex}#${indexInRun}`;
+      const key = `${run.groupKey}@${runIndex}#${indexInRun}`;
       const remaining = run.photos.length - cursor;
       const layoutId = layoutOverrides[key] ?? defaultLayoutFor(remaining);
       const capacity = PAGE_LAYOUTS[layoutId].capacity;
 
       pagesOfRun.push({
-        ...blankPage(key, 'photos'),
+        ...emptyPage(key, 'photos'),
         layoutId,
         photos: run.photos.slice(cursor, cursor + capacity),
-        dayNumber: tripDays.get(run.dayKey) ?? null,
+        groupKey: run.groupKey,
+        dayNumber: dayNumbers.get(run.groupKey) ?? null,
         date: run.photos[cursor].timestamp,
         pageOfDay: indexInRun + 1,
       });
@@ -182,33 +238,65 @@ function interleaveStories(
 
 export function buildAlbumPages(
   photos: readonly Photo[],
-  { layoutOverrides = {}, stories = [] }: BuildAlbumPagesOptions = {},
+  {
+    layoutOverrides = {},
+    stories = [],
+    groupKeys = {},
+  }: BuildAlbumPagesOptions = {},
 ): AlbumPage[] {
   const content = interleaveStories(
-    buildPhotoPages(photos, layoutOverrides),
+    buildPhotoPages(photos, layoutOverrides, groupKeys),
     stories,
   );
 
-  // Total ímpar: capa sozinha + spreads completos até a contracapa.
-  if (content.length % 2 !== 0) content.push(blankPage('blank', 'blank'));
-
   let number = 0;
   for (const page of content) {
-    if (page.kind === 'photos' || page.kind === 'story') {
-      number += 1;
-      page.number = number;
-    }
+    number += 1;
+    page.number = number;
   }
 
+  // Falta uma página para o total fechar par: ela entra atrás da capa, como
+  // guarda, e nunca no fim.
+  const needsFlyleaf = content.length % 2 === 0;
+
   return [
-    blankPage('cover', 'cover'),
-    blankPage('inside-cover', 'inside-cover'),
+    emptyPage('cover', 'cover'),
+    ...(needsFlyleaf ? [emptyPage('inside-cover', 'inside-cover')] : []),
+    emptyPage('title', 'title'),
     ...content,
-    blankPage('back', 'back'),
+    emptyPage('back', 'back'),
   ];
 }
 
-/** Índice do spread que contém determinada foto (ver bookGeometry). */
+/**
+ * Retângulo que a foto ocupa pelo layout da página dela.
+ * É o ponto de partida do modo espontâneo: a foto começa a ser movida de onde
+ * já estava, em vez de pular para um canto.
+ */
+export function findSlotRect(
+  pages: readonly AlbumPage[],
+  photoId: string,
+): SlotRect | null {
+  for (const page of pages) {
+    const index = page.photos.findIndex((photo) => photo.id === photoId);
+    if (index === -1) continue;
+    const slots = PAGE_LAYOUTS[page.layoutId].slots;
+    return slots[index] ?? slots[slots.length - 1] ?? null;
+  }
+  return null;
+}
+
+export function findPageOfPhoto(
+  pages: readonly AlbumPage[],
+  photoId: string,
+): AlbumPage | null {
+  return (
+    pages.find((page) => page.photos.some((photo) => photo.id === photoId)) ??
+    null
+  );
+}
+
+/** Índice do spread que contém determinada página (ver bookGeometry). */
 export function findSpreadOfPhoto(
   pages: readonly AlbumPage[],
   photoId: string,
