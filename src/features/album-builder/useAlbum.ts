@@ -1,0 +1,151 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import { importPhotos, type ImportProgress } from '@/features/photo-upload/importPhotos';
+import { sortPhotosChronologically, type SortDirection } from '@/lib/sortPhotos';
+import type { Photo } from '@/types/photo';
+
+/**
+ * Estado do álbum. Toda a regra de negócio de montagem vive aqui —
+ * a UI só chama estas ações.
+ *
+ * Fase 2: este hook continua igual; a persistência entra como um efeito
+ * adicional (salvar em API) sem alterar a forma do estado.
+ */
+
+export interface ImportStatus {
+  isImporting: boolean;
+  progress: ImportProgress | null;
+  rejectedFileNames: string[];
+}
+
+const INITIAL_STATUS: ImportStatus = {
+  isImporting: false,
+  progress: null,
+  rejectedFileNames: [],
+};
+
+export function useAlbum() {
+  const [name, setName] = useState('');
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [status, setStatus] = useState<ImportStatus>(INITIAL_STATUS);
+
+  /** Enquanto false, novas fotos entram já reordenadas cronologicamente. */
+  const [isManuallyOrdered, setIsManuallyOrdered] = useState(false);
+
+  // Object URLs precisam ser revogados para não vazar memória.
+  const previewUrlsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const urls = previewUrlsRef.current;
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+      urls.clear();
+    };
+  }, []);
+
+  const addFiles = useCallback(
+    async (files: File[]) => {
+      setStatus({ isImporting: true, progress: null, rejectedFileNames: [] });
+
+      const { photos: imported, rejectedFileNames } = await importPhotos(
+        files,
+        (progress) => setStatus((prev) => ({ ...prev, progress })),
+      );
+
+      imported.forEach((photo) => previewUrlsRef.current.add(photo.previewUrl));
+
+      setPhotos((prev) => {
+        const known = new Set(prev.map((p) => `${p.fileName}:${p.sizeInBytes}`));
+        const unique = imported.filter(
+          (p) => !known.has(`${p.fileName}:${p.sizeInBytes}`),
+        );
+
+        // Sem reordenação manual ainda: mantém a promessa de ordem cronológica.
+        // Com reordenação manual: respeita o trabalho do usuário e só anexa.
+        return isManuallyOrdered
+          ? [...prev, ...sortPhotosChronologically(unique, sortDirection)]
+          : sortPhotosChronologically([...prev, ...unique], sortDirection);
+      });
+
+      setStatus({ isImporting: false, progress: null, rejectedFileNames });
+    },
+    [isManuallyOrdered, sortDirection],
+  );
+
+  const removePhoto = useCallback((id: string) => {
+    setPhotos((prev) => {
+      const target = prev.find((photo) => photo.id === id);
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl);
+        previewUrlsRef.current.delete(target.previewUrl);
+      }
+      return prev.filter((photo) => photo.id !== id);
+    });
+  }, []);
+
+  const toggleIncluded = useCallback((id: string) => {
+    setPhotos((prev) =>
+      prev.map((photo) =>
+        photo.id === id ? { ...photo, included: !photo.included } : photo,
+      ),
+    );
+  }, []);
+
+  const movePhoto = useCallback((fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    setPhotos((prev) => {
+      const from = prev.findIndex((photo) => photo.id === fromId);
+      const to = prev.findIndex((photo) => photo.id === toId);
+      if (from === -1 || to === -1) return prev;
+
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+    setIsManuallyOrdered(true);
+  }, []);
+
+  const sortByDate = useCallback((direction: SortDirection = 'asc') => {
+    setSortDirection(direction);
+    setPhotos((prev) => sortPhotosChronologically(prev, direction));
+    setIsManuallyOrdered(false);
+  }, []);
+
+  const clear = useCallback(() => {
+    previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    previewUrlsRef.current.clear();
+    setPhotos([]);
+    setIsManuallyOrdered(false);
+    setStatus(INITIAL_STATUS);
+  }, []);
+
+  const includedPhotos = useMemo(
+    () => photos.filter((photo) => photo.included),
+    [photos],
+  );
+
+  const withoutExifDateCount = useMemo(
+    () => photos.filter((photo) => photo.timestampSource === 'file').length,
+    [photos],
+  );
+
+  return {
+    name,
+    setName,
+    photos,
+    includedPhotos,
+    withoutExifDateCount,
+    status,
+    sortDirection,
+    isManuallyOrdered,
+    addFiles,
+    removePhoto,
+    toggleIncluded,
+    movePhoto,
+    sortByDate,
+    clear,
+  };
+}
