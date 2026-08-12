@@ -108,6 +108,26 @@ export function useAlbum() {
     setIsManuallyOrdered(true);
   }, []);
 
+  /**
+   * Troca duas fotos de posição.
+   * No álbum 3D é isto que acontece ao soltar uma foto sobre outra: trocar é
+   * mais previsível que inserir, porque não empurra todo o resto para a frente
+   * e desmonta as páginas seguintes.
+   */
+  const swapPhotos = useCallback((aId: string, bId: string) => {
+    if (aId === bId) return;
+    setPhotos((prev) => {
+      const from = prev.findIndex((photo) => photo.id === aId);
+      const to = prev.findIndex((photo) => photo.id === bId);
+      if (from === -1 || to === -1) return prev;
+
+      const next = [...prev];
+      [next[from], next[to]] = [next[to], next[from]];
+      return next;
+    });
+    setIsManuallyOrdered(true);
+  }, []);
+
   const sortByDate = useCallback((direction: SortDirection = 'asc') => {
     setSortDirection(direction);
     setPhotos((prev) => sortPhotosChronologically(prev, direction));
@@ -145,6 +165,7 @@ export function useAlbum() {
     removePhoto,
     toggleIncluded,
     movePhoto,
+    swapPhotos,
     sortByDate,
     clear,
   };

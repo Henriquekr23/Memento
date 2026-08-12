@@ -1,17 +1,34 @@
 'use client';
 
+import { useCallback, useState } from 'react';
+
+import { AlbumBook } from '@/features/album-book/AlbumBook';
+import { useAlbumBook } from '@/features/album-book/useAlbumBook';
 import { AlbumGrid } from '@/features/album-builder/AlbumGrid';
-import { AlbumToolbar } from '@/features/album-builder/AlbumToolbar';
+import { AlbumToolbar, type AlbumView } from '@/features/album-builder/AlbumToolbar';
 import { useAlbum } from '@/features/album-builder/useAlbum';
 import { useAlbumExport } from '@/features/album-export/useAlbumExport';
 import { PhotoDropzone } from '@/features/photo-upload/PhotoDropzone';
 
 export default function HomePage() {
   const album = useAlbum();
+  const book = useAlbumBook(album.includedPhotos);
   const { exportAlbum, isExporting, progress, error, exporterLabel } =
     useAlbumExport();
+  const [view, setView] = useState<AlbumView>('grid');
 
   const hasPhotos = album.photos.length > 0;
+  const isBookView = view === 'book' && hasPhotos;
+
+  // Depois de importar, o lugar interessante é o álbum — não a grade.
+  const { addFiles } = album;
+  const handleFilesSelected = useCallback(
+    async (files: File[]) => {
+      await addFiles(files);
+      setView('book');
+    },
+    [addFiles],
+  );
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-7xl px-4 pb-20">
@@ -22,8 +39,8 @@ export default function HomePage() {
         <p className="text-sm text-amber-300/90">Keep the Journey</p>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/50">
           Suba as fotos da viagem, deixe que a data de cada uma coloque tudo em
-          ordem e ajuste o que quiser. Tudo acontece no seu navegador — nenhuma
-          foto é enviada para lugar nenhum.
+          ordem e monte o álbum página por página. Tudo acontece no seu navegador
+          — nenhuma foto é enviada para lugar nenhum.
         </p>
       </header>
 
@@ -31,6 +48,8 @@ export default function HomePage() {
         <AlbumToolbar
           name={album.name}
           onNameChange={album.setName}
+          view={view}
+          onViewChange={setView}
           totalCount={album.photos.length}
           includedCount={album.includedPhotos.length}
           withoutExifDateCount={album.withoutExifDateCount}
@@ -40,7 +59,12 @@ export default function HomePage() {
           exportLabel={exporterLabel}
           onSortByDate={album.sortByDate}
           onExport={() =>
-            exportAlbum({ name: album.name, photos: album.includedPhotos })
+            exportAlbum({
+              name: album.name,
+              photos: album.includedPhotos,
+              photoCaptions: book.photoCaptions,
+              stories: book.stories,
+            })
           }
           onClear={album.clear}
         />
@@ -48,7 +72,7 @@ export default function HomePage() {
 
       <div className="space-y-6">
         <PhotoDropzone
-          onFilesSelected={album.addFiles}
+          onFilesSelected={handleFilesSelected}
           disabled={album.status.isImporting}
           compact={hasPhotos}
         />
@@ -77,14 +101,7 @@ export default function HomePage() {
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 
-        {hasPhotos ? (
-          <AlbumGrid
-            photos={album.photos}
-            onReorder={album.movePhoto}
-            onRemove={album.removePhoto}
-            onToggleIncluded={album.toggleIncluded}
-          />
-        ) : (
+        {!hasPhotos && (
           <ol className="grid gap-3 text-sm text-white/45 sm:grid-cols-3">
             <li className="rounded-xl border border-white/10 p-4">
               <span className="text-amber-300">1.</span> Selecione as fotos da
@@ -95,11 +112,29 @@ export default function HomePage() {
               cronológica pela data do EXIF.
             </li>
             <li className="rounded-xl border border-white/10 p-4">
-              <span className="text-amber-300">3.</span> Ajuste, nomeie e baixe o
-              álbum em ZIP.
+              <span className="text-amber-300">3.</span> Folheie o álbum, ajuste
+              as páginas e baixe em ZIP.
             </li>
           </ol>
         )}
+
+        {hasPhotos &&
+          (isBookView ? (
+            <AlbumBook
+              book={book}
+              albumName={album.name}
+              photos={album.includedPhotos}
+              onSwapPhotos={album.swapPhotos}
+              onRemoveFromAlbum={album.toggleIncluded}
+            />
+          ) : (
+            <AlbumGrid
+              photos={album.photos}
+              onReorder={album.movePhoto}
+              onRemove={album.removePhoto}
+              onToggleIncluded={album.toggleIncluded}
+            />
+          ))}
       </div>
     </main>
   );

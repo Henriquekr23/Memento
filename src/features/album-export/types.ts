@@ -1,3 +1,4 @@
+import type { StoryInsertion } from '@/lib/paginate';
 import type { Photo } from '@/types/photo';
 
 /** O que é entregue ao exportador — só o necessário, nada do estado de UI. */
@@ -5,6 +6,10 @@ export interface AlbumSnapshot {
   name: string;
   /** Já na ordem final e contendo apenas as fotos incluídas. */
   photos: Photo[];
+  /** Legenda por foto, indexada pelo id. */
+  photoCaptions?: Readonly<Record<string, string>>;
+  /** Páginas de texto escritas pelo usuário, na ordem em que foram criadas. */
+  stories?: readonly StoryInsertion[];
 }
 
 export interface ExportProgress {

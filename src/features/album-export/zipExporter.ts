@@ -36,9 +36,11 @@ export function buildIndexFile(album: AlbumSnapshot): string {
 
   album.photos.forEach((photo, index) => {
     const day = tripDays.get(toDayKey(photo.timestamp));
+    const caption = album.photoCaptions?.[photo.id]?.trim();
     lines.push(
       `${String(index + 1).padStart(3, '0')}. ${buildPhotoFileName(photo, index + 1)}`,
     );
+    if (caption) lines.push(`     "${caption}"`);
     lines.push(
       `     Dia ${day ?? '?'} · ${formatDateTime(photo.timestamp)}` +
         (photo.timestampSource === 'file' ? ' (data do arquivo, sem EXIF)' : ''),
@@ -61,6 +63,22 @@ export function buildIndexFile(album: AlbumSnapshot): string {
     lines.push(`     Original: ${photo.fileName}`);
     lines.push('');
   });
+
+  // O texto escrito pelo usuário não pode ficar preso no navegador.
+  const stories = (album.stories ?? []).filter(
+    (story) => story.title.trim() || story.body.trim(),
+  );
+
+  if (stories.length > 0) {
+    lines.push('');
+    lines.push('── Páginas de texto ──────────────────────────────');
+    lines.push('');
+    for (const story of stories) {
+      if (story.title.trim()) lines.push(story.title.trim());
+      if (story.body.trim()) lines.push(story.body.trim());
+      lines.push('');
+    }
+  }
 
   return lines.join('\n');
 }

@@ -2,9 +2,13 @@
 
 import type { SortDirection } from '@/lib/sortPhotos';
 
+export type AlbumView = 'grid' | 'book';
+
 interface AlbumToolbarProps {
   name: string;
   onNameChange: (name: string) => void;
+  view: AlbumView;
+  onViewChange: (view: AlbumView) => void;
   totalCount: number;
   includedCount: number;
   withoutExifDateCount: number;
@@ -20,6 +24,8 @@ interface AlbumToolbarProps {
 export function AlbumToolbar({
   name,
   onNameChange,
+  view,
+  onViewChange,
   totalCount,
   includedCount,
   withoutExifDateCount,
@@ -51,6 +57,25 @@ export function AlbumToolbar({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center rounded-full border border-white/15 p-0.5">
+            {(['grid', 'book'] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onViewChange(option)}
+                aria-pressed={view === option}
+                className={[
+                  'rounded-full px-4 py-1.5 text-sm transition',
+                  view === option
+                    ? 'bg-white/90 font-medium text-neutral-900'
+                    : 'text-white/60 hover:text-white',
+                ].join(' ')}
+              >
+                {option === 'grid' ? 'Grade' : 'Álbum'}
+              </button>
+            ))}
+          </div>
+
           <button
             type="button"
             onClick={() => onSortByDate(sortDirection === 'asc' ? 'desc' : 'asc')}
