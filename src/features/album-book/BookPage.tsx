@@ -36,6 +36,8 @@ export interface BookPageProps {
   onChangeComposeMode: (pageKey: string, mode: ComposeMode) => void;
   /** Inclinação automática das fotos que o usuário ainda não girou. */
   autoTiltEnabled: boolean;
+  /** Ponteiro que não paira: o que dependia de hover precisa de outro gatilho. */
+  isTouch: boolean;
   selectedPhotoId: string | null;
   photoCaptions: Record<string, string>;
   /** Páginas embaixo da folha que está virando não recebem interação. */
@@ -173,6 +175,36 @@ function PageDropArea({
   );
 }
 
+/**
+ * Onde e quando os controles da página aparecem.
+ *
+ * No mouse: canto superior direito, revelados pelo hover — a página fica limpa
+ * e eles surgem onde o cursor já está.
+ *
+ * No toque não há hover, então o gatilho passa a ser a escolha de uma foto
+ * **desta** página: quem tocou numa foto está editando esta folha. Página sem
+ * foto nenhuma não tem como ser escolhida, e ali eles ficam à vista.
+ *
+ * E no toque eles mudam de lugar: descem para logo abaixo do cabeçalho,
+ * centralizados. A pílula tem seis botões e, no canto de uma folha de 390px,
+ * cobria a legenda da página inteira; no rodapé da folha ela ficava abaixo da
+ * dobra, e só aparecia para quem já tivesse rolado. Aqui ela cobre a borda de
+ * cima da primeira foto — e só enquanto essa foto está escolhida.
+ */
+function controlsClassOf(
+  isTouch: boolean,
+  isPageSelected: boolean,
+  hasPhotos: boolean,
+): string {
+  if (!isTouch) {
+    return 'absolute right-4 top-3 z-10 opacity-0 transition focus-within:opacity-100 group-hover/page:opacity-100';
+  }
+  const base = 'absolute left-1/2 top-[52px] z-10 -translate-x-1/2 transition';
+  return isPageSelected || !hasPhotos
+    ? `${base} opacity-100`
+    : `${base} pointer-events-none opacity-0`;
+}
+
 function GutterShadow({ side }: { side: PageSide }) {
   return (
     <div
@@ -302,7 +334,7 @@ export function BookPage(props: BookPageProps) {
         style={paperStyle}
       >
         {interactive && (
-          <div className="absolute right-4 top-3 z-10 opacity-0 transition focus-within:opacity-100 group-hover/page:opacity-100">
+          <div className={controlsClassOf(props.isTouch, false, false)}>
             <PageControls
               variant="text"
               onChangeVariant={(variant) => {
@@ -329,6 +361,14 @@ export function BookPage(props: BookPageProps) {
   const composeMode = props.getComposeMode(page.key);
   const isFree = composeMode === 'free';
   const dayLabel = page.date ? formatDayLabel(page.date) : '';
+  const isPageSelected = page.photos.some(
+    (photo) => photo.id === props.selectedPhotoId,
+  );
+  const controlsClass = controlsClassOf(
+    props.isTouch,
+    isPageSelected,
+    page.photos.length > 0,
+  );
 
   return (
     <div
@@ -356,26 +396,14 @@ export function BookPage(props: BookPageProps) {
           disabled={!interactive}
           placeholder={dayLabel}
           aria-label="Legenda da página"
-          className="w-full select-text truncate border-0 bg-transparent pr-0 text-[13px] leading-6 outline-none transition-[padding] duration-200 placeholder:text-current placeholder:opacity-35 group-hover/page:pr-24"
+          className={[
+            'w-full select-text truncate border-0 bg-transparent text-[13px] leading-6 outline-none transition-[padding] duration-200 placeholder:text-current placeholder:opacity-35',
+            // O recuo só existe para não colidir com a pílula de controles. No
+            // toque ela mora no rodapé, então a legenda usa a linha inteira.
+            props.isTouch ? 'pr-0' : 'pr-0 group-hover/page:pr-24',
+          ].join(' ')}
         />
 
-        {/* Fora do fluxo: no fluxo, ele roubava a largura do campo de legenda
-            e a data ficava cortada mesmo com a página inteira livre. */}
-        {interactive && (
-          <div className="absolute right-4 top-3 opacity-0 transition focus-within:opacity-100 group-hover/page:opacity-100">
-            <PageControls
-              variant={page.layoutId}
-              onChangeVariant={(variant) => {
-                if (variant === 'text') props.onConvertPage(page, 'story');
-                else props.onChangeLayout(page.key, variant);
-              }}
-              composeMode={composeMode}
-              onToggleComposeMode={() =>
-                props.onChangeComposeMode(page.key, isFree ? 'aligned' : 'free')
-              }
-            />
-          </div>
-        )}
       </header>
 
       {/* Área útil: todo posicionamento de foto é em % dela. */}
@@ -405,6 +433,7 @@ export function BookPage(props: BookPageProps) {
                 caption={props.photoCaptions[photo.id] ?? ''}
                 isSelected={interactive && props.selectedPhotoId === photo.id}
                 interactive={interactive}
+                isTouch={props.isTouch}
                 mode={composeMode}
                 rect={rect}
                 zIndex={(isFree && placement ? placement.z : 0) + index + 1}
@@ -440,6 +469,27 @@ export function BookPage(props: BookPageProps) {
         <span>{side === 'left' ? page.number : ''}</span>
         <span>{side === 'right' ? page.number : ''}</span>
       </footer>
+
+      {/* Filho direto da folha, e não do cabeçalho: `<header>` é `relative`, e
+          de dentro dele o "ancorar no rodapé" do modo toque ancorava no rodapé
+          do próprio cabeçalho — a pílula voltava para cima da legenda.
+          Fora do fluxo em qualquer caso: no fluxo, ela roubava a largura do
+          campo de legenda e a data ficava cortada. */}
+      {interactive && (
+        <div className={controlsClass}>
+          <PageControls
+            variant={page.layoutId}
+            onChangeVariant={(variant) => {
+              if (variant === 'text') props.onConvertPage(page, 'story');
+              else props.onChangeLayout(page.key, variant);
+            }}
+            composeMode={composeMode}
+            onToggleComposeMode={() =>
+              props.onChangeComposeMode(page.key, isFree ? 'aligned' : 'free')
+            }
+          />
+        </div>
+      )}
 
       <GutterShadow side={side} />
     </div>

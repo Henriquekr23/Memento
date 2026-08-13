@@ -153,7 +153,19 @@ html {
 
 /* ── Componentes do sistema ─────────────────────────────────────────────
    Mesmas classes do design system original. A regra do Classical é usar
-   estas, e não inventar equivalentes paralelas em cada tela. */
+   estas, e não inventar equivalentes paralelas em cada tela.
+
+   Tudo daqui até o fim do arquivo vive em `@layer components`, e isso não é
+   detalhe: CSS fora de qualquer camada vence CSS dentro de uma, por mais
+   específico que o outro seja. Solto, o `display: inline-flex` do `.btn`
+   ganhava do `.hidden` do Tailwind — e `className="btn hidden sm:inline-flex"`
+   simplesmente não escondia nada. Era por isso que o botão do topo da landing
+   aparecia no celular e empurrava a página para fora da tela.
+
+   A regra geral: componente é a base, utilitário é o ajuste pontual, e o
+   ajuste tem de poder vencer a base. É o que esta camada garante. */
+
+@layer components {
 
 .kicker {
   display: block;
@@ -175,9 +187,9 @@ html {
   margin: 0;
   background: var(--color-divider);
 }
-/* Mesma sangria da barra do álbum. Precisa ser classe: `.hr` fica fora das
-   layers do Tailwind e o `margin: 0` dela vencia qualquer `-mx-*` utilitário —
-   era por isso que as duas réguas da tela tinham comprimentos diferentes. */
+/* Mesma sangria da barra do álbum. Continua sendo classe, e não um `-mx-*`
+   utilitário no JSX, porque o valor é a mesma expressão `clamp()` usada no
+   padding das telas: escrita em dois lugares, uma hora as duas divergem. */
 .hr-bleed {
   margin-inline: calc(clamp(20px, 5vw, 72px) * -1);
 }
@@ -193,6 +205,9 @@ html {
   font-weight: 600;
   font-size: 14px;
   line-height: 1.2;
+  /* Rótulo de botão nunca quebra: apertado, "Baixar álbum" virava duas linhas
+     e o botão crescia para cima, desalinhando a barra inteira no celular. */
+  white-space: nowrap;
   color: var(--color-text);
   background: transparent;
   border: 1px solid transparent;
@@ -574,6 +589,30 @@ html {
   }
 }
 
+/* O pegador do slider. O padrão do navegador tem ~12px: bom para o ponteiro,
+   pequeno para o dedo. Cresce só onde o ponteiro é grosso, para não engordar
+   um controle fino de desktop sem motivo. */
+@media (hover: none) {
+  .range-input {
+    height: 4px;
+  }
+  .range-input::-webkit-slider-thumb {
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    border: 2px solid var(--color-bg);
+    background: var(--color-accent);
+  }
+  .range-input::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    border: 2px solid var(--color-bg);
+    background: var(--color-accent);
+  }
+}
+
 /* Gaveta de estilo. Fica sempre no DOM para poder deslizar; `visibility` é o
    que a tira do caminho quando fechada (foco e leitor de tela junto), e ela
    só muda depois da transição terminar — daí o `0s linear` atrasado. */
@@ -610,38 +649,6 @@ html {
   transition:
     transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1),
     visibility 0s;
-}
-
-/* A aba que puxa a gaveta: encostada na borda da janela, lida de cima para
-   baixo, do jeito das abas de um fichário. */
-.drawer-handle {
-  position: fixed;
-  right: 0;
-  top: 50%;
-  z-index: 30;
-  padding: 18px 7px;
-  writing-mode: vertical-rl;
-  border: 1px solid var(--color-divider);
-  border-right: 0;
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
-  background: var(--color-bg);
-  color: color-mix(in srgb, var(--color-text) 70%, transparent);
-  font-family: var(--font-heading);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transform: translateY(-50%);
-  transition:
-    color 0.18s ease,
-    border-color 0.18s ease,
-    transform 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-.drawer-handle:hover {
-  color: var(--color-accent-700);
-  border-color: var(--color-accent);
-  transform: translateY(-50%) translateX(-3px);
 }
 
 /* Fotografia: moldura fina com gradação de arquivo, como prancha colada. */
@@ -836,4 +843,5 @@ html {
   .mm-cols::after {
     content: none;
   }
+}
 }

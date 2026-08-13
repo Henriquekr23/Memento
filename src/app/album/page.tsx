@@ -9,6 +9,7 @@ import { useAlbumBook } from '@/features/album-book/useAlbumBook';
 import { AlbumGrid } from '@/features/album-builder/AlbumGrid';
 import { AlbumStart, type StartMode } from '@/features/album-builder/AlbumStart';
 import { AlbumToolbar, type AlbumView } from '@/features/album-builder/AlbumToolbar';
+import { StyleDrawer } from '@/features/album-style/StyleDrawer';
 import { useAlbum } from '@/features/album-builder/useAlbum';
 import { useAlbumExport } from '@/features/album-export/useAlbumExport';
 
@@ -18,6 +19,9 @@ export default function AlbumPage() {
   const { exportAlbum, running, isExporting, progress, error } = useAlbumExport();
   const [view, setView] = useState<AlbumView>('grid');
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  // A gaveta de estilo vive aqui, e não dentro do AlbumBook, porque quem a abre
+  // é o botão da barra — e a barra é filha desta página.
+  const [isStyleOpen, setIsStyleOpen] = useState(false);
 
   const hasPhotos = album.photos.length > 0;
   const isBookView = view === 'book' && hasPhotos;
@@ -57,6 +61,8 @@ export default function AlbumPage() {
           sortDirection={album.sortDirection}
           isManuallyOrdered={album.isManuallyOrdered}
           exporting={running}
+          isStyleOpen={isStyleOpen}
+          onToggleStyle={() => setIsStyleOpen((open) => !open)}
           onSortByDate={album.sortByDate}
           onExport={(kind) =>
             exportAlbum(
@@ -83,6 +89,16 @@ export default function AlbumPage() {
           onClear={() => setIsClearConfirmOpen(true)}
         />
       )}
+
+      <StyleDrawer
+        open={isStyleOpen && isBookView}
+        onOpenChange={setIsStyleOpen}
+        theme={book.theme}
+        onChange={book.setTheme}
+        autoTiltEnabled={book.autoTiltEnabled}
+        onAutoTiltChange={book.setAutoTiltEnabled}
+        onResetPages={book.resetPages}
+      />
 
       <ConfirmDialog
         open={isClearConfirmOpen}

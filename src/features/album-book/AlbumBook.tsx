@@ -14,7 +14,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { StyleDrawer } from '@/features/album-style/StyleDrawer';
 import { themeToStyle } from '@/features/album-style/theme';
 import {
   MAX_PHOTOS_PER_PAGE,
@@ -29,7 +28,7 @@ import {
 } from '@/lib/paginate';
 import type { Photo } from '@/types/photo';
 
-import { useIsNarrow } from '@/hooks/useMediaQuery';
+import { useIsNarrow, useIsTouch } from '@/hooks/useMediaQuery';
 
 import { leftIndexOf, resolveSpreadView, rightIndexOf } from './bookGeometry';
 import { pageKeyFromDropId } from './BookPage';
@@ -76,7 +75,6 @@ export function AlbumBook({
   onReorderPhotos,
   onAddFiles,
 }: AlbumBookProps) {
-  const [isStyleOpen, setIsStyleOpen] = useState(false);
   const [draggingPhotoId, setDraggingPhotoId] = useState<string | null>(null);
   // `document` não existe na pré-renderização. O portal não emite nada na
   // árvore do pai, então não há risco de divergência na hidratação.
@@ -96,6 +94,9 @@ export function AlbumBook({
   // No celular o spread de duas páginas não cabe: a tela passa a enquadrar uma
   // página por vez, e a navegação anda de meia folha em meia folha.
   const isNarrow = useIsNarrow();
+  // Estreito e sem hover são coisas diferentes: um laptop com tela sensível ao
+  // toque é largo e mesmo assim precisa das alças visíveis.
+  const isTouch = useIsTouch();
   const leftIndex = leftIndexOf(spread);
   const rightIndex = rightIndexOf(spread);
   const nav = useSinglePageNav({
@@ -441,6 +442,7 @@ export function AlbumBook({
       getComposeMode: book.getComposeMode,
       onChangeComposeMode: book.setPageComposeMode,
       autoTiltEnabled: book.autoTiltEnabled,
+      isTouch,
       selectedPhotoId: book.selectedPhotoId,
       photoCaptions: book.photoCaptions,
       getAdjustment: book.getAdjustment,
@@ -455,7 +457,7 @@ export function AlbumBook({
       onConvertPage: convertPage,
       onSendToTray: sendPhotoToTray,
     }),
-    [albumName, albumMeta, book, sendPhotoToTray, convertPage],
+    [albumName, albumMeta, book, isTouch, sendPhotoToTray, convertPage],
   );
 
   return (
@@ -565,24 +567,14 @@ export function AlbumBook({
       ) : (
         <p className="text-center text-xs text-[color-mix(in_srgb,var(--color-text)_35%,transparent)]">
           {spread === 0
-            ? isNarrow
+            ? isTouch
               ? 'Toque na capa para abrir o álbum'
               : 'Clique na capa para abrir o álbum'
-            : isNarrow
-              ? 'Deslize para virar a página · toque numa foto para ajustar'
+            : isTouch
+              ? 'Deslize para virar a página · toque numa foto para escolhê-la; aí aparecem as alças e os controles da página'
               : 'Arraste a página para folhear · ← → também viram · clique numa foto para ajustar · o canto da página escolhe entre layout e livre'}
         </p>
       )}
-
-      <StyleDrawer
-        open={isStyleOpen}
-        onOpenChange={setIsStyleOpen}
-        theme={book.theme}
-        onChange={book.setTheme}
-        autoTiltEnabled={book.autoTiltEnabled}
-        onAutoTiltChange={book.setAutoTiltEnabled}
-        onResetPages={book.resetPages}
-      />
     </div>
   );
 }

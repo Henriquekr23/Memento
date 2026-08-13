@@ -33,3 +33,18 @@ export const NARROW_QUERY = '(max-width: 767px)';
 export function useIsNarrow(): boolean {
   return useMediaQuery(NARROW_QUERY);
 }
+
+/**
+ * Ponteiro que não consegue pairar — dedo, basicamente.
+ *
+ * Metade dos controles do livro aparece no `hover`: as alças da foto e a
+ * pílula de layout da página. No toque o hover não existe, então essas coisas
+ * simplesmente não existiam no celular. Perguntar pelo *ponteiro* e não pela
+ * *largura* é o que faz a resposta continuar certa num tablet grande ou num
+ * laptop com tela sensível ao toque.
+ */
+export const COARSE_POINTER_QUERY = '(hover: none)';
+
+export function useIsTouch(): boolean {
+  return useMediaQuery(COARSE_POINTER_QUERY);
+}
