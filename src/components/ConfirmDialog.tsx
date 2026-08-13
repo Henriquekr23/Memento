@@ -59,38 +59,36 @@ export function ConfirmDialog({
         aria-label={cancelLabel}
         tabIndex={-1}
         onClick={onCancel}
-        className="absolute inset-0 cursor-default bg-neutral-950/70 backdrop-blur-sm"
+        className="absolute inset-0 cursor-default bg-[color-mix(in_srgb,var(--color-neutral-900)_50%,transparent)] backdrop-blur-sm"
       />
 
-      <div className="relative w-full max-w-sm rounded-2xl border border-white/10 bg-neutral-900 p-5 shadow-2xl">
-        <h2 id="confirm-title" className="text-base font-semibold text-white">
+      <div className="elev-lg relative flex w-full max-w-sm flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-divider)] bg-[var(--color-surface)] p-[var(--space-4)]">
+        <h2
+          id="confirm-title"
+          className="m-0 font-[family-name:var(--font-heading)] text-xl font-semibold"
+        >
           {title}
         </h2>
         <p
           id="confirm-description"
-          className="mt-2 text-sm leading-relaxed text-white/60"
+          className="m-0 text-sm leading-relaxed opacity-85"
         >
           {description}
         </p>
 
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-2 flex justify-end gap-2">
           <button
             ref={cancelRef}
             type="button"
             onClick={onCancel}
-            className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/80 transition hover:border-white/35 hover:text-white"
+            className="btn btn-secondary"
           >
             {cancelLabel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={[
-              'rounded-full px-4 py-2 text-sm font-medium transition',
-              destructive
-                ? 'bg-red-500 text-white hover:bg-red-400'
-                : 'bg-amber-400 text-neutral-950 hover:bg-amber-300',
-            ].join(' ')}
+            className={`btn ${destructive ? 'btn-danger' : 'btn-primary'}`}
           >
             {confirmLabel}
           </button>

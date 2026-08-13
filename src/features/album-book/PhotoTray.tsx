@@ -42,8 +42,8 @@ function TrayPhoto({ photo, onPlace }: TrayPhotoProps) {
         className={[
           'group relative block h-24 w-24 cursor-grab overflow-hidden rounded-lg border transition active:cursor-grabbing',
           isDragging
-            ? 'border-white/10 opacity-30'
-            : 'border-white/15 hover:border-amber-400 hover:shadow-lg hover:shadow-amber-400/10',
+            ? 'border-[var(--color-divider)] opacity-30'
+            : 'border-[var(--color-divider)] hover:border-[var(--color-accent)] hover:shadow-lg hover:shadow-amber-400/10',
         ].join(' ')}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -54,10 +54,10 @@ function TrayPhoto({ photo, onPlace }: TrayPhotoProps) {
           loading="lazy"
           className="h-full w-full select-none object-cover"
         />
-        <span className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/85 to-transparent px-1.5 pb-1 pt-4 text-[10px] text-white/80">
+        <span className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-[color-mix(in_srgb,var(--color-neutral-900)_88%,transparent)] to-transparent px-1.5 pb-1 pt-4 text-[10px] text-[color-mix(in_srgb,var(--color-text)_80%,transparent)]">
           {formatDate(photo.timestamp)}
         </span>
-        <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-neutral-950/75 text-xs font-medium text-amber-300 opacity-0 transition group-hover:opacity-100">
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[var(--color-surface)] text-xs font-medium text-[var(--color-accent-700)] opacity-0 transition group-hover:opacity-100">
           + colocar
         </span>
       </button>
@@ -67,6 +67,8 @@ function TrayPhoto({ photo, onPlace }: TrayPhotoProps) {
 
 interface PhotoTrayProps {
   photos: Photo[];
+  /** Quantas fotos estão nas páginas — o resto do total, que é `photos`. */
+  albumCount: number;
   isImporting: boolean;
   onPlace: (photoId: string) => void;
   onAddFiles: (files: File[]) => void;
@@ -84,10 +86,12 @@ interface PhotoTrayProps {
  */
 export function PhotoTray({
   photos,
+  albumCount,
   isImporting,
   onPlace,
   onAddFiles,
 }: PhotoTrayProps) {
+  const totalCount = albumCount + photos.length;
   const { setNodeRef, isOver, active } = useDroppable({ id: TRAY_DROP_ID });
 
   const isReceiving =
@@ -98,34 +102,41 @@ export function PhotoTray({
       ref={setNodeRef}
       aria-label="Depósito de fotos"
       className={[
-        'select-none rounded-2xl border border-dashed p-3 transition',
+        'select-none rounded-[var(--radius-md)] border border-dashed p-3 transition',
         isReceiving
-          ? 'border-amber-400 bg-amber-400/10'
-          : 'border-white/15 bg-white/[0.03]',
+          ? 'border-[var(--color-accent)] bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)]'
+          : 'border-[var(--color-divider)] bg-transparent',
       ].join(' ')}
     >
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h2 className="flex items-center gap-2 text-xs font-medium text-white/70">
+      {/* Título à esquerda, ação à direita, e a dica só quando há o que fazer
+          com ela: vazio, a instrução vive no centro do próprio espaço vazio,
+          onde o olho já está procurando. */}
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <h2 className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.08em] text-[color-mix(in_srgb,var(--color-text)_55%,transparent)]">
           Depósito
           {photos.length > 0 && (
-            <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[11px] text-amber-300">
+            <span className="rounded-full bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] px-2 py-0.5 text-[11px] tabular-nums text-[var(--color-accent-700)]">
               {photos.length}
             </span>
+          )}
+        </h2>
+
+        <div className="flex items-center gap-3">
+          {photos.length > 0 && (
+            <p className="hidden text-[11px] text-[color-mix(in_srgb,var(--color-text)_40%,transparent)] sm:block">
+              clique para colocar na página aberta, ou arraste até ela
+            </p>
           )}
           <AddPhotosButton onFilesSelected={onAddFiles} disabled={isImporting}>
             {isImporting ? 'lendo…' : '+ Fotos'}
           </AddPhotosButton>
-        </h2>
-        <p className="text-[11px] text-white/40">
-          {photos.length === 0
-            ? 'arraste uma foto da página para cá (ou use o ↑ no canto dela) para tirá-la do álbum'
-            : 'clique para colocar na página aberta, ou arraste até a página que quiser'}
-        </p>
+        </div>
       </div>
 
       {photos.length === 0 ? (
-        <p className="py-4 text-center text-xs text-white/25">
-          Nenhuma foto aqui — todas estão no álbum.
+        <p className="mx-auto max-w-[46ch] py-5 text-center text-xs leading-5 text-[color-mix(in_srgb,var(--color-text)_35%,transparent)]">
+          Nenhuma foto aqui — todas estão no álbum. Arraste uma foto da página
+          para cá (ou use o ↑ no canto dela) para tirá-la.
         </p>
       ) : (
         <ul className="flex gap-2 overflow-x-auto pb-1">
@@ -134,6 +145,13 @@ export function PhotoTray({
           ))}
         </ul>
       )}
+
+      {/* A contagem mora aqui e não na barra: é sobre estas fotos, e no canto
+          ela informa sem disputar atenção com o livro. */}
+      <p className="mt-1 text-right text-[11px] tabular-nums text-[color-mix(in_srgb,var(--color-text)_35%,transparent)]">
+        {albumCount} de {totalCount} {totalCount === 1 ? 'foto' : 'fotos'} no
+        álbum
+      </p>
     </section>
   );
 }

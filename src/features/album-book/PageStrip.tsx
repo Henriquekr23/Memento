@@ -29,6 +29,8 @@ interface PageStripProps {
   spreadOfPage: (page: AlbumPage) => number | null;
   onReorder: (fromIndex: number, toIndex: number) => void;
   onSelectPage: (page: AlbumPage) => void;
+  onAddPage: () => void;
+  onRemovePage: (page: AlbumPage) => void;
 }
 
 function PageThumb({
@@ -36,11 +38,13 @@ function PageThumb({
   index,
   isCurrent,
   onSelect,
+  onRemove,
 }: {
   page: AlbumPage;
   index: number;
   isCurrent: boolean;
   onSelect: () => void;
+  onRemove: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: page.key });
@@ -51,7 +55,7 @@ function PageThumb({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={isDragging ? 'z-10 opacity-80' : ''}
+      className={`group/thumb relative ${isDragging ? 'z-10 opacity-80' : ''}`}
     >
       <button
         type="button"
@@ -66,12 +70,19 @@ function PageThumb({
         className={[
           'group relative block h-20 w-16 cursor-grab overflow-hidden rounded-md border transition active:cursor-grabbing',
           isCurrent
-            ? 'border-amber-400 shadow-lg shadow-amber-400/10'
-            : 'border-white/15 hover:border-white/40',
+            ? 'border-[var(--color-accent)] shadow-lg shadow-amber-400/10'
+            : 'border-[var(--color-divider)] hover:border-[var(--color-divider)]',
         ].join(' ')}
         style={{ background: 'var(--paper-base)' }}
       >
-        {page.kind === 'story' ? (
+        {page.kind === 'photos' && page.photos.length === 0 ? (
+          <span
+            className="flex h-full items-center justify-center text-[10px]"
+            style={{ color: 'var(--paper-ink-soft)' }}
+          >
+            vazia
+          </span>
+        ) : page.kind === 'story' ? (
           <span className="flex h-full flex-col justify-center gap-1 px-2">
             {[85, 70, 90, 60].map((width, line) => (
               <span
@@ -106,11 +117,36 @@ function PageThumb({
         )}
 
         <span
-          className="absolute bottom-0 right-0 rounded-tl bg-neutral-950/70 px-1 text-[9px] leading-tight text-white/70"
+          className="absolute bottom-0 right-0 rounded-tl bg-[color-mix(in_srgb,var(--color-neutral-900)_88%,transparent)] px-1 text-[9px] leading-tight text-[color-mix(in_srgb,var(--color-text)_70%,transparent)]"
           aria-hidden
         >
           {index + 1}
         </span>
+      </button>
+
+      {/* Dentro dos limites da miniatura: a lista rola na horizontal, e
+          overflow-x recorta o que sai por cima — o círculo ficava cortado. */}
+      <button
+        type="button"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={onRemove}
+        title={
+          page.kind === 'story'
+            ? 'Remover esta página de texto'
+            : 'Remover a página — as fotos voltam para o depósito'
+        }
+        aria-label="Remover página"
+        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-neutral-900)_88%,transparent)] text-[10px] leading-none text-[color-mix(in_srgb,var(--color-text)_80%,transparent)] opacity-0 shadow-md backdrop-blur transition hover:bg-red-500 hover:text-[var(--color-text)] group-hover/thumb:opacity-100 focus-visible:opacity-100"
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M4 7h16M10 4h4M9 7v12M15 7v12M6 7l1 14h10l1-14"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
     </li>
   );
@@ -129,13 +165,13 @@ export function PageStrip({
   spreadOfPage,
   onReorder,
   onSelectPage,
+  onAddPage,
+  onRemovePage,
 }: PageStripProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-
-  if (pages.length === 0) return null;
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -148,12 +184,12 @@ export function PageStrip({
 
   return (
     <section aria-label="Páginas do álbum" className="select-none">
-      <div className="mb-2 flex items-baseline justify-between gap-3">
-        <h2 className="text-xs font-medium text-white/70">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <h2 className="flex items-center gap-2 text-xs font-medium text-[color-mix(in_srgb,var(--color-text)_70%,transparent)]">
           Páginas
-          <span className="ml-2 text-[11px] text-white/35">{pages.length}</span>
+          <span className="text-[11px] text-[color-mix(in_srgb,var(--color-text)_35%,transparent)]">{pages.length}</span>
         </h2>
-        <p className="text-[11px] text-white/35">
+        <p className="text-[11px] text-[color-mix(in_srgb,var(--color-text)_35%,transparent)]">
           clique para ir até a página · arraste para reordenar
         </p>
       </div>
@@ -175,8 +211,23 @@ export function PageStrip({
                 index={index}
                 isCurrent={spreadOfPage(page) === currentSpread}
                 onSelect={() => onSelectPage(page)}
+                onRemove={() => onRemovePage(page)}
               />
             ))}
+
+            {/* Página fantasma: o lugar de criar uma página nova é o fim da
+                lista, onde ela vai aparecer. */}
+            <li className="shrink-0">
+              <button
+                type="button"
+                onClick={onAddPage}
+                title="Nova página em branco, pronta para receber fotos do depósito"
+                aria-label="Adicionar página"
+                className="flex h-20 w-16 items-center justify-center rounded-md border border-dashed border-[var(--color-divider)] text-lg text-[color-mix(in_srgb,var(--color-text)_40%,transparent)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent-700)]"
+              >
+                +
+              </button>
+            </li>
           </ul>
         </SortableContext>
       </DndContext>

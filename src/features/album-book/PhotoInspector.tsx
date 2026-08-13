@@ -49,7 +49,7 @@ function Slider({
   format: (value: number) => string;
 }) {
   return (
-    <label className="flex min-w-36 flex-1 items-center gap-2 text-xs text-white/60">
+    <label className="flex min-w-36 flex-1 items-center gap-2 text-xs text-[color-mix(in_srgb,var(--color-text)_60%,transparent)]">
       <span className="w-20 shrink-0">{label}</span>
       <input
         type="range"
@@ -58,9 +58,9 @@ function Slider({
         step={step}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-white/15 accent-amber-400"
+        className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-[var(--color-surface)] accent-[var(--color-accent)]"
       />
-      <span className="w-10 shrink-0 text-right tabular-nums text-white/45">
+      <span className="w-10 shrink-0 text-right tabular-nums text-[color-mix(in_srgb,var(--color-text)_45%,transparent)]">
         {format(value)}
       </span>
     </label>
@@ -92,7 +92,7 @@ export function PhotoInspector({
     adjustment.rotation === DEFAULT_ADJUSTMENT.rotation;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-white/10 bg-neutral-900/80 px-4 py-3 backdrop-blur">
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 card rounded-[var(--radius-md)] px-4 py-3">
       <div className="flex min-w-0 items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -101,10 +101,10 @@ export function PhotoInspector({
           className="h-10 w-10 shrink-0 rounded object-cover"
         />
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-white" title={photo.fileName}>
+          <p className="truncate text-xs font-medium text-[var(--color-text)]" title={photo.fileName}>
             {photo.fileName}
           </p>
-          <p className="text-[11px] text-white/40">
+          <p className="text-[11px] text-[color-mix(in_srgb,var(--color-text)_40%,transparent)]">
             {formatDateTime(photo.timestamp)}
           </p>
         </div>
@@ -154,7 +154,7 @@ export function PhotoInspector({
             onClick={() => onAdjust(photo.id, { rotation: 0 })}
             disabled={rotation === 0}
             title="Deixar a foto reta"
-            className="shrink-0 rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-white/70 transition hover:border-white/35 hover:text-white disabled:opacity-25"
+            className="shrink-0 btn btn-secondary btn-sm disabled:opacity-25"
           >
             endireitar
           </button>
@@ -186,7 +186,7 @@ export function PhotoInspector({
           type="button"
           onClick={() => onReset(photo.id)}
           disabled={isDefault && composeMode === 'aligned'}
-          className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-white/70 transition hover:border-white/35 hover:text-white disabled:opacity-30"
+          className="btn btn-secondary btn-sm disabled:opacity-30"
         >
           Voltar ao padrão
         </button>
@@ -194,7 +194,7 @@ export function PhotoInspector({
           type="button"
           onClick={() => onSendToTray(photo.id)}
           title="Tira a foto da página e devolve ao depósito, sem apagar"
-          className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-white/60 transition hover:border-amber-400/50 hover:text-amber-200"
+          className="btn btn-secondary btn-sm"
         >
           ↑ Depósito
         </button>
@@ -202,13 +202,13 @@ export function PhotoInspector({
           type="button"
           onClick={onClose}
           aria-label="Fechar ajustes"
-          className="rounded-full px-2 py-1.5 text-xs text-white/40 transition hover:text-white"
+          className="rounded-full px-2 py-1.5 text-xs text-[color-mix(in_srgb,var(--color-text)_40%,transparent)] transition hover:text-[var(--color-text)]"
         >
           ✕
         </button>
       </div>
 
-      <p className="w-full text-[11px] text-white/35">
+      <p className="w-full text-[11px] text-[color-mix(in_srgb,var(--color-text)_35%,transparent)]">
         {composeMode === 'free'
           ? 'Arraste a foto para movê-la pela página · ◢ redimensiona · legenda logo abaixo da foto'
           : 'Arraste a foto para reenquadrar · a alça ⠿ troca de lugar com outra · legenda logo abaixo da foto'}

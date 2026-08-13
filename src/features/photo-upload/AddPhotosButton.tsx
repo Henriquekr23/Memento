@@ -44,7 +44,7 @@ export function AddPhotosButton({
         onClick={() => inputRef.current?.click()}
         className={
           className ||
-          'rounded-full border border-white/15 px-3 py-1 text-[11px] text-white/70 transition hover:border-amber-400/60 hover:text-amber-200 disabled:opacity-40'
+          'btn btn-secondary btn-sm disabled:opacity-40'
         }
       >
         {children}

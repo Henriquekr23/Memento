@@ -41,11 +41,11 @@ export function PhotoDropzone({
         handleFiles(event.dataTransfer.files);
       }}
       className={[
-        'rounded-2xl border border-dashed transition-colors',
-        compact ? 'px-5 py-4' : 'px-8 py-14 text-center',
+        'rounded-[var(--radius-md)] border border-dashed transition-colors',
+        compact ? 'px-5 py-4' : 'px-8 py-16 text-center',
         isDragging
-          ? 'border-amber-400 bg-amber-400/10'
-          : 'border-white/20 bg-white/[0.03] hover:border-white/35',
+          ? 'border-[var(--color-accent)] bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)]'
+          : 'border-[var(--color-divider)] bg-transparent hover:border-[var(--color-divider)]',
         disabled ? 'pointer-events-none opacity-50' : '',
       ].join(' ')}
     >
@@ -65,32 +65,27 @@ export function PhotoDropzone({
         className={
           compact
             ? 'flex flex-wrap items-center justify-between gap-3'
-            : 'flex flex-col items-center gap-3'
+            : 'flex flex-col items-center gap-4'
         }
       >
-        <div className={compact ? '' : 'flex flex-col items-center gap-2'}>
-          {!compact && (
-            <span aria-hidden className="text-3xl">
-              📷
-            </span>
-          )}
-          <p className="text-sm font-medium text-white">
-            {compact
-              ? 'Adicionar mais fotos ao álbum'
-              : 'Arraste as fotos da sua viagem para cá'}
-          </p>
-          {!compact && (
-            <p className="max-w-md text-sm text-white/50">
-              As fotos são lidas no seu navegador. Nenhum arquivo é enviado para
-              nenhum servidor.
-            </p>
-          )}
-        </div>
+        <p
+          className={
+            compact
+              ? 'text-sm font-medium text-[var(--color-text)]'
+              : 'font-[family-name:var(--font-heading)] text-[19px] font-normal text-[var(--color-text)]'
+          }
+        >
+          {compact
+            ? 'Adicionar mais fotos ao álbum'
+            : isDragging
+              ? 'Pode soltar'
+              : 'Arraste suas fotos para cá'}
+        </p>
 
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-amber-300"
+          className="btn btn-primary"
         >
           Selecionar fotos
         </button>

@@ -1,24 +1,822 @@
 @import "tailwindcss";
 
+/* ════════════════════════════════════════════════════════════════════════
+   Classical — tokens do design system.
+   Portado de `_ds/classical/styles.css`. Esta é a fonte da verdade do visual:
+   nenhum componente inventa cor, fonte ou espaçamento fora daqui.
+
+   As fontes vêm por `next/font` (auto-hospedadas em `layout.tsx`), e não pelo
+   @import do Google Fonts do arquivo original: assim não há requisição a
+   terceiros em tempo de execução — o que também mantém a CSP (`font-src
+   'self'`) intacta e evita o salto de layout na primeira pintura.
+   ════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  --background: #0a0a0a;
-  --foreground: #f5f5f5;
+  --color-bg: #f3f2f2;
+  --color-surface: #eae9e9;
+  --color-text: #201f1d;
+  --color-accent: #b68235;
+  --color-divider: color-mix(in srgb, #201f1d 16%, transparent);
+
+  --color-neutral-100: #f8f4f4;
+  --color-neutral-200: #eae7e7;
+  --color-neutral-300: #d7d3d3;
+  --color-neutral-400: #bab6b6;
+  --color-neutral-500: #9b9797;
+  --color-neutral-600: #7d7979;
+  --color-neutral-700: #605d5d;
+  --color-neutral-800: #444141;
+  --color-neutral-900: #2d2b2b;
+
+  --color-accent-100: #fff3e4;
+  --color-accent-200: #ffe3bf;
+  --color-accent-300: #facb8d;
+  --color-accent-400: #e1ad66;
+  --color-accent-500: #c28d41;
+  --color-accent-600: #a06f24;
+  --color-accent-700: #7d5411;
+  --color-accent-800: #5a3b0a;
+  --color-accent-900: #3a270d;
+
+  --space-1: 4.6px;
+  --space-2: 9.2px;
+  --space-3: 13.8px;
+  --space-4: 18.4px;
+  --space-6: 27.6px;
+  --space-8: 36.8px;
+
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 7px;
+
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #2d2b2b 14%, transparent);
+  --shadow-md: 0 3px 10px color-mix(in srgb, #2d2b2b 16%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2d2b2b 22%, transparent);
+}
+
+/* Modo escuro. O padrão segue o sistema por CSS puro — sem JavaScript e sem
+   divergência de hidratação; `data-theme` no <html> tem a palavra final. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-bg: var(--color-neutral-900);
+    --color-surface: var(--color-neutral-800);
+    --color-text: var(--color-neutral-100);
+    --color-divider: color-mix(in srgb, #f8f4f4 18%, transparent);
+    --color-accent-700: var(--color-accent-400);
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-bg: var(--color-neutral-900);
+  --color-surface: var(--color-neutral-800);
+  --color-text: var(--color-neutral-100);
+  --color-divider: color-mix(in srgb, #f8f4f4 18%, transparent);
+  --color-accent-700: var(--color-accent-400);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-ink: var(--color-text);
+  --color-accent: var(--color-accent);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-heading);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  text-wrap: pretty;
+  transition:
+    background-color 0.35s ease,
+    color 0.35s ease;
 }
 
-/* Evita seleção de texto acidental durante o drag-and-drop. */
-[data-dnd-dragging] {
-  user-select: none;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--space-2);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+img {
+  display: block;
+  max-width: 100%;
+}
+
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Componentes do sistema ─────────────────────────────────────────────
+   Mesmas classes do design system original. A regra do Classical é usar
+   estas, e não inventar equivalentes paralelas em cada tela. */
+
+.kicker {
+  display: block;
+  font-size: 13px;
+  line-height: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-700);
+  font-feature-settings: 'tnum' 1;
+}
+
+.muted {
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+
+.hr {
+  height: 1px;
+  border: 0;
+  margin: 0;
+  background: var(--color-divider);
+}
+/* Mesma sangria da barra do álbum. Precisa ser classe: `.hr` fica fora das
+   layers do Tailwind e o `margin: 0` dela vencia qualquer `-mx-*` utilitário —
+   era por isso que as duas réguas da tela tinham comprimentos diferentes. */
+.hr-bleed {
+  margin-inline: calc(clamp(20px, 5vw, 72px) * -1);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid transparent;
+  padding: var(--space-2) calc(var(--space-3) * 1.2);
+  border-radius: var(--radius-md);
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-primary {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.btn-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+.btn-primary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+.btn-secondary {
+  border-color: var(--color-divider);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+.btn-secondary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text) 14%, transparent);
+}
+.btn-ghost {
+  color: var(--color-accent);
+  padding-inline: var(--space-1);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+.btn-danger {
+  color: #a33;
+  border-color: color-mix(in srgb, #a33 45%, transparent);
+}
+.btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, #a33 12%, transparent);
+}
+/* Botão que fica "ligado" — o painel de estilo, por exemplo. Mesmo desenho do
+   ativo do interruptor, para os dois estados de "pressionado" combinarem. */
+.btn-secondary[aria-pressed='true'] {
+  color: var(--color-accent-700);
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+.btn-sm {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+
+/* A marca. Clicável em todas as telas: é o caminho de volta ao início, então
+   o hover precisa deixar claro que ali há um link. */
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  color: inherit;
+  transition: color 0.18s ease;
+}
+.wordmark-glyph {
+  color: var(--color-accent);
+  transition: transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.wordmark:hover {
+  color: var(--color-accent-700);
+}
+.wordmark:hover .wordmark-glyph {
+  transform: rotate(-4deg) scale(1.06);
+}
+
+/* Escolha de como montar o álbum: dois cartões que se comportam como rádio.
+   O anel do ponto é feito com `inset box-shadow` para não mexer no tamanho do
+   elemento — mudar borda no estado ativo empurraria o texto ao lado. */
+.mode-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-4);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+.mode-card:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+.mode-card[aria-pressed='true'] {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+.mode-dot {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.mode-card[aria-pressed='true'] .mode-dot {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  box-shadow: inset 0 0 0 2.5px var(--color-bg);
+}
+.mode-card[aria-pressed='true'] .mode-title {
+  color: var(--color-accent-700);
+}
+
+/* Link de navegação: o filete cresce da esquerda, no lugar do sublinhado do
+   navegador. Só transform e color animam — nada que force layout. */
+.nav-link {
+  position: relative;
+  padding-bottom: 3px;
+  color: inherit;
+  transition: color 0.18s ease;
+}
+.nav-link::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.24s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.nav-link:hover {
+  color: var(--color-accent-700);
+}
+.nav-link:hover::after,
+.nav-link:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-text);
+  caret-color: var(--color-accent);
+  background: transparent;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+}
+.input:hover {
+  border-color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+.input:focus-visible {
+  border-color: var(--color-accent);
+  outline-offset: 0;
+}
+
+/* Campo de destaque — o nome do álbum é o único texto que o usuário escreve
+   antes de ver o álbum, então merece o corpo da tipografia de título.
+   Precisa ser uma classe (e não utilitários) porque `.input` está fora das
+   layers do Tailwind e venceria `text-[20px]` por prioridade de cascata. */
+.input-lg {
+  min-height: 54px;
+  padding: 10px 14px;
+  font-family: var(--font-heading);
+  font-size: 20px;
+}
+
+.field > label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 5px;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: 1px solid var(--color-divider);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 3px 10px;
+  border-radius: calc(var(--radius-md) * 0.75);
+}
+.tag-accent {
+  background: var(--color-accent-100);
+  color: var(--color-accent-800);
+}
+.tag-neutral {
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-800);
+}
+.tag-outline {
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Botão de duas posições que precisa *parecer* um interruptor: o trilho é
+   afundado (fundo mais escuro que a página) e a opção ativa é uma pastilha
+   elevada — o contraste entre os dois planos é o que diz "isto alterna". */
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.switch-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 1px);
+  background: transparent;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.switch-opt:hover {
+  color: var(--color-text);
+}
+.switch-opt[aria-pressed='true'] {
+  background: var(--color-bg);
+  color: var(--color-accent-700);
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
+/* Paginação do álbum: um corpo só, em vez de dois botões e um texto soltos. */
+.pager {
+  display: inline-flex;
+  align-items: stretch;
+  min-height: 36px;
+  overflow: hidden;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+}
+.pager-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-heading);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+}
+.pager-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+.pager-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+.pager-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 108px;
+  padding: 7px 12px;
+  border-inline: 1px solid var(--color-divider);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+
+/* Nome do álbum na barra: sem caixa, porque ali ele é o título do que está na
+   tela — a caixa só aparece ao passar o mouse, dizendo que dá para editar. */
+.title-input {
+  width: 100%;
+  padding: 4px 0;
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text);
+  caret-color: var(--color-accent);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.18s ease;
+}
+.title-input::placeholder {
+  font-weight: 400;
+  color: color-mix(in srgb, var(--color-text) 30%, transparent);
+}
+.title-input:hover {
+  border-bottom-color: var(--color-divider);
+}
+.title-input:focus {
+  border-bottom-color: var(--color-accent);
+}
+
+.seg {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+}
+.seg-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-family: inherit;
+}
+.seg-opt + .seg-opt {
+  border-left: 1px solid var(--color-divider);
+}
+.seg-opt[aria-pressed='true'] {
+  color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+.seg-opt[aria-pressed='false']:hover {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+/* Gaveta de estilo. Fica sempre no DOM para poder deslizar; `visibility` é o
+   que a tira do caminho quando fechada (foco e leitor de tela junto), e ela
+   só muda depois da transição terminar — daí o `0s linear` atrasado. */
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  border: 0;
+  padding: 0;
+  background: color-mix(in srgb, #0b0b0b 55%, transparent);
+  cursor: default;
+}
+.drawer {
+  position: fixed;
+  inset-block: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  width: min(340px, 88vw);
+  overflow-y: auto;
+  visibility: hidden;
+  background: var(--color-bg);
+  border-left: 1px solid var(--color-divider);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(100%);
+  transition:
+    transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1),
+    visibility 0s linear 0.28s;
+}
+.drawer[data-open='true'] {
+  visibility: visible;
+  transform: translateX(0);
+  transition:
+    transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1),
+    visibility 0s;
+}
+
+/* A aba que puxa a gaveta: encostada na borda da janela, lida de cima para
+   baixo, do jeito das abas de um fichário. */
+.drawer-handle {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  z-index: 30;
+  padding: 18px 7px;
+  writing-mode: vertical-rl;
+  border: 1px solid var(--color-divider);
+  border-right: 0;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  background: var(--color-bg);
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.drawer-handle:hover {
+  color: var(--color-accent-700);
+  border-color: var(--color-accent);
+  transform: translateY(-50%) translateX(-3px);
+}
+
+/* Fotografia: moldura fina com gradação de arquivo, como prancha colada. */
+.plate {
+  box-sizing: border-box;
+  border: 6px solid var(--color-surface);
+  outline: 1px solid var(--color-divider);
+}
+.plate-graded {
+  filter: sepia(0.22) saturate(0.82) contrast(1.05);
+}
+
+/* Prancha que é um link. A inclinação vem das variáveis do ponteiro (escritas
+   fora do React); o hover só acrescenta profundidade ao mesmo transform, para
+   não haver duas regras disputando a propriedade. */
+.plate-link {
+  display: block;
+  transform: perspective(900px) rotateX(calc(var(--my) * -6deg)) rotateY(calc(var(--mx) * 8deg));
+  transition:
+    transform 0.2s ease,
+    outline-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.plate-link:hover,
+.plate-link:focus-visible {
+  outline-color: var(--color-accent);
+  box-shadow: var(--shadow-lg);
+  transform: perspective(900px) rotateX(calc(var(--my) * -6deg))
+    rotateY(calc(var(--mx) * 8deg)) translateZ(14px);
+}
+.plate-cta {
+  opacity: 0.72;
+  transition: opacity 0.22s ease;
+}
+.plate-link:hover .plate-cta,
+.plate-link:focus-visible .plate-cta {
+  opacity: 1;
+}
+.plate-cta-arrow {
+  display: inline-block;
+  transition: transform 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.plate-link:hover .plate-cta-arrow,
+.plate-link:focus-visible .plate-cta-arrow {
+  transform: translateX(4px);
+}
+
+/* Passo de "Como funciona": o filete de cima e o número marcam qual está
+   aberto. O detalhe abre por grid-template-rows 0fr → 1fr, que anima altura
+   automática sem medir nada em JavaScript. */
+.step {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--color-divider);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: border-top-color 0.2s ease;
+}
+.step:hover {
+  border-top-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
+.step[aria-expanded='true'] {
+  border-top-color: var(--color-accent);
+}
+.step-num {
+  color: color-mix(in srgb, var(--color-text) 40%, transparent);
+  transition:
+    color 0.2s ease,
+    transform 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.step:hover .step-num {
+  color: color-mix(in srgb, var(--color-text) 75%, transparent);
+  transform: translateY(-2px);
+}
+.step[aria-expanded='true'] .step-num {
+  color: var(--color-accent);
+}
+.step-detail {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.3s ease,
+    opacity 0.25s ease;
+}
+.step[aria-expanded='true'] .step-detail {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.elev-sm {
+  box-shadow: var(--shadow-sm);
+}
+.elev-md {
+  box-shadow: var(--shadow-md);
+}
+.elev-lg {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Ícone do tema resolvido só em CSS: o botão troca `data-theme` no <html> e
+   o ícone certo aparece sozinho, sem estado no React nem risco de hidratação
+   divergente ao ler a preferência do sistema. */
+.theme-icon-sun {
+  display: none;
+}
+.theme-icon-moon {
+  display: block;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .theme-icon-sun {
+    display: block;
+  }
+  :root:not([data-theme='light']) .theme-icon-moon {
+    display: none;
+  }
+}
+:root[data-theme='dark'] .theme-icon-sun {
+  display: block;
+}
+:root[data-theme='dark'] .theme-icon-moon {
+  display: none;
+}
+
+/* ── Animações da landing ─────────────────────────────────────────────── */
+@keyframes mm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes mm-dash {
+  to {
+    stroke-dashoffset: -220;
+  }
+}
+@keyframes mm-pin {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.mm-rise {
+  animation: mm-rise 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.mm-dash {
+  animation: mm-dash 7s linear infinite;
+}
+.mm-dash-fast {
+  animation: mm-dash 4.5s linear infinite;
+}
+.mm-pin {
+  animation: mm-pin 0.4s ease-out;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Colunas com filete entre elas, como no original. */
+.mm-cols {
+  position: relative;
+}
+.mm-cols::before,
+.mm-cols::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-divider);
+}
+.mm-cols::before {
+  left: calc((100% - 112px) / 3 + 28px);
+}
+.mm-cols::after {
+  left: calc(2 * (100% - 112px) / 3 + 84px);
+}
+@media (max-width: 720px) {
+  .mm-cols::before,
+  .mm-cols::after {
+    content: none;
+  }
 }

@@ -6,16 +6,13 @@ interface StoryPageProps {
   story: StoryInsertion;
   interactive: boolean;
   onChange: (id: string, patch: Partial<Pick<StoryInsertion, 'title' | 'body'>>) => void;
-  onRemove: (id: string) => void;
 }
 
-/** Página inteira de texto: para contar a história por trás das fotos. */
-export function StoryPage({
-  story,
-  interactive,
-  onChange,
-  onRemove,
-}: StoryPageProps) {
+/**
+ * Página inteira de texto: para contar a história por trás das fotos.
+ * Remover é papel da lixeira na tira de páginas — um só lugar para isso.
+ */
+export function StoryPage({ story, interactive, onChange }: StoryPageProps) {
   const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
 
   return (
@@ -42,23 +39,12 @@ export function StoryPage({
         onChange={(event) => onChange(story.id, { body: event.target.value })}
         onPointerDown={stop}
         disabled={!interactive}
-        placeholder="Escreva o que aconteceu neste trecho da viagem…"
+        placeholder="Escreva o que aconteceu aqui…"
         aria-label="Texto da página"
         style={{ color: 'var(--paper-ink)' }}
         className="min-h-0 w-full flex-1 select-text resize-none border-0 bg-transparent text-sm leading-relaxed outline-none placeholder:text-current placeholder:opacity-25"
       />
 
-      {interactive && (
-        <button
-          type="button"
-          onPointerDown={stop}
-          onClick={() => onRemove(story.id)}
-          className="shrink-0 self-start rounded-full px-2 py-1 text-[11px] opacity-0 transition hover:underline group-hover/page:opacity-60"
-          style={{ color: 'var(--paper-ink-soft)' }}
-        >
-          remover esta página
-        </button>
-      )}
     </div>
   );
 }

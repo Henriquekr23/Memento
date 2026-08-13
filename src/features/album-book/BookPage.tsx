@@ -20,9 +20,8 @@ import {
 } from '@/types/page';
 
 import type { PageSide } from './bookGeometry';
-import { LayoutPicker } from './LayoutPicker';
+import { PageControls } from './PageControls';
 import { PhotoSlot } from './PhotoSlot';
-import { isTrayDragId } from './PhotoTray';
 import { StoryPage } from './StoryPage';
 
 export interface BookPageProps {
@@ -57,20 +56,74 @@ export interface BookPageProps {
     id: string,
     patch: Partial<Pick<StoryInsertion, 'title' | 'body'>>,
   ) => void;
-  onRemoveStory: (id: string) => void;
+  /** Troca o tipo da página entre fotos e texto. */
+  onConvertPage: (page: AlbumPage, to: 'story' | 'photos') => void;
   onSendToTray: (photoId: string) => void;
 }
 
 const PAPER_TEXTURE =
   'radial-gradient(circle at 18% 12%, rgba(255,255,255,0.5), transparent 45%), radial-gradient(circle at 82% 78%, rgba(0,0,0,0.05), transparent 55%)';
 
-/** Prefixo do id de drop de uma página inteira. */
+/** Prefixos dos alvos de drop de uma página: a folha inteira e cada vaga. */
 export const PAGE_DROP_PREFIX = 'page:';
+export const SLOT_DROP_PREFIX = 'slot:';
 
+/**
+ * Chave da página a partir de um id de drop, seja da folha ou de uma vaga.
+ * A vaga tem alvo próprio para o `closestCenter` não preferir a foto vizinha
+ * quando o usuário mira justamente no espaço em branco.
+ */
 export function pageKeyFromDropId(id: string): string | null {
-  return id.startsWith(PAGE_DROP_PREFIX)
-    ? id.slice(PAGE_DROP_PREFIX.length)
-    : null;
+  if (id.startsWith(PAGE_DROP_PREFIX)) return id.slice(PAGE_DROP_PREFIX.length);
+  if (id.startsWith(SLOT_DROP_PREFIX)) {
+    // slot:<pageKey>#<índice>
+    return id.slice(SLOT_DROP_PREFIX.length).split('#')[0] || null;
+  }
+  return null;
+}
+
+/** Vaga livre do layout: decorativa e, ao mesmo tempo, alvo de drop. */
+function EmptySlot({
+  pageKey,
+  index,
+  slot,
+  disabled,
+}: {
+  pageKey: string;
+  index: number;
+  slot: SlotRect;
+  disabled: boolean;
+}) {
+  const { setNodeRef, isOver, active } = useDroppable({
+    id: `${SLOT_DROP_PREFIX}${pageKey}#${index}`,
+    disabled,
+  });
+
+  const isTarget = isOver && active !== null;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        position: 'absolute',
+        left: `${slot.x}%`,
+        top: `${slot.y}%`,
+        width: `${slot.w}%`,
+        height: `${slot.h}%`,
+      }}
+      className="p-2"
+    >
+      <div
+        className={[
+          'h-full w-full rounded-[3px] border border-dashed transition',
+          isTarget ? 'border-[var(--color-accent)] bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] opacity-100' : 'opacity-25',
+        ].join(' ')}
+        style={{
+          borderColor: isTarget ? undefined : 'var(--paper-ink-soft)',
+        }}
+      />
+    </div>
+  );
 }
 
 /**
@@ -94,9 +147,9 @@ function PageDropArea({
   });
 
   const isFull = photoCount >= MAX_PHOTOS_PER_PAGE;
-  // Só destaca quando a foto vem do depósito: arraste entre fotos do álbum é
-  // troca de lugar, e a página inteira não é alvo disso.
-  const isTarget = isOver && active !== null && isTrayDragId(String(active.id));
+  // Vale tanto para foto vinda do depósito quanto para foto que está mudando
+  // de página — as duas terminam entrando nesta folha.
+  const isTarget = isOver && active !== null;
 
   return (
     <div ref={setNodeRef} className="relative min-h-0 flex-1">
@@ -105,7 +158,7 @@ function PageDropArea({
           aria-hidden
           className={[
             'pointer-events-none absolute inset-2 z-50 rounded-lg border-2 border-dashed',
-            isFull ? 'border-red-400/70 bg-red-500/10' : 'border-amber-400 bg-amber-400/10',
+            isFull ? 'border-red-400/70 bg-red-500/10' : 'border-[var(--color-accent)] bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)]',
           ].join(' ')}
         >
           <span className="absolute inset-x-0 bottom-2 text-center text-[11px] font-medium text-neutral-900">
@@ -160,7 +213,7 @@ export function BookPage(props: BookPageProps) {
               Memento
             </span>
             <h2 className="text-balance text-2xl font-semibold leading-tight sm:text-3xl">
-              {albumName || 'Minha viagem'}
+              {albumName || 'Meu álbum'}
             </h2>
             <span
               className="h-px w-16"
@@ -175,7 +228,7 @@ export function BookPage(props: BookPageProps) {
               className="mt-1 text-[11px] tracking-[0.2em] opacity-60"
               style={{ color: 'var(--cover-accent)' }}
             >
-              KEEP THE JOURNEY
+              GUARDE A MEMÓRIA
             </span>
           </div>
         ) : (
@@ -185,10 +238,10 @@ export function BookPage(props: BookPageProps) {
               style={{ background: 'var(--cover-accent)', opacity: 0.5 }}
             />
             <span className="text-[11px] tracking-[0.3em] opacity-70">
-              FIM DA VIAGEM
+              FIM DO ÁLBUM
             </span>
             <span className="text-[10px] opacity-45">
-              Memento · Keep the Journey
+              Memento · Guarde a memória
             </span>
           </div>
         )}
@@ -212,7 +265,7 @@ export function BookPage(props: BookPageProps) {
       >
         <div className="flex h-full flex-col justify-center gap-3 px-10">
           <h2 className="text-2xl font-semibold leading-tight">
-            {albumName || 'Minha viagem'}
+            {albumName || 'Meu álbum'}
           </h2>
           {albumMeta.firstDate && albumMeta.lastDate && (
             <p className="text-sm opacity-60">
@@ -248,11 +301,21 @@ export function BookPage(props: BookPageProps) {
         className={`group/page relative h-full w-full overflow-hidden ${rounded}`}
         style={paperStyle}
       >
+        {interactive && (
+          <div className="absolute right-4 top-3 z-10 opacity-0 transition focus-within:opacity-100 group-hover/page:opacity-100">
+            <PageControls
+              variant="text"
+              onChangeVariant={(variant) => {
+                if (variant !== 'text') props.onConvertPage(page, 'photos');
+              }}
+            />
+          </div>
+        )}
+
         <StoryPage
           story={page.story}
           interactive={interactive}
           onChange={props.onChangeStory}
-          onRemove={props.onRemoveStory}
         />
         <span className="pointer-events-none absolute bottom-3 left-0 right-0 text-center text-[10px] opacity-30">
           {page.number}
@@ -299,34 +362,18 @@ export function BookPage(props: BookPageProps) {
         {/* Fora do fluxo: no fluxo, ele roubava a largura do campo de legenda
             e a data ficava cortada mesmo com a página inteira livre. */}
         {interactive && (
-          <div className="absolute right-4 top-3 flex items-center gap-1.5 opacity-0 transition focus-within:opacity-100 group-hover/page:opacity-100">
-            {!isFree && (
-              <LayoutPicker
-                value={page.layoutId}
-                onChange={(layoutId) => props.onChangeLayout(page.key, layoutId)}
-              />
-            )}
-            <button
-              type="button"
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={() =>
+          <div className="absolute right-4 top-3 opacity-0 transition focus-within:opacity-100 group-hover/page:opacity-100">
+            <PageControls
+              variant={page.layoutId}
+              onChangeVariant={(variant) => {
+                if (variant === 'text') props.onConvertPage(page, 'story');
+                else props.onChangeLayout(page.key, variant);
+              }}
+              composeMode={composeMode}
+              onToggleComposeMode={() =>
                 props.onChangeComposeMode(page.key, isFree ? 'aligned' : 'free')
               }
-              aria-pressed={isFree}
-              title={
-                isFree
-                  ? 'Esta página está livre: arraste para mover, ◢ redimensiona, ↻ gira'
-                  : 'Nesta página as fotos seguem o layout — clique para soltá-las'
-              }
-              className={[
-                'rounded-full px-2.5 py-1.5 text-[11px] font-medium shadow-sm ring-1 ring-black/5 transition',
-                isFree
-                  ? 'bg-neutral-900 text-amber-300'
-                  : 'bg-white/80 text-neutral-500 hover:text-neutral-800',
-              ].join(' ')}
-            >
-              {isFree ? '✥ livre' : '▦ layout'}
-            </button>
+            />
           </div>
         )}
       </header>
@@ -370,24 +417,21 @@ export function BookPage(props: BookPageProps) {
             );
           })}
 
+          {page.photos.length === 0 && (
+            <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-xs opacity-45">
+              Página em branco — traga fotos do depósito
+            </p>
+          )}
+
           {!isFree &&
             layout.slots.slice(page.photos.length).map((slot, index) => (
-              <div
+              <EmptySlot
                 key={`empty-${index}`}
-                style={{
-                  position: 'absolute',
-                  left: `${slot.x}%`,
-                  top: `${slot.y}%`,
-                  width: `${slot.w}%`,
-                  height: `${slot.h}%`,
-                }}
-                className="p-2"
-              >
-                <div
-                  className="h-full w-full rounded-[3px] border border-dashed opacity-25"
-                  style={{ borderColor: 'var(--paper-ink-soft)' }}
-                />
-              </div>
+                pageKey={page.key}
+                index={page.photos.length + index}
+                slot={slot}
+                disabled={!interactive}
+              />
             ))}
         </div>
       </PageDropArea>

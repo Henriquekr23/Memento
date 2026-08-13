@@ -26,7 +26,7 @@ import { toDayKey } from './sortPhotos';
  * onde um álbum de verdade tem uma guarda.
  *
  * Regras do miolo:
- * - cada dia da viagem começa numa página nova (o álbum "respira" por dia);
+ * - cada dia começa numa página nova (o álbum "respira" por dia);
  * - a ordem manual é respeitada: se o usuário jogou uma foto de outro dia no
  *   meio, ela abre uma nova sequência em vez de voltar para o dia dela;
  * - `groupKeys` é a exceção: quando o usuário coloca uma foto numa página
@@ -60,6 +60,28 @@ export interface StoryInsertion {
 }
 
 export const STORY_ANCHOR_START = 'start';
+/** Âncora especial: a inserção fica sempre no fim do miolo. */
+export const STORY_ANCHOR_END = 'end';
+
+/**
+ * Página de fotos criada em branco pelo usuário, esperando receber fotos do
+ * depósito.
+ *
+ * Ela não existe enquanto folha de papel no modelo: o que existe é um *grupo*
+ * reservado. Enquanto nenhuma foto pertence a esse grupo, a página aparece
+ * vazia; assim que a primeira foto entra nele, as fotos passam a formar a
+ * página sozinhas e a inserção some de cena. Tirar as fotos de volta faz a
+ * página vazia reaparecer.
+ */
+export interface EmptyPageInsertion {
+  id: string;
+  /** `'start'` ou o id da foto depois da qual a página entra. */
+  anchorPhotoId: string;
+}
+
+export function emptyPageGroupKey(insertionId: string): string {
+  return `inserted:${insertionId}`;
+}
 
 export interface AlbumPage {
   /** Chave estável: guarda layout, legenda e histórias do usuário. */
@@ -67,7 +89,7 @@ export interface AlbumPage {
   kind: AlbumPageKind;
   layoutId: PageLayoutId;
   photos: Photo[];
-  /** Grupo ao qual a página pertence (dia da viagem, por padrão). */
+  /** Grupo ao qual a página pertence (o dia, por padrão). */
   groupKey: string | null;
   dayNumber: number | null;
   date: Date | null;
@@ -76,6 +98,13 @@ export interface AlbumPage {
   /** Numeração visível — só o miolo é numerado. */
   number: number | null;
   story: StoryInsertion | null;
+  /** Preenchido nas páginas em branco criadas pelo usuário. */
+  emptyPageId: string | null;
+  /**
+   * Foto depois da qual a página entra na ordem. Só existe em páginas
+   * inseridas: é o que diz onde encaixar a primeira foto que chegar nelas.
+   */
+  anchorPhotoId: string | null;
 }
 
 /** Máximo de fotos numa página, pelo maior layout disponível. */
@@ -144,6 +173,8 @@ function emptyPage(key: string, kind: AlbumPageKind): AlbumPage {
     totalPagesOfDay: 0,
     number: null,
     story: null,
+    emptyPageId: null,
+    anchorPhotoId: null,
   };
 }
 
@@ -151,9 +182,25 @@ function storyPage(story: StoryInsertion): AlbumPage {
   return { ...emptyPage(`story:${story.id}`, 'story'), story };
 }
 
+function blankPhotoPage(
+  insertion: EmptyPageInsertion,
+  layoutOverrides: Readonly<Record<string, PageLayoutId>>,
+): AlbumPage {
+  const key = emptyPageGroupKey(insertion.id);
+  return {
+    ...emptyPage(key, 'photos'),
+    layoutId: layoutOverrides[key] ?? 'quad',
+    groupKey: key,
+    emptyPageId: insertion.id,
+    anchorPhotoId: insertion.anchorPhotoId,
+  };
+}
+
 export interface BuildAlbumPagesOptions {
   layoutOverrides?: Readonly<Record<string, PageLayoutId>>;
   stories?: readonly StoryInsertion[];
+  /** Páginas de fotos criadas em branco pelo usuário. */
+  emptyPages?: readonly EmptyPageInsertion[];
   /** Fotos que o usuário colocou à mão numa página de outro grupo. */
   groupKeys?: Readonly<Record<string, string>>;
 }
@@ -211,40 +258,77 @@ function buildPhotoPages(
  * História cuja âncora sumiu (a foto foi removida) vai para o fim em vez de
  * desaparecer — perder texto escrito pelo usuário seria imperdoável.
  */
-function interleaveStories(
+function groupByAnchor<T extends { anchorPhotoId: string }>(
+  items: readonly T[],
+): Map<string, T[]> {
+  const byAnchor = new Map<string, T[]>();
+  for (const item of items) {
+    const list = byAnchor.get(item.anchorPhotoId);
+    if (list) list.push(item);
+    else byAnchor.set(item.anchorPhotoId, [item]);
+  }
+  return byAnchor;
+}
+
+/**
+ * Intercala as páginas inseridas pelo usuário — textos e páginas em branco —
+ * entre as páginas de fotos, seguindo a foto âncora de cada uma.
+ *
+ * Quando duas inserções dividem a mesma âncora, o texto vem antes da página em
+ * branco. Inserção cuja âncora sumiu (a foto foi para o depósito) vai para o
+ * fim em vez de desaparecer: perder o que o usuário criou é inaceitável.
+ */
+function interleaveInsertions(
   photoPages: readonly AlbumPage[],
   stories: readonly StoryInsertion[],
+  emptyPages: readonly EmptyPageInsertion[],
+  layoutOverrides: Readonly<Record<string, PageLayoutId>>,
 ): AlbumPage[] {
-  const byAnchor = new Map<string, StoryInsertion[]>();
-  for (const story of stories) {
-    const list = byAnchor.get(story.anchorPhotoId);
-    if (list) list.push(story);
-    else byAnchor.set(story.anchorPhotoId, [story]);
-  }
+  const storiesByAnchor = groupByAnchor(stories);
+  const emptyByAnchor = groupByAnchor(emptyPages);
+
+  // Página em branco que já recebeu fotos não é mais "em branco": as próprias
+  // fotos formam a página, e renderizar a inserção duplicaria a folha.
+  const filledGroups = new Set(
+    photoPages.map((page) => page.groupKey).filter(Boolean) as string[],
+  );
+  const isStillEmpty = (insertion: EmptyPageInsertion) =>
+    !filledGroups.has(emptyPageGroupKey(insertion.id));
 
   const used = new Set<string>();
   const content: AlbumPage[] = [];
 
-  for (const story of byAnchor.get(STORY_ANCHOR_START) ?? []) {
-    content.push(storyPage(story));
-    used.add(story.id);
-  }
+  const emitAt = (anchor: string) => {
+    for (const story of storiesByAnchor.get(anchor) ?? []) {
+      content.push(storyPage(story));
+      used.add(story.id);
+    }
+    for (const insertion of emptyByAnchor.get(anchor) ?? []) {
+      used.add(insertion.id);
+      if (isStillEmpty(insertion)) {
+        content.push(blankPhotoPage(insertion, layoutOverrides));
+      }
+    }
+  };
+
+  emitAt(STORY_ANCHOR_START);
 
   for (const page of photoPages) {
     content.push(page);
-    // A história entra depois da página que contém a foto âncora.
-    for (const photo of page.photos) {
-      for (const story of byAnchor.get(photo.id) ?? []) {
-        content.push(storyPage(story));
-        used.add(story.id);
-      }
-    }
+    for (const photo of page.photos) emitAt(photo.id);
   }
 
-  // Âncora que sumiu (a foto foi para o depósito ou apagada): a história vai
-  // para o fim em vez de desaparecer. Perder texto do usuário é inaceitável.
+  // Ancoradas no fim: entram depois de tudo, aconteça o que acontecer com as
+  // fotos. É o que faz "nova página" nascer sempre no fim do álbum.
+  emitAt(STORY_ANCHOR_END);
+
   for (const story of stories) {
     if (!used.has(story.id)) content.push(storyPage(story));
+  }
+  for (const insertion of emptyPages) {
+    if (!used.has(insertion.id) && isStillEmpty(insertion)) {
+      content.push(blankPhotoPage(insertion, layoutOverrides));
+    }
   }
 
   return content;
@@ -255,12 +339,15 @@ export function buildAlbumPages(
   {
     layoutOverrides = {},
     stories = [],
+    emptyPages = [],
     groupKeys = {},
   }: BuildAlbumPagesOptions = {},
 ): AlbumPage[] {
-  const content = interleaveStories(
+  const content = interleaveInsertions(
     buildPhotoPages(photos, layoutOverrides, groupKeys),
     stories,
+    emptyPages,
+    layoutOverrides,
   );
 
   let number = 0;
@@ -294,6 +381,8 @@ export interface PageReorder {
   photoOrder: string[];
   /** História → nova foto âncora, para o texto seguir a página. */
   storyAnchors: Record<string, string>;
+  /** Página em branco → nova foto âncora, pelo mesmo motivo. */
+  emptyPageAnchors: Record<string, string>;
 }
 
 /**
@@ -316,7 +405,7 @@ export function reorderContentPages(
     fromIndex >= content.length ||
     toIndex >= content.length
   ) {
-    return { photoOrder: [], storyAnchors: {} };
+    return { photoOrder: [], storyAnchors: {}, emptyPageAnchors: {} };
   }
 
   const reordered = [...content];
@@ -325,11 +414,16 @@ export function reorderContentPages(
 
   const photoOrder: string[] = [];
   const storyAnchors: Record<string, string> = {};
+  const emptyPageAnchors: Record<string, string> = {};
   let lastPhotoId = STORY_ANCHOR_START;
 
   for (const page of reordered) {
     if (page.story) {
       storyAnchors[page.story.id] = lastPhotoId;
+      continue;
+    }
+    if (page.emptyPageId) {
+      emptyPageAnchors[page.emptyPageId] = lastPhotoId;
       continue;
     }
     for (const photo of page.photos) {
@@ -338,7 +432,7 @@ export function reorderContentPages(
     }
   }
 
-  return { photoOrder, storyAnchors };
+  return { photoOrder, storyAnchors, emptyPageAnchors };
 }
 
 /**

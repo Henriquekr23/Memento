@@ -24,13 +24,23 @@ Isso muda o que importa proteger. As ameaças reais desta fase são:
 
 ## O que foi verificado
 
+> Última revisão completa refeita depois das funcionalidades de depósito,
+> reordenação de páginas e páginas em branco. Nada novo entrou que fale com a
+> rede, guarde dados ou execute conteúdo dinâmico.
+
 Buscas no código-fonte, todas sem ocorrência:
 
 - `fetch(`, `XMLHttpRequest`, `WebSocket`, `import(` dinâmico — **nenhuma**
 - `localStorage`, `sessionStorage`, `indexedDB`, `document.cookie` — **nenhuma**
 - `dangerouslySetInnerHTML`, `innerHTML`, `eval(`, `new Function` — **nenhuma**
 - `process.env` no código do cliente — **nenhuma** (não há `.env` no projeto)
+- `target="_blank"` sem `rel="noopener"` — **nenhum** (não há link externo)
+- URLs de terceiros embutidas no código — **nenhuma**
 - `npm audit --omit=dev` — **0 vulnerabilidades**
+- Dependências diretas: 9, todas de front (`@dnd-kit/*`, `exifr`, `jszip`,
+  `next`, `react`, `react-dom`). `@dnd-kit/modifiers` foi removido nesta
+  revisão por não estar em uso — dependência sem uso é superfície de ataque de
+  graça.
 
 Nada roda no servidor: não há rota de API, Server Action nem middleware. O
 único código de servidor é o pré-render estático da página.

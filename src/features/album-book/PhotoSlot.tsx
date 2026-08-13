@@ -41,7 +41,7 @@ const CORNER_SIZE = 15;
 
 /** Alças que aparecem ao passar o mouse na foto. */
 const HANDLE_CLASS =
-  'absolute z-20 flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900/90 text-[11px] leading-none text-white opacity-0 shadow-md transition hover:bg-neutral-800 group-hover/photo:opacity-100 focus-visible:opacity-100';
+  'absolute z-20 flex h-6 w-6 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-neutral-900)_88%,transparent)] text-[11px] leading-none text-[var(--color-neutral-100)] opacity-0 shadow-md transition hover:bg-[var(--color-neutral-900)] group-hover/photo:opacity-100 focus-visible:opacity-100';
 const PLACEMENT_TRANSITION =
   'left 260ms cubic-bezier(0.22,0.61,0.36,1), top 260ms cubic-bezier(0.22,0.61,0.36,1), width 260ms cubic-bezier(0.22,0.61,0.36,1), height 260ms cubic-bezier(0.22,0.61,0.36,1)';
 
@@ -281,8 +281,8 @@ export function PhotoSlot({
             ? `touch-none ${isFree ? 'cursor-move' : 'cursor-grab active:cursor-grabbing'}`
             : '',
           isDragging ? 'opacity-30' : '',
-          isOver ? 'ring-2 ring-amber-500' : '',
-          isSelected ? 'ring-2 ring-amber-400' : '',
+          isOver ? 'ring-2 ring-[var(--color-accent)]' : '',
+          isSelected ? 'ring-2 ring-[var(--color-accent)]' : '',
         ].join(' ')}
       >
         <div className="relative min-h-0 flex-1 overflow-hidden rounded-[1px]">

@@ -1,6 +1,6 @@
 import type { AlbumPage } from '@/lib/paginate';
 
-import type { TurnState } from './useAlbumBook';
+import type { TurnState } from './usePageTurn';
 
 /**
  * Geometria do livro: dado o spread atual e o estado da virada, decide qual

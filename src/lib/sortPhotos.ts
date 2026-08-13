@@ -41,7 +41,7 @@ export interface DayGroup {
 
 /**
  * Agrupa por dia preservando a ordem atual da lista (não reordena).
- * Usado só para exibir rótulos de "dia da viagem".
+ * Usado só para exibir rótulos de "dia do álbum".
  */
 export function groupPhotosByDay(photos: readonly Photo[]): DayGroup[] {
   const groups = new Map<string, DayGroup>();
@@ -60,10 +60,10 @@ export function groupPhotosByDay(photos: readonly Photo[]): DayGroup[] {
 }
 
 /**
- * Número do dia da viagem (1, 2, 3...) para cada foto, considerando o dia
+ * Número do dia do álbum (1, 2, 3...) para cada foto, considerando o dia
  * mais antigo do álbum como dia 1. Independe da ordem manual escolhida.
  */
-export function buildTripDayIndex(photos: readonly Photo[]): Map<string, number> {
+export function buildDayIndex(photos: readonly Photo[]): Map<string, number> {
   const uniqueDays = [...new Set(photos.map((p) => toDayKey(p.timestamp)))].sort();
   return new Map(uniqueDays.map((key, index) => [key, index + 1]));
 }

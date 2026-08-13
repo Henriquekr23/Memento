@@ -6,6 +6,30 @@ data/hora, permite reordenar e selecionar manualmente e exporta tudo em ZIP.
 **Fase 1 (atual):** 100% client-side. Nenhuma foto sai do navegador, nenhum
 backend, nenhum custo de infraestrutura.
 
+## Telas
+
+| Rota | O que é |
+| --- | --- |
+| `/` | Landing: apresentação do produto, mapa de destino interativo, tema claro/escuro e português/inglês |
+| `/album` | A aplicação: importar, montar, folhear e exportar o álbum |
+
+## Visual
+
+O sistema visual é o **Classical** (`_ds/classical/`): fundo quase branco,
+Cormorant Garamond sobre Lora, filetes no lugar de blocos preenchidos, botões
+com contorno em vez de fundo, e fotografia sempre passada pela moldura
+`.plate`. Os tokens vivem em `src/app/globals.css` — nenhum componente inventa
+cor, fonte ou espaçamento fora de lá, e as classes (`.btn`, `.input`, `.card`,
+`.seg`, `.kicker`) são as do próprio sistema.
+
+As fontes vêm por `next/font` (auto-hospedadas), e não pelo `@import` do Google
+Fonts do arquivo original: sem requisição a terceiros em tempo de execução — o
+que mantém a CSP (`font-src 'self'`) intacta — e sem salto de layout.
+
+O modo escuro segue o sistema operacional por media query em CSS puro, e o
+botão da landing sobrepõe isso com `data-theme` no `<html>`. Sem estado no
+React, sem risco de divergência na hidratação.
+
 ## Rodar
 
 ```bash
@@ -14,6 +38,13 @@ npm run dev     # http://localhost:3000
 ```
 
 Outros comandos: `npm run build`, `npm run lint`, `npx tsc --noEmit`.
+
+Na primeira tela o usuário dá nome ao álbum e escolhe como as fotos entram:
+**organizar por data** (o álbum já nasce montado, um dia por página) ou
+**eu monto** (tudo vai para o depósito e ele decide o que entra em cada
+página). A escolha vem antes da importação de propósito — depois que o álbum já
+está montado por data, desmontar tudo para escolher à mão é trabalho perdido,
+e é justamente quem quer montar à mão que mais sofreria com isso.
 
 O app tem duas visões sobre o mesmo estado:
 
@@ -27,16 +58,34 @@ O app tem duas visões sobre o mesmo estado:
 
 ```
 src/
-├── app/                      # Rota única (App Router). page.tsx só compõe as features.
+├── app/                      # Rotas (App Router): / é a landing, /album é a aplicação
 ├── features/
+│   ├── landing/              # Página de entrada: copy pt/en, mapa, paralaxe
 │   ├── photo-upload/         # Dropzone + File[] → Photo[] (importPhotos.ts)
 │   ├── exif-reader/          # parseExif.ts — exifr → PhotoExif normalizado
 │   ├── album-builder/        # useAlbum (estado), AlbumGrid (dnd-kit), AlbumToolbar, PhotoCard
-│   ├── album-book/           # Livro 3D: AlbumBook, BookPage, PhotoSlot, bookGeometry, useAlbumBook
+│   ├── album-book/           # Livro 3D (ver abaixo)
 │   └── album-export/         # AlbumExporter (contrato) + zipExporter (JSZip)
 ├── lib/                      # Funções puras: sortPhotos.ts, paginate.ts, format.ts
 └── types/                    # Tipos de domínio (Photo, PhotoExif, Album, PageLayout)
 ```
+
+Dentro de `features/album-book/`, a divisão é por responsabilidade:
+
+| Arquivo | Responsabilidade |
+| --- | --- |
+| `AlbumBook.tsx` | orquestra: junta estado, arraste de fotos e os pedaços abaixo |
+| `BookStage.tsx` | o livro em si: perspectiva, folha girando, sombras, gesto de folhear |
+| `BookToolbar.tsx` · `PageStrip.tsx` · `PhotoTray.tsx` | navegação, tira de páginas, depósito |
+| `BookPage.tsx` · `PhotoSlot.tsx` · `StoryPage.tsx` | o que existe dentro de uma página |
+| `usePageTurn.ts` | **só** navegação: em que spread estamos e como a folha se move |
+| `useAlbumBook.ts` | **só** conteúdo: layouts, posições, textos, tema |
+| `bookGeometry.ts` | função pura: dado o spread e a virada, o que aparece onde |
+
+`usePageTurn` e `useAlbumBook` eram um hook só. Foram separados porque têm
+ritmos diferentes: um muda a cada quadro do arraste, o outro a cada edição do
+usuário — e misturar os dois deixava difícil enxergar qual estado estava
+mudando por quê.
 
 ## O álbum em 3D
 
@@ -114,7 +163,15 @@ Sem isso a foto não acompanhava o cursor e ainda era cortada pelo
 ### Tira de páginas
 
 A faixa embaixo do livro mostra o miolo inteiro em miniatura: clique para ir até
-a página, arraste para reordenar. Ela substituiu o slider de navegação.
+a página, arraste para reordenar, 🗑 para remover. A página fantasma no fim da
+lista cria uma página em branco — e ela nasce **no fim**, ancorada num marcador
+de fim de álbum (`STORY_ANCHOR_END`) em vez de depender de onde o livro está
+aberto. Quem cria uma página espera encontrá-la onde clicou.
+
+Remover uma página **não apaga foto nenhuma**: elas voltam para o depósito e
+podem ser recolocadas onde o usuário quiser. O mesmo vale ao converter uma
+página de fotos em página de texto pelo seletor de layout (a opção **T**) — as
+fotos saem do álbum, não do computador.
 
 Reordenar página é reescrever a ordem das fotos — que continua sendo a fonte de
 verdade — e reancorar os textos. Para isso a página de história deixou de ser
@@ -137,6 +194,10 @@ caminho de ida e volta descobrível.
 - **Tirar da página:** o ↑ no canto da foto, ou arrastar a foto até o depósito.
 - **Colocar na página:** clicar na foto do depósito, ou arrastar até a página
   que quiser (a página acende em âmbar; em vermelho se já estiver cheia).
+- **Mudar de página:** arrastar a foto pela alça ⠿ até uma vaga livre da outra
+  página. Cada vaga é um alvo de drop próprio — sem isso, o `closestCenter` do
+  dnd-kit preferia a foto vizinha justamente quando o usuário mirava no espaço
+  em branco. Soltar em cima de outra foto continua trocando as duas.
 
 O clique **sempre** tem um destino: a página aberta, senão a primeira com
 espaço, senão uma página nova no fim — e o álbum vira até lá e seleciona a foto.
@@ -182,6 +243,22 @@ sumir (as fotos foram removidas), a história vai para o fim do álbum em vez de
 desaparecer: perder texto escrito pelo usuário seria imperdoável. Legendas e
 histórias também entram no `indice.txt` do ZIP, para o texto não ficar preso no
 navegador.
+
+## Peso da landing
+
+Medido no build de produção: **~178 KB gzip** de JavaScript, contra ~290 KB da
+aplicação. A diferença é exatamente `exifr`, `jszip` e `dnd-kit` — bibliotecas
+que só a aplicação carrega. Três decisões seguram esse número:
+
+- **Nada de re-render por movimento do mouse.** A paralaxe do herói e a
+  inclinação da prancha escrevem variáveis CSS direto no elemento, dentro de um
+  `requestAnimationFrame` (`usePointerVars`). Se cada `pointermove` virasse
+  `setState`, a página reconciliaria dezenas de vezes por segundo.
+- **A lista de 177 países entra sob demanda** (`import()` quando o ponteiro
+  chega no campo de destino). Até lá o mapa já funciona: destino não
+  reconhecido cai num ponto derivado do próprio texto.
+- **Todo o conteúdo vem no HTML.** A landing é pré-renderizada; texto, mapa e
+  chamadas aparecem antes de qualquer JavaScript executar.
 
 ## Decisões que importam
 

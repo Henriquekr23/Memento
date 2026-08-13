@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { useMemo } from 'react';
 
-import { buildTripDayIndex, toDayKey } from '@/lib/sortPhotos';
+import { buildDayIndex, toDayKey } from '@/lib/sortPhotos';
 import type { Photo } from '@/types/photo';
 
 import { PhotoCard } from './PhotoCard';
@@ -39,7 +39,7 @@ export function AlbumGrid({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const tripDays = useMemo(() => buildTripDayIndex(photos), [photos]);
+  const dayNumbers = useMemo(() => buildDayIndex(photos), [photos]);
 
   /** Numeração do álbum: só conta as fotos incluídas. */
   const positions = useMemo(() => {
@@ -73,7 +73,7 @@ export function AlbumGrid({
               key={photo.id}
               photo={photo}
               position={positions.get(photo.id) ?? null}
-              tripDay={tripDays.get(toDayKey(photo.timestamp)) ?? null}
+              dayNumber={dayNumbers.get(toDayKey(photo.timestamp)) ?? null}
               onRemove={onRemove}
               onToggleIncluded={onToggleIncluded}
             />

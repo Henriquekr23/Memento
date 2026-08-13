@@ -47,8 +47,13 @@ export function useAlbum() {
     };
   }, []);
 
+  /**
+   * `destination` decide onde as fotos caem: direto nas páginas ou no depósito.
+   * Quem importa pelo "+ Fotos" do depósito quer escolher a dedo onde colocar
+   * cada uma — jogá-las no álbum desfaz a composição já feita.
+   */
   const addFiles = useCallback(
-    async (files: File[]) => {
+    async (files: File[], destination: 'album' | 'tray' = 'album') => {
       setStatus({ ...INITIAL_STATUS, isImporting: true });
 
       const {
@@ -63,9 +68,9 @@ export function useAlbum() {
 
       setPhotos((prev) => {
         const known = new Set(prev.map((p) => `${p.fileName}:${p.sizeInBytes}`));
-        const unique = imported.filter(
-          (p) => !known.has(`${p.fileName}:${p.sizeInBytes}`),
-        );
+        const unique = imported
+          .filter((p) => !known.has(`${p.fileName}:${p.sizeInBytes}`))
+          .map((photo) => ({ ...photo, included: destination === 'album' }));
 
         // Sem reordenação manual ainda: mantém a promessa de ordem cronológica.
         // Com reordenação manual: respeita o trabalho do usuário e só anexa.
@@ -103,11 +108,13 @@ export function useAlbum() {
     );
   }, []);
 
-  /** Tira a foto do álbum sem apagá-la: ela volta para o depósito. */
-  const sendToTray = useCallback((id: string) => {
+  /** Tira fotos do álbum sem apagá-las: elas voltam para o depósito. */
+  const sendToTray = useCallback((ids: string | readonly string[]) => {
+    const wanted = new Set(typeof ids === 'string' ? [ids] : ids);
+    if (wanted.size === 0) return;
     setPhotos((prev) =>
       prev.map((photo) =>
-        photo.id === id ? { ...photo, included: false } : photo,
+        wanted.has(photo.id) ? { ...photo, included: false } : photo,
       ),
     );
   }, []);

@@ -6,7 +6,7 @@ import {
   sanitizeFileName,
   slugify,
 } from '@/lib/format';
-import { buildTripDayIndex, toDayKey } from '@/lib/sortPhotos';
+import { buildDayIndex, toDayKey } from '@/lib/sortPhotos';
 import type { Photo } from '@/types/photo';
 
 import type { AlbumExporter, AlbumSnapshot, ExportProgress } from './types';
@@ -25,7 +25,7 @@ export function buildPhotoFileName(photo: Photo, position: number): string {
 
 /** Índice em texto puro, para o usuário saber o que tem no ZIP. */
 export function buildIndexFile(album: AlbumSnapshot): string {
-  const tripDays = buildTripDayIndex(album.photos);
+  const dayNumbers = buildDayIndex(album.photos);
   const lines: string[] = [
     `Memento — ${album.name || 'Álbum sem nome'}`,
     `${album.photos.length} foto(s)`,
@@ -34,7 +34,7 @@ export function buildIndexFile(album: AlbumSnapshot): string {
   ];
 
   album.photos.forEach((photo, index) => {
-    const day = tripDays.get(toDayKey(photo.timestamp));
+    const day = dayNumbers.get(toDayKey(photo.timestamp));
     const caption = album.photoCaptions?.[photo.id]?.trim();
     lines.push(
       `${String(index + 1).padStart(3, '0')}. ${buildPhotoFileName(photo, index + 1)}`,
