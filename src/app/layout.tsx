@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 
+import { LangProvider } from '@/features/i18n/LangProvider';
+
 import './globals.css';
 
 /**
@@ -42,7 +44,11 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR" className={`${heading.variable} ${body.variable}`}>
-      <body className="antialiased">{children}</body>
+      {/* O idioma escolhido vale para todas as telas (barra, rodapé, "Sobre"),
+          então o provider fica na raiz — e não dentro de uma página. */}
+      <body className="antialiased">
+        <LangProvider>{children}</LangProvider>
+      </body>
     </html>
   );
 }
