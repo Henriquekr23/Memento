@@ -23,9 +23,16 @@ com contorno em vez de fundo, e fotografia sempre passada pela moldura
 cor, fonte ou espaçamento fora de lá, e as classes (`.btn`, `.input`, `.card`,
 `.seg`, `.kicker`) são as do próprio sistema.
 
-As fontes vêm por `next/font` (auto-hospedadas), e não pelo `@import` do Google
-Fonts do arquivo original: sem requisição a terceiros em tempo de execução — o
-que mantém a CSP (`font-src 'self'`) intacta — e sem salto de layout.
+Os `.woff2` moram em `src/app/fonts/` e entram por `next/font/local`: sem
+requisição a terceiros em execução — o que mantém a CSP (`font-src 'self'`)
+intacta — e sem salto de layout. Vieram de `next/font/google`, que auto-hospeda
+igual mas **baixa os arquivos durante o build**; com eles versionados, compilar
+não depende de rede nenhuma.
+
+As classes do design system ficam dentro de `@layer components` no `globals.css`.
+Isso não é organização: CSS fora de camada vence CSS dentro de uma, e soltas elas
+ganhavam dos utilitários do Tailwind — `className="btn hidden sm:inline-flex"`
+não escondia nada.
 
 O modo escuro segue o sistema operacional por media query em CSS puro, e o
 botão da landing sobrepõe isso com `data-theme` no `<html>`. Sem estado no

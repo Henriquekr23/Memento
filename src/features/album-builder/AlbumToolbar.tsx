@@ -1,5 +1,6 @@
 'use client';
 
+import { Tooltip } from '@/components/Tooltip';
 import type { ExportKind } from '@/features/album-export/useAlbumExport';
 import type { SortDirection } from '@/lib/sortPhotos';
 
@@ -155,33 +156,43 @@ export function AlbumToolbar({
               disso que se trata: mexer no álbum que está na tela. No celular
               vira só o pincel — a palavra não cabe ao lado do resto. */}
           {view === 'book' && (
-            <button
-              type="button"
-              onClick={onToggleStyle}
-              aria-pressed={isStyleOpen}
-              aria-expanded={isStyleOpen}
-              aria-controls="style-drawer"
-              title="Capa, papel, moldura e letra do álbum"
-              className="btn btn-secondary"
-            >
-              <StyleIcon />
-              <span className="hidden sm:inline">Estilo</span>
-            </button>
+            <Tooltip label="Capa, papel, moldura e letra do álbum" side="bottom">
+              <button
+                type="button"
+                onClick={onToggleStyle}
+                aria-pressed={isStyleOpen}
+                aria-expanded={isStyleOpen}
+                aria-controls="style-drawer"
+                aria-label="Estilo do álbum"
+                className="btn btn-secondary"
+              >
+                <StyleIcon />
+                <span className="hidden sm:inline">Estilo</span>
+              </button>
+            </Tooltip>
           )}
 
           {/* Um caminho só de saída: o álbum. Um segundo botão ao lado deste
               dividia a atenção entre "o livro" e "os arquivos", e o livro é o
               produto. */}
-          <button
-            type="button"
-            onClick={() => onExport('pdf')}
-            disabled={isExporting || isEmpty}
-            title="Baixar o álbum montado, página por página, em PDF"
-            className="btn btn-primary"
+          <Tooltip
+            label={
+              isEmpty
+                ? 'Inclua ao menos uma foto para baixar'
+                : 'Baixar o álbum montado, página por página, em PDF'
+            }
+            side="bottom"
           >
-            <DownloadIcon />
-            {exporting === 'pdf' ? 'Montando o álbum…' : 'Baixar álbum'}
-          </button>
+            <button
+              type="button"
+              onClick={() => onExport('pdf')}
+              disabled={isExporting || isEmpty}
+              className="btn btn-primary"
+            >
+              <DownloadIcon />
+              {exporting === 'pdf' ? 'Montando o álbum…' : 'Baixar álbum'}
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -215,24 +226,27 @@ export function AlbumToolbar({
           </p>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                onSortByDate(sortDirection === 'asc' ? 'desc' : 'asc')
-              }
-              title="Reordenar tudo por data e hora"
-              className="btn btn-secondary btn-sm"
-            >
-              {sortDirection === 'asc' ? '↑ Mais antigas' : '↓ Mais recentes'}
-            </button>
+            <Tooltip label="Reordenar tudo por data e hora" side="top">
+              <button
+                type="button"
+                onClick={() =>
+                  onSortByDate(sortDirection === 'asc' ? 'desc' : 'asc')
+                }
+                className="btn btn-secondary btn-sm"
+              >
+                {sortDirection === 'asc' ? '↑ Mais antigas' : '↓ Mais recentes'}
+              </button>
+            </Tooltip>
 
-            <button
-              type="button"
-              onClick={onClear}
-              className="btn btn-secondary btn-sm"
-            >
-              Limpar
-            </button>
+            <Tooltip label="Descartar este álbum e começar de novo" side="top">
+              <button
+                type="button"
+                onClick={onClear}
+                className="btn btn-secondary btn-sm"
+              >
+                Limpar
+              </button>
+            </Tooltip>
           </div>
         </div>
       )}

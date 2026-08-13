@@ -3,62 +3,14 @@
 import Link from 'next/link';
 import { useState } from 'react';
 
-import { Wordmark } from '@/components/Logo';
+import { SiteFooter } from '@/components/SiteFooter';
+import { SiteNav } from '@/components/SiteNav';
+import { COMMON } from '@/features/i18n/common';
+import { useLang } from '@/features/i18n/LangProvider';
 
-import { COPY, type Lang } from './copy';
+import { BeforeAfter } from './BeforeAfter';
+import { COPY } from './copy';
 import { usePointerVars } from './usePointerVars';
-
-/**
- * Alterna o tema lendo o estado atual do próprio documento.
- *
- * Sem estado no React de propósito: o padrão vem do sistema operacional por
- * media query no CSS, e ler isso durante o render quebraria a hidratação.
- * Aqui a única fonte da verdade é o `data-theme` no <html>.
- */
-function toggleTheme() {
-  const root = document.documentElement;
-  const isDark = root.dataset.theme
-    ? root.dataset.theme === 'dark'
-    : window.matchMedia('(prefers-color-scheme: dark)').matches;
-  root.dataset.theme = isDark ? 'light' : 'dark';
-}
-
-function SunIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="theme-icon-sun"
-    >
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="theme-icon-moon"
-    >
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
-    </svg>
-  );
-}
 
 /** Traçado do fio que liga as três fotos da ilustração do topo. */
 const THREAD = 'M70,400 C170,350 120,230 240,215 C365,200 305,110 405,75';
@@ -135,10 +87,11 @@ function HeroPhoto({
 }
 
 export function LandingPage() {
-  const [lang, setLang] = useState<Lang>('pt');
+  const { lang } = useLang();
   /** Passo aberto em "Como funciona"; -1 quando todos estão fechados. */
   const [openStep, setOpenStep] = useState(0);
   const t = COPY[lang];
+  const c = COMMON[lang];
 
   const {
     setNode: setHeroNode,
@@ -153,58 +106,15 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen">
-      <nav className="mx-auto flex max-w-[1200px] items-center justify-between gap-6 px-[clamp(20px,5vw,72px)] pt-7">
-        <Wordmark tagline={t.tagline} />
-
-        <div className="flex items-center gap-5">
-          <div className="hidden gap-7 text-sm md:flex">
-            <a href="#o-album" className="nav-link">
-              {t.navA}
-            </a>
-            <a href="#como-funciona" className="nav-link">
-              {t.navB}
-            </a>
-            <a href="#recursos" className="nav-link">
-              {t.navC}
-            </a>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setLang((current) => (current === 'pt' ? 'en' : 'pt'))}
-              aria-label={t.langAria}
-              className="btn btn-secondary h-9 min-w-9 px-2.5 text-xs tracking-[0.06em]"
-            >
-              {lang === 'pt' ? 'EN' : 'PT'}
-            </button>
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label={t.themeAria}
-              className="btn btn-secondary btn-icon"
-            >
-              <SunIcon />
-              <MoonIcon />
-            </button>
-            <Link
-              href="/album"
-              aria-label={t.ctaAria}
-              className="btn btn-primary hidden sm:inline-flex"
-            >
-              {t.cta}
-            </Link>
-          </div>
-        </div>
-      </nav>
-
       <div className="mx-auto max-w-[1200px] px-[clamp(20px,5vw,72px)]">
+        <SiteNav variant="landing" tagline={t.tagline} />
+
         {/* ── Hero ──────────────────────────────────────────────────────── */}
         <section
           ref={setHeroNode}
           onPointerMove={onHeroMove}
           onPointerLeave={onHeroLeave}
-          className="relative grid items-center gap-6 py-[76px] md:grid-cols-[1.25fr_1fr]"
+          className="relative grid items-center gap-6 py-[clamp(48px,7vw,76px)] md:grid-cols-[1.25fr_1fr]"
           style={{ ['--mx' as string]: 0, ['--my' as string]: 0, ['--angle' as string]: '0deg' }}
         >
           <div>
@@ -216,16 +126,31 @@ export function LandingPage() {
               {t.heroSub}
             </p>
 
-            {/* Só no celular: ali em cima o botão de montar não cabe na barra,
-                e sem ele a única porta de entrada ficaria a uma rolagem de
-                distância. No desktop a barra já resolve. */}
-            <Link
-              href="/album"
-              aria-label={t.ctaAria}
-              className="mm-rise btn btn-primary mt-8 [animation-delay:0.24s] sm:hidden"
-            >
-              {t.cta}
-            </Link>
+            {/* A ação principal do produto mora aqui, e só aqui: um botão
+                grande e sólido no primeiro quadro da página. Na barra do topo
+                ele disputava atenção com a navegação e precisava de um clone
+                escondido para o celular. `w-full sm:w-auto` é o que faz o
+                alvo ocupar a largura do dedo na tela pequena. */}
+            <div className="mm-rise mt-9 [animation-delay:0.24s]">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                <Link
+                  href="/album"
+                  aria-label={c.ctaAria}
+                  className="btn btn-hero w-full sm:w-auto"
+                >
+                  {c.cta}
+                  <span aria-hidden className="btn-hero-arrow">
+                    →
+                  </span>
+                </Link>
+                <a href="#antes-depois" className="btn btn-secondary w-full sm:w-auto">
+                  {t.heroSecondary}
+                </a>
+              </div>
+              <p className="mt-3.5 text-[13px] leading-5 text-[color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                {t.heroNote}
+              </p>
+            </div>
           </div>
 
           {/* Três fotos penduradas no mesmo fio: o que o álbum faz, sem texto. */}
@@ -261,12 +186,19 @@ export function LandingPage() {
 
         <hr className="hr" />
 
+        {/* ── Antes e depois ────────────────────────────────────────────── */}
+        <BeforeAfter />
+
+        <hr className="hr" />
+
         {/* ── O álbum ───────────────────────────────────────────────────── */}
         <section
           id="o-album"
           className="mm-split grid items-center gap-7 py-16 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-x-[clamp(32px,5vw,80px)]"
         >
-          {/* A prancha é a porta de entrada: clicar nela abre o construtor. */}
+          {/* A prancha é a porta de entrada: clicar nela abre o construtor.
+              Sem dica flutuante aqui de propósito — o convite já está escrito
+              dentro dela, em texto visível. */}
           <Link
             href="/album"
             aria-label={t.plateAria}
@@ -383,16 +315,12 @@ export function LandingPage() {
           <h2 className="m-0 max-w-[24ch] text-[28px] font-normal leading-[34px]">
             {t.closingTitle}
           </h2>
-          <Link href="/album" className="btn btn-primary" aria-label={t.ctaAria}>
-            {t.cta}
+          <Link href="/album" className="btn btn-hero" aria-label={c.ctaAria}>
+            {c.cta}
           </Link>
         </section>
 
-        <hr className="hr" />
-
-        <footer className="py-8 text-[13px] leading-5 text-[color-mix(in_srgb,var(--color-text)_60%,transparent)]">
-          {t.footer}
-        </footer>
+        <SiteFooter />
       </div>
     </div>
   );

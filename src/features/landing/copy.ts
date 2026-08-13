@@ -1,6 +1,14 @@
-/** Textos da landing, nos dois idiomas do design original. */
+/**
+ * Textos da landing, nos dois idiomas do design original.
+ *
+ * O que também aparece em "Sobre", na barra e no rodapé (rótulo do botão de
+ * montar, dicas, navegação) vive em `features/i18n/common.ts` — aqui fica só o
+ * que é desta página.
+ */
 
-export type Lang = 'pt' | 'en';
+import type { Lang } from '@/features/i18n/lang';
+
+export type { Lang };
 
 export interface LandingStep {
   title: string;
@@ -9,18 +17,20 @@ export interface LandingStep {
   detail: string;
 }
 
+/** Um dos dois lados da seção "Antes e depois". */
+export interface BeforeAfterPanel {
+  badge: string;
+  title: string;
+  body: string;
+}
+
 export interface LandingCopy {
   tagline: string;
-  navA: string;
-  navB: string;
-  navC: string;
-  cta: string;
-  ctaAria: string;
-  langAria: string;
-  themeAria: string;
   heroLine1: string;
   heroLine2: string;
   heroSub: string;
+  heroSecondary: string;
+  heroNote: string;
   photoPlaceholder: string;
   plateCta: string;
   plateAria: string;
@@ -32,22 +42,24 @@ export interface LandingCopy {
   steps: LandingStep[];
   recursosKicker: string;
   features: { title: string; body: string }[];
+  beforeAfter: {
+    kicker: string;
+    hint: string;
+    title: string;
+    ctaNote: string;
+    before: BeforeAfterPanel;
+    after: BeforeAfterPanel;
+  };
   closingTitle: string;
-  footer: string;
 }
 
 export const COPY: Record<Lang, LandingCopy> = {
   pt: {
     tagline: 'Guarde a memória',
-    navA: 'O álbum',
-    navB: 'Como funciona',
-    navC: 'Recursos',
-    cta: 'Montar meu álbum',
-    ctaAria: 'Abrir o Memento e montar um álbum',
-    langAria: 'Switch to English',
-    themeAria: 'Alternar modo escuro',
     heroLine1: 'Você envia as fotos.',
     heroLine2: 'A memória vira um álbum.',
+    heroSecondary: 'Ver antes e depois',
+    heroNote: 'Sem cadastro, sem envio para servidor. Roda no seu navegador.',
     heroSub:
       'Um casamento, uma viagem, o aniversário de dez anos atrás. Arraste as imagens para cá e o Memento coloca tudo em ordem pela data e hora gravadas em cada arquivo. Daí em diante quem monta é você: escolhe as páginas, ajusta a sequência, escreve o que só você lembra — e leva o álbum pronto para guardar.',
     photoPlaceholder: 'Suas fotos, em ordem',
@@ -100,20 +112,30 @@ export const COPY: Record<Lang, LandingCopy> = {
         body: 'Data, hora e, quando existem, coordenadas são lidas do próprio arquivo — o bastante para acertar a ordem sem trabalho manual.',
       },
     ],
+    beforeAfter: {
+      kicker: 'Antes e depois',
+      hint: 'As duas telas, lado a lado',
+      title: 'A mesma viagem, na galeria do celular e no álbum',
+      ctaNote: 'Leva o tempo de escolher as fotos.',
+      before: {
+        badge: 'Antes',
+        title: 'Uma grade sem fim',
+        body: 'No aplicativo de fotos tudo tem o mesmo tamanho e o mesmo peso: a paisagem, o recibo, a foto repetida três vezes. Achar aquele dia é rolar até cansar — e a memória fica onde ninguém volta.',
+      },
+      after: {
+        badge: 'Depois',
+        title: 'Um álbum com páginas',
+        body: 'No Memento a foto que importa fica grande, o resto acompanha, e a legenda diz o que a imagem não conta. As datas dão a ordem; você dá o sentido — e no fim baixa o álbum pronto.',
+      },
+    },
     closingTitle: 'Comece pelas fotos que você já tem.',
-    footer: 'Memento — Guarde a memória. Em desenvolvimento, Fase 1.',
   },
   en: {
     tagline: 'Keep the Memory',
-    navA: 'The album',
-    navB: 'How it works',
-    navC: 'Features',
-    cta: 'Build my album',
-    ctaAria: 'Open Memento and build an album',
-    langAria: 'Mudar para português',
-    themeAria: 'Toggle dark mode',
     heroLine1: 'You bring the photos.',
     heroLine2: 'The memory becomes an album.',
+    heroSecondary: 'See before and after',
+    heroNote: 'No sign-up, nothing uploaded. It runs in your browser.',
     heroSub:
       'A wedding, a trip, a birthday from ten years ago. Drag the images in and Memento puts everything in order by the date and time written into each file. From there it’s yours to build: pick the pages, adjust the sequence, write down what only you remember — and take the finished album with you.',
     photoPlaceholder: 'Your photos, in order',
@@ -166,7 +188,22 @@ export const COPY: Record<Lang, LandingCopy> = {
         body: 'Date, time and, when present, coordinates are read from the file itself — enough to get the order right with no manual work.',
       },
     ],
+    beforeAfter: {
+      kicker: 'Before and after',
+      hint: 'Both screens, side by side',
+      title: 'The same trip, in the phone gallery and in the album',
+      ctaNote: 'It takes as long as picking the photos.',
+      before: {
+        badge: 'Before',
+        title: 'An endless grid',
+        body: 'In the photo app everything has the same size and the same weight: the landscape, the receipt, the shot taken three times. Finding that one day means scrolling until you give up — and the memory stays where nobody goes back.',
+      },
+      after: {
+        badge: 'After',
+        title: 'An album with pages',
+        body: 'In Memento the photo that matters is the big one, the rest follows it, and the caption says what the image cannot. Dates give the order; you give the meaning — and at the end you download the finished album.',
+      },
+    },
     closingTitle: 'Start with the photos you already have.',
-    footer: 'Memento — Keep the Memory. In development, Phase 1.',
   },
 };

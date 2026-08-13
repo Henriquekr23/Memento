@@ -1,9 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useState } from 'react';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Wordmark } from '@/components/Logo';
+import { SiteFooter } from '@/components/SiteFooter';
+import { Tooltip } from '@/components/Tooltip';
 import { AlbumBook } from '@/features/album-book/AlbumBook';
 import { useAlbumBook } from '@/features/album-book/useAlbumBook';
 import { AlbumGrid } from '@/features/album-builder/AlbumGrid';
@@ -41,7 +44,12 @@ export default function AlbumPage() {
       {/* A marca é o caminho de volta: clicar em "Memento" leva ao início, como
           em qualquer site — um botão só para isso era redundante. */}
       <header className="flex flex-wrap items-center justify-between gap-4 py-7">
-        <Wordmark tagline="Guarde a memória" />
+        <Tooltip label="Voltar ao início" side="bottom">
+          <Wordmark tagline="Guarde a memória" />
+        </Tooltip>
+        <Link href="/sobre" className="nav-link text-sm">
+          Sobre
+        </Link>
       </header>
 
       {/* Sangra igual à barra: a régua da barra é de ponta a ponta (ela gruda no
@@ -181,6 +189,8 @@ export default function AlbumPage() {
             />
           ))}
       </div>
+
+      <SiteFooter />
     </main>
   );
 }
