@@ -1,10 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
   <rect width="32" height="32" rx="6" fill="#201f1d"/>
-  <g transform="translate(3.2 3.2) scale(0.8)" fill="none" stroke="#c28d41">
-    <rect x="3.25" y="4.25" width="25.5" height="23.5" rx="1.5" stroke-width="1.9"/>
-    <rect x="6.5" y="7.5" width="19" height="13" fill="#c28d41" opacity="0.16" stroke="none"/>
-    <path d="M10 18.5V10l6 5.2 6-5.2v8.5" stroke-width="2.6" stroke-linejoin="miter"/>
-    <path d="M8 18.5h4M20 18.5h4" stroke-width="1.7" stroke-linecap="round"/>
-    <path d="M9 24h9" stroke-width="1.6" stroke-linecap="round" opacity="0.45"/>
+  <!-- Mesmo desenho do components/Logo.tsx, sem a legenda à mão: a 16px na aba
+       do navegador um traço de 1.2 vira ruído. -->
+  <g transform="translate(16 16) scale(0.84) translate(-16 -16)" fill="none" stroke="#c28d41" stroke-width="2" stroke-linejoin="round">
+    <path d="M16 10.4C13.5 8.2 9.8 7.4 4.6 7.6v14.8c5.2-.2 8.9.6 11.4 2.9"/>
+    <path d="M16 10.4c2.5-2.2 6.2-3 11.4-2.8v14.8c-5.2-.2-8.9.6-11.4 2.9"/>
+    <path d="M16 10.4v14.9"/>
+    <rect x="7.3" y="11.6" width="6.3" height="4.9" fill="#c28d41" opacity="0.3" stroke="none"/>
+    <!-- Marcador mais largo que o do componente: a 16px na aba, 2.9 de largura
+         desaparece. -->
+    <path d="M20.3 4.6h3.6v24l-1.8-2.2-1.8 2.2z" fill="#c28d41" stroke="none"/>
   </g>
 </svg>

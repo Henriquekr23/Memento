@@ -1,7 +1,8 @@
 # Memento — Keep the Journey
 
 Monta o álbum de uma viagem a partir das fotos: lê os metadados EXIF, ordena por
-data/hora, permite reordenar e selecionar manualmente e exporta tudo em ZIP.
+data/hora, permite reordenar e compor as páginas à mão e exporta o álbum pronto
+em PDF — capa, miolo e contracapa, uma página do arquivo por página do livro.
 
 **Fase 1 (atual):** 100% client-side. Nenhuma foto sai do navegador, nenhum
 backend, nenhum custo de infraestrutura.
@@ -65,7 +66,7 @@ src/
 │   ├── exif-reader/          # parseExif.ts — exifr → PhotoExif normalizado
 │   ├── album-builder/        # useAlbum (estado), AlbumGrid (dnd-kit), AlbumToolbar, PhotoCard
 │   ├── album-book/           # Livro 3D (ver abaixo)
-│   └── album-export/         # AlbumExporter (contrato) + zipExporter (JSZip)
+│   └── album-export/         # AlbumExporter (contrato) + pdf/ (canvas → JPEG → PDF, sem biblioteca)
 ├── lib/                      # Funções puras: sortPhotos.ts, paginate.ts, format.ts
 └── types/                    # Tipos de domínio (Photo, PhotoExif, Album, PageLayout)
 ```
@@ -241,14 +242,15 @@ uma linha nesse arquivo, sem tocar em componente nenhum.
 As páginas de história são ancoradas à página de fotos anterior. Se a âncora
 sumir (as fotos foram removidas), a história vai para o fim do álbum em vez de
 desaparecer: perder texto escrito pelo usuário seria imperdoável. Legendas e
-histórias também entram no `indice.txt` do ZIP, para o texto não ficar preso no
-navegador.
+histórias também vão para o PDF, cada uma na página onde está, para o texto não
+ficar preso no navegador.
 
 ## Peso da landing
 
 Medido no build de produção: **~178 KB gzip** de JavaScript, contra ~290 KB da
-aplicação. A diferença é exatamente `exifr`, `jszip` e `dnd-kit` — bibliotecas
-que só a aplicação carrega. Três decisões seguram esse número:
+aplicação. A diferença é exatamente `exifr` e `dnd-kit` — bibliotecas que só a
+aplicação carrega. (Números de antes de o `jszip` sair; a aplicação deve estar
+mais leve hoje, mas não remedi.) Três decisões seguram esse número:
 
 - **Nada de re-render por movimento do mouse.** A paralaxe do herói e a
   inclinação da prancha escrevem variáveis CSS direto no elemento, dentro de um
@@ -272,9 +274,14 @@ que só a aplicação carrega. Três decisões seguram esse número:
   acontece se ele clicar no botão de ordenar por data.
 - **Incluir ≠ remover.** O olho tira a foto do álbum exportado sem apagá-la da
   lista; o ✕ descarta de vez (e revoga o object URL).
-- **ZIP sem compressão** (`STORE`): JPEG já é comprimido, então comprimir de
-  novo só gasta CPU. Dentro do ZIP vai um `indice.txt` com data, GPS, câmera e
-  nome original de cada foto.
+- **Uma saída só, e é o álbum.** Houve um segundo botão que baixava as fotos
+  originais em ZIP. Ele dividia a atenção entre "o livro" e "os arquivos" — e o
+  livro é o produto. Saiu o botão, saiu o `zipExporter` e saiu o `jszip`.
+- **PDF sem biblioteca.** Cada página é desenhada num canvas do tamanho do papel
+  e vira um JPEG; o `pdfWriter.ts` empilha esses JPEGs num PDF à mão, com filtro
+  `DCTDecode` — o JPEG entra cru, sem recompressão. Um jsPDF custaria ~350 KB de
+  bundle para usar 2% dele. Uma página por vez na memória: um álbum de 200 fotos
+  com todos os canvas vivos derruba a aba.
 - **Object URLs são revogados** ao remover foto, limpar o álbum e desmontar o
   componente, senão centenas de fotos vazam memória na aba.
 
@@ -286,7 +293,8 @@ Resumo: não existe servidor nem segredo para proteger nesta fase, então o
 esforço foi em (1) tornar verificável a promessa de que as fotos não saem da
 máquina — `connect-src 'self'` na CSP faz o próprio navegador bloquear
 qualquer envio, mesmo que uma dependência tentasse; (2) não vazar localização
-no ZIP compartilhado; (3) não derrubar a aba com arquivo grande demais.
+no arquivo que a pessoa compartilha; (3) não derrubar a aba com arquivo grande
+demais.
 
 ## Caminho para a Fase 2
 
@@ -294,8 +302,9 @@ A migração não deve tocar em `exif-reader`, `lib/` nem na UI do
 `album-builder`. Os dois pontos de costura já estão isolados:
 
 - `features/album-export/types.ts` define o contrato `AlbumExporter`. Criar um
-  `apiAlbumExporter` que faz upload e devolve link público e passá-lo para
-  `useAlbumExport()` substitui o ZIP sem mudar componente nenhum.
+  `apiAlbumExporter` que faz upload e devolve link público e acrescentá-lo ao
+  mapa `EXPORTERS` de `useAlbumExport()` dá um terceiro destino sem mudar
+  componente nenhum.
 - `useAlbum` concentra todo o estado do álbum; a persistência entra como um
   efeito adicional, sem alterar o formato do estado.
 - O estado editorial do livro (layouts, posições livres, legendas, histórias,

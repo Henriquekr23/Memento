@@ -18,7 +18,8 @@ máquina. Fase 2 (futura): contas e persistência via Supabase no free tier.
 ## Stack
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 ·
-`exifr` (EXIF) · `jszip` (exportação) · `@dnd-kit` (arrastar) · zero backend.
+`exifr` (EXIF) · `@dnd-kit` (arrastar) · zero backend.
+A exportação em PDF é feita à mão, sem biblioteca.
 
 ## Estrutura
 
@@ -35,7 +36,8 @@ src/
 │   ├── album-builder/     → useAlbum (estado), AlbumGrid, AlbumToolbar, AlbumStart
 │   ├── album-book/        → o livro 3D (ver abaixo)
 │   ├── album-style/       → temas de capa/papel/moldura/letra
-│   └── album-export/      → AlbumExporter (contrato) + zipExporter
+│   └── album-export/      → AlbumExporter (contrato) + useAlbumExport
+│       └── pdf/           → o álbum em PDF (ver abaixo)
 ├── components/            → ConfirmDialog
 ├── lib/                   → paginate.ts, sortPhotos.ts, format.ts (funções puras)
 └── types/                 → photo.ts, page.ts
@@ -60,8 +62,13 @@ Dentro de `album-book/`, separado por responsabilidade:
 - **Tira de páginas**: navegar, reordenar (arrastar), remover (🗑), página
   fantasma "+" no fim.
 - **Estilo**: 6 capas, 4 papéis, 3 molduras, 4 tipografias.
-- **Exportação** ZIP com fotos renomeadas em ordem + `indice.txt` com legendas
-  e textos.
+- **Exportação em PDF** — a única saída: uma página do arquivo por página do
+  livro, com o papel, a moldura, a inclinação, o recorte e as legendas como
+  estão na tela. Dentro de `album-export/pdf/`: `drawPage.ts` desenha a página
+  num canvas, `pdfWriter.ts` empilha os JPEGs num PDF **sem biblioteca**
+  (filtro `DCTDecode`, JPEG cru), `pdfExporter.ts` orquestra.
+  O ZIP das fotos originais existiu e foi removido: dividia a atenção entre "o
+  livro" e "os arquivos". Saiu junto o `jszip`. Está no histórico do git.
 - **Landing** (`/`) com paralaxe, mapa de destino interativo, tema claro/escuro
   e PT/EN.
 
@@ -85,13 +92,24 @@ Dentro de `album-book/`, separado por responsabilidade:
    álbum — é intencional nesta fase.
 8. **Movimento de mouse não passa pelo React** na landing: variáveis CSS
    escritas via ref dentro de `requestAnimationFrame`.
+9. **O PDF redesenha a página, não fotografa o DOM.** Capturar a tela traria a
+   resolução da tela (uma foto de 12 MP viraria um borrão), os controles de
+   edição e a perspectiva 3D. Em `drawPage.ts` a régua é `unit` = 1 px de tela
+   do livro: todo número lá é o mesmo do Tailwind do `BookPage`/`PhotoSlot`
+   (`px-5` → `20 * unit`). Mexeu no visual de um, confira o outro.
+10. **`resolveAlbumPalette` é a única ponte entre tema e canvas.** A tela lê
+    `var(--paper-base)`; o canvas não tem cascata e precisa do valor. Criar um
+    tema novo continua sendo mexer só nas listas de `theme.ts`.
 
 ## Segurança
 
 `SECURITY.md` tem o modelo de ameaças completo. Resumo: não há servidor nem
 segredo nesta fase; o esforço foi em CSP + cabeçalhos (só em produção; em dev
-atrapalhavam), não vazar GPS no `indice.txt` do ZIP, limite de 80 MB por
-arquivo e `.gitignore` cobrindo `.env*`, chaves e material de teste.
+atrapalhavam), não vazar GPS no arquivo exportado, limite de 80 MB por arquivo e
+`.gitignore` cobrindo `.env*`, chaves e material de teste.
+
+Com a saída do ZIP, o GPS deixou de ser um risco de exportação: o PDF rasteriza
+as páginas, então o EXIF das fotos não sobrevive a ele.
 
 Para a Fase 2, o item que não pode ser esquecido: **RLS ligada desde a primeira
 tabela do Supabase**, e `service_role key` jamais com prefixo `NEXT_PUBLIC_`.
@@ -102,6 +120,16 @@ tabela do Supabase**, e `service_role key` jamais com prefixo `NEXT_PUBLIC_`.
 TypeScript rodados com `tsx` sobre as funções puras (paginação, geometria,
 rotação, escolha de destino). Não há framework de teste instalado — os asserts
 são scripts avulsos, rodados fora do repositório.
+
+Para o PDF há `scripts/checkPdfExport.mts` (fora do `tsconfig`, por causa da
+dependência nativa): troca o canvas do navegador por um de Node e gera um álbum
+de amostra em disco, para conferir as páginas sem abrir a aplicação.
+
+```
+npm i --no-save @napi-rs/canvas tsx
+npx tsx scripts/checkPdfExport.mts ./fotos album.pdf          # modo alinhado
+npx tsx scripts/checkPdfExport.mts ./fotos livre.pdf livre    # papel escuro, cantoneiras, fotos soltas
+```
 
 **Limitações do meu ambiente:** não consigo abrir navegador (nenhuma
 verificação visual), não alcanço o Google Fonts (valido o build com um
@@ -119,7 +147,12 @@ projeto.
 - [ ] Legenda e layout de página são guardados pela chave da página, que depende
       da posição — reordenar pode fazer os dois trocarem de página. Ajustes por
       foto e textos não são afetados.
-- [ ] Opção de exportar sem metadados (hoje o ZIP leva o EXIF original, com GPS).
+- [ ] Conferir o PDF num navegador de verdade: o `drawPage.ts` foi verificado
+      com o canvas do Node, que não é o mesmo motor. Vale olhar principalmente
+      as fontes (as pilhas do tema são fontes do sistema) e a memória em um
+      álbum grande.
+- [ ] O PDF usa A5 retrato fixo. Se o livro ganhar formato paisagem ou quadrado,
+      as constantes ficam no topo de `pdf/pdfExporter.ts`.
 
 ## Como prefiro trabalhar
 

@@ -37,10 +37,11 @@ Buscas no código-fonte, todas sem ocorrência:
 - `target="_blank"` sem `rel="noopener"` — **nenhum** (não há link externo)
 - URLs de terceiros embutidas no código — **nenhuma**
 - `npm audit --omit=dev` — **0 vulnerabilidades**
-- Dependências diretas: 9, todas de front (`@dnd-kit/*`, `exifr`, `jszip`,
-  `next`, `react`, `react-dom`). `@dnd-kit/modifiers` foi removido nesta
-  revisão por não estar em uso — dependência sem uso é superfície de ataque de
-  graça.
+- Dependências diretas: 8, todas de front (`@dnd-kit/*`, `exifr`, `next`,
+  `react`, `react-dom`). `@dnd-kit/modifiers` saiu por não estar em uso e
+  `jszip` saiu junto com a exportação em ZIP — dependência sem uso é superfície
+  de ataque de graça. A exportação em PDF não trouxe nenhuma no lugar: o
+  arquivo é montado à mão em `album-export/pdf/pdfWriter.ts`.
 
 Nada roda no servidor: não há rota de API, Server Action nem middleware. O
 único código de servidor é o pré-render estático da página.
@@ -69,17 +70,18 @@ Nada roda no servidor: não há rota de API, Server Action nem middleware. O
 
 ### Privacidade dos metadados
 
-Fotos de celular carregam GPS. O `indice.txt` do ZIP **não** escreve mais a
-coordenada exata: registra apenas que a foto tem GPS no EXIF. O ZIP é
-justamente o arquivo que a pessoa compartilha, e um índice em texto puro com a
-localização de cada foto é o jeito mais fácil de vazar onde ela mora. Quem
-precisa do dado continua tendo ele dentro do EXIF da própria foto.
+Fotos de celular carregam GPS, modelo da câmera e, em algumas marcas, número de
+série. **O arquivo exportado não leva nada disso.** O PDF é montado a partir de
+páginas rasterizadas num canvas: o que entra nele são pixels, e o EXIF do
+original não sobrevive à travessia.
 
-> Ponto em aberto, para você decidir: a exportação copia o arquivo original,
-> com EXIF completo (GPS, modelo da câmera, número de série em algumas marcas).
-> Se o álbum for feito para publicar, o certo seria oferecer um "exportar sem
-> metadados". Isso exige reescrever os bytes da imagem (canvas ou piexif) e
-> perde qualidade se for recomprimir — por isso não entrou sem você pedir.
+Isso resolveu por construção um ponto que estava em aberto enquanto a
+exportação era um ZIP de arquivos originais — lá o EXIF ia inteiro, e evitar
+isso exigiria reescrever os bytes de cada imagem.
+
+> A contrapartida, que vale registrar: quem quiser as fotos originais de volta
+> não as tem pelo Memento. O arquivo de origem continua no computador da
+> pessoa, intacto — o app nunca o move nem o altera.
 
 ### Robustez da importação
 
@@ -93,8 +95,13 @@ precisa do dado continua tendo ele dentro do EXIF da própria foto.
 ### Vazamento de memória
 
 Object URLs são revogadas ao remover a foto, limpar o álbum e desmontar o
-componente. O download do ZIP revoga a URL **um segundo depois** do clique:
-revogar no mesmo tique cancela o download em alguns navegadores.
+componente. O download revoga a URL **um segundo depois** do clique: revogar no
+mesmo tique cancela o download em alguns navegadores.
+
+A geração do PDF desenha **uma página por vez** e fecha cada `ImageBitmap` logo
+depois de usá-la. Com todos os canvas e bitmaps vivos ao mesmo tempo, um álbum
+de 200 fotos derruba a aba — e derrubar a aba, aqui, é perder o álbum inteiro,
+que não tem persistência nesta fase.
 
 ### O que não pode ir para o cliente
 

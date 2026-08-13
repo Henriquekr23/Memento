@@ -1,5 +1,6 @@
 'use client';
 
+import type { ExportKind } from '@/features/album-export/useAlbumExport';
 import type { SortDirection } from '@/lib/sortPhotos';
 
 export type AlbumView = 'grid' | 'book';
@@ -14,10 +15,10 @@ interface AlbumToolbarProps {
   withoutExifDateCount: number;
   sortDirection: SortDirection;
   isManuallyOrdered: boolean;
-  isExporting: boolean;
-  exportLabel: string;
+  /** Qual exportação está rodando — `null` quando nenhuma. */
+  exporting: ExportKind | null;
   onSortByDate: (direction: SortDirection) => void;
-  onExport: () => void;
+  onExport: (kind: ExportKind) => void;
   onClear: () => void;
 }
 
@@ -52,6 +53,25 @@ function BookIcon() {
   );
 }
 
+/** Seta para baixo sobre a linha do chão: o gesto universal de baixar. */
+function DownloadIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M7 1.4v7.2M4 5.8 7 8.8l3-3M1.9 11.4h10.2" />
+    </svg>
+  );
+}
+
 const VIEWS: { id: AlbumView; label: string; icon: React.ReactNode }[] = [
   { id: 'grid', label: 'Grade', icon: <GridIcon /> },
   { id: 'book', label: 'Álbum', icon: <BookIcon /> },
@@ -67,12 +87,13 @@ export function AlbumToolbar({
   withoutExifDateCount,
   sortDirection,
   isManuallyOrdered,
-  isExporting,
-  exportLabel,
+  exporting,
   onSortByDate,
   onExport,
   onClear,
 }: AlbumToolbarProps) {
+  const isExporting = exporting !== null;
+  const isEmpty = includedCount === 0;
   return (
     <div className="sticky top-0 z-20 -mx-[clamp(20px,5vw,72px)] mb-6 border-b border-[var(--color-divider)] bg-[color-mix(in_srgb,var(--color-bg)_88%,transparent)] px-[clamp(20px,5vw,72px)] py-4 backdrop-blur">
       {/* Uma linha só: o nome à esquerda ocupa o que sobrar, e à direita fica
@@ -105,13 +126,18 @@ export function AlbumToolbar({
             ))}
           </div>
 
+          {/* Um caminho só de saída: o álbum. Um segundo botão ao lado deste
+              dividia a atenção entre "o livro" e "os arquivos", e o livro é o
+              produto. */}
           <button
             type="button"
-            onClick={onExport}
-            disabled={isExporting || includedCount === 0}
+            onClick={() => onExport('pdf')}
+            disabled={isExporting || isEmpty}
+            title="Baixar o álbum montado, página por página, em PDF"
             className="btn btn-primary"
           >
-            {isExporting ? 'Gerando…' : exportLabel}
+            <DownloadIcon />
+            {exporting === 'pdf' ? 'Montando o álbum…' : 'Baixar álbum'}
           </button>
         </div>
       </div>
