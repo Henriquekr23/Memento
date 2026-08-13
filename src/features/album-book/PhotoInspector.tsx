@@ -92,7 +92,7 @@ export function PhotoInspector({
     adjustment.rotation === DEFAULT_ADJUSTMENT.rotation;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 card rounded-[var(--radius-md)] px-4 py-3">
+    <div className="inspector-dock flex flex-wrap items-center gap-x-5 gap-y-3 card rounded-[var(--radius-md)] px-4 py-3">
       <div className="flex min-w-0 items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

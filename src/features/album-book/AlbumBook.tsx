@@ -29,6 +29,8 @@ import {
 } from '@/lib/paginate';
 import type { Photo } from '@/types/photo';
 
+import { useIsNarrow } from '@/hooks/useMediaQuery';
+
 import { leftIndexOf, resolveSpreadView, rightIndexOf } from './bookGeometry';
 import { pageKeyFromDropId } from './BookPage';
 import { snapToCursor } from './dragPreview';
@@ -43,6 +45,7 @@ import {
   photoIdFromDragId,
 } from './PhotoTray';
 import type { AlbumBookState } from './useAlbumBook';
+import { useSinglePageNav } from './useSinglePageNav';
 
 interface AlbumBookProps {
   book: AlbumBookState;
@@ -89,6 +92,29 @@ export function AlbumBook({
     () => resolveSpreadView(pages, spread, turn),
     [pages, spread, turn],
   );
+
+  // No celular o spread de duas páginas não cabe: a tela passa a enquadrar uma
+  // página por vez, e a navegação anda de meia folha em meia folha.
+  const isNarrow = useIsNarrow();
+  const leftIndex = leftIndexOf(spread);
+  const rightIndex = rightIndexOf(spread);
+  const nav = useSinglePageNav({
+    hasLeft: leftIndex >= 0 && leftIndex < pages.length,
+    hasRight: rightIndex < pages.length,
+    turn,
+    canGoNext: book.canGoNext,
+    canGoPrev: book.canGoPrev,
+    startTurn: book.startTurn,
+  });
+
+  const contentPageCount = Math.max(0, pages.length - 2);
+  const pagerLabel = (() => {
+    if (spread === 0) return 'Capa';
+    if (!isNarrow) return `${spread} de ${book.spreadCount - 1}`;
+    const index = nav.side === 'left' ? leftIndex : rightIndex;
+    if (index >= pages.length - 1 || contentPageCount === 0) return 'Fim';
+    return `${index} de ${contentPageCount}`;
+  })();
 
   const albumMeta = useMemo(() => {
     if (photos.length === 0) {
@@ -456,6 +482,9 @@ export function AlbumBook({
           turn={turn}
           captions={book.captions}
           pageProps={pageProps}
+          singlePage={isNarrow}
+          side={nav.side}
+          onNavigate={nav.go}
           onBeginDrag={book.beginDrag}
           onUpdateDrag={book.updateDrag}
           onEndDrag={book.endDrag}
@@ -487,11 +516,10 @@ export function AlbumBook({
       </DndContext>
 
       <BookToolbar
-        spread={spread}
-        spreadCount={book.spreadCount}
-        canGoNext={book.canGoNext}
-        canGoPrev={book.canGoPrev}
-        onTurn={book.startTurn}
+        label={pagerLabel}
+        canGoNext={isNarrow ? nav.canNext : book.canGoNext}
+        canGoPrev={isNarrow ? nav.canPrev : book.canGoPrev}
+        onTurn={isNarrow ? nav.go : book.startTurn}
       />
 
       <PageStrip
@@ -504,7 +532,12 @@ export function AlbumBook({
         onReorder={handleReorderPages}
         onSelectPage={(page) => {
           const index = pages.indexOf(page);
-          if (index !== -1) book.goToSpread(Math.ceil(index / 2));
+          if (index === -1) return;
+          book.goToSpread(Math.ceil(index / 2));
+          // Página ímpar é a da esquerda do spread (esquerda = 2s - 1). Sem
+          // isto, no celular o toque na tira levava ao spread certo e à
+          // página errada.
+          nav.showSide(index % 2 === 1 ? 'left' : 'right');
         }}
         onAddPage={book.addEmptyPageAtEnd}
         onRemovePage={removePage}
@@ -532,8 +565,12 @@ export function AlbumBook({
       ) : (
         <p className="text-center text-xs text-[color-mix(in_srgb,var(--color-text)_35%,transparent)]">
           {spread === 0
-            ? 'Clique na capa para abrir o álbum'
-            : 'Arraste a página para folhear · ← → também viram · clique numa foto para ajustar · o canto da página escolhe entre layout e livre'}
+            ? isNarrow
+              ? 'Toque na capa para abrir o álbum'
+              : 'Clique na capa para abrir o álbum'
+            : isNarrow
+              ? 'Deslize para virar a página · toque numa foto para ajustar'
+              : 'Arraste a página para folhear · ← → também viram · clique numa foto para ajustar · o canto da página escolhe entre layout e livre'}
         </p>
       )}
 

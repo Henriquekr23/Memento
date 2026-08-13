@@ -557,6 +557,23 @@ html {
   background: color-mix(in srgb, var(--color-text) 7%, transparent);
 }
 
+/* No celular a barra de ajustes da foto gruda no rodapé da janela: em fluxo,
+   ela nasce abaixo do livro e o usuário toca numa foto sem ver nada acontecer.
+   Precisa de fundo opaco — `.card` é transparente — e por isso é classe, não
+   utilitário: as duas regras têm a mesma especificidade e esta vem depois. */
+@media (max-width: 767px) {
+  .inspector-dock {
+    position: sticky;
+    bottom: 8px;
+    z-index: 30;
+    background: var(--color-bg);
+    box-shadow: var(--shadow-lg);
+  }
+  .title-input {
+    font-size: 19px;
+  }
+}
+
 /* Gaveta de estilo. Fica sempre no DOM para poder deslizar; `visibility` é o
    que a tira do caminho quando fechada (foco e leitor de tela junto), e ela
    só muda depois da transição terminar — daí o `0s linear` atrasado. */

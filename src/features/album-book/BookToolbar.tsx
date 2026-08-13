@@ -3,8 +3,9 @@
 import type { TurnDirection } from './usePageTurn';
 
 interface BookToolbarProps {
-  spread: number;
-  spreadCount: number;
+  /** Onde o leitor está: "Capa", "3 de 8"… quem escreve é o álbum, que sabe
+      se a tela mostra um spread ou uma página só. */
+  label: string;
   canGoNext: boolean;
   canGoPrev: boolean;
   onTurn: (direction: TurnDirection) => void;
@@ -15,8 +16,7 @@ interface BookToolbarProps {
  * verdade — acima dele só o que serve para abastecer as páginas.
  */
 export function BookToolbar({
-  spread,
-  spreadCount,
+  label,
   canGoNext,
   canGoPrev,
   onTurn,
@@ -36,7 +36,7 @@ export function BookToolbar({
           ‹
         </button>
         <span className="pager-label" aria-live="polite">
-          {spread === 0 ? 'Capa' : `${spread} de ${spreadCount - 1}`}
+          {label}
         </span>
         <button
           type="button"
