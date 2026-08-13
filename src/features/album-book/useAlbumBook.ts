@@ -337,6 +337,11 @@ export function useAlbumBook(photos: readonly Photo[]) {
     removeStory,
     theme,
     setTheme,
+    // Os registros crus, para quem precisa da composição inteira de uma vez —
+    // hoje a exportação em PDF, que desenha as páginas fora do React.
+    adjustments,
+    placements,
+    pageComposeModes,
     getAdjustment,
     updateAdjustment,
     resetAdjustment,

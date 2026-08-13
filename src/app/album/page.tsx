@@ -15,8 +15,7 @@ import { useAlbumExport } from '@/features/album-export/useAlbumExport';
 export default function AlbumPage() {
   const album = useAlbum();
   const book = useAlbumBook(album.includedPhotos);
-  const { exportAlbum, isExporting, progress, error, exporterLabel } =
-    useAlbumExport();
+  const { exportAlbum, running, isExporting, progress, error } = useAlbumExport();
   const [view, setView] = useState<AlbumView>('grid');
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
 
@@ -57,16 +56,29 @@ export default function AlbumPage() {
           withoutExifDateCount={album.withoutExifDateCount}
           sortDirection={album.sortDirection}
           isManuallyOrdered={album.isManuallyOrdered}
-          isExporting={isExporting}
-          exportLabel={exporterLabel}
+          exporting={running}
           onSortByDate={album.sortByDate}
-          onExport={() =>
-            exportAlbum({
-              name: album.name,
-              photos: album.includedPhotos,
-              photoCaptions: book.photoCaptions,
-              stories: book.stories,
-            })
+          onExport={(kind) =>
+            exportAlbum(
+              {
+                name: album.name,
+                photos: album.includedPhotos,
+                photoCaptions: book.photoCaptions,
+                stories: book.stories,
+                // O PDF precisa da composição para sair igual ao que está na
+                // tela; o ZIP simplesmente ignora este campo.
+                book: {
+                  pages: book.pages,
+                  theme: book.theme,
+                  pageCaptions: book.captions,
+                  composeModes: book.pageComposeModes,
+                  adjustments: book.adjustments,
+                  placements: book.placements,
+                  autoTilt: book.autoTiltEnabled,
+                },
+              },
+              kind,
+            )
           }
           onClear={() => setIsClearConfirmOpen(true)}
         />
@@ -123,7 +135,7 @@ export default function AlbumPage() {
 
         {isExporting && progress && (
           <p className="text-sm text-[color-mix(in_srgb,var(--color-text)_60%,transparent)]">
-            Montando o álbum… {progress.processed}/{progress.total}
+            Desenhando as páginas… {progress.processed}/{progress.total}
           </p>
         )}
 

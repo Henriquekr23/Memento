@@ -57,16 +57,3 @@ export function slugify(value: string, fallback = 'album'): string {
   return slug.length > 0 ? slug : fallback;
 }
 
-/** Remove caracteres proibidos em nomes de arquivo, preservando legibilidade. */
-export function sanitizeFileName(value: string): string {
-  return value.replace(/[\\/:*?"<>|]/g, '_').trim();
-}
-
-/** Carimbo estável para nomes de arquivo: 2026-05-12_14h30. */
-export function fileNameTimestamp(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return (
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
-    `_${pad(date.getHours())}h${pad(date.getMinutes())}`
-  );
-}

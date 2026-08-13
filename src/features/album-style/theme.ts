@@ -39,6 +39,31 @@ interface ThemeOption<Id extends string> {
   vars: Record<string, string>;
 }
 
+/**
+ * Textura da capa, nomeada.
+ *
+ * Na tela ela é um gradiente CSS; no PDF ela precisa ser desenhada linha a
+ * linha no canvas. Guardar o *nome* junto do CSS evita ter que interpretar a
+ * string do gradiente do outro lado — é a mesma decisão de design em dois
+ * meios diferentes.
+ */
+export type TextureId = 'grain' | 'weave';
+
+interface CoverOption extends ThemeOption<CoverId> {
+  texture: TextureId;
+  base: string;
+  ink: string;
+  accent: string;
+}
+
+interface PaperOption extends ThemeOption<PaperId> {
+  base: string;
+  ink: string;
+  inkSoft: string;
+  accent: string;
+  frameBg: string;
+}
+
 const GRAIN =
   'repeating-linear-gradient(45deg, rgba(0,0,0,0.10) 0 2px, transparent 2px 5px)';
 const WEAVE =
@@ -52,28 +77,33 @@ function cover(
   base: string,
   ink: string,
   accent: string,
-  texture: string,
-): ThemeOption<CoverId> {
+  texture: TextureId,
+): CoverOption {
+  const css = texture === 'grain' ? GRAIN : WEAVE;
   return {
     id,
     label,
-    swatch: { background: base, backgroundImage: texture },
+    base,
+    ink,
+    accent,
+    texture,
+    swatch: { background: base, backgroundImage: css },
     vars: {
       '--cover-base': base,
-      '--cover-texture': `${SHEEN}, ${texture}`,
+      '--cover-texture': `${SHEEN}, ${css}`,
       '--cover-ink': ink,
       '--cover-accent': accent,
     },
   };
 }
 
-export const COVER_OPTIONS: ThemeOption<CoverId>[] = [
-  cover('leather', 'Couro', '#2a1f18', '#fdf3e3', '#e6b667', GRAIN),
-  cover('navy', 'Marinho', '#1b2a3f', '#eaf1fb', '#8fb6e8', GRAIN),
-  cover('burgundy', 'Bordô', '#3d1620', '#fbeaee', '#e08fa2', GRAIN),
-  cover('charcoal', 'Carvão', '#161616', '#f2f2f2', '#b9b9b9', WEAVE),
-  cover('linen', 'Linho', '#ded3c0', '#3a3128', '#8a6a3b', WEAVE),
-  cover('kraft', 'Kraft', '#c79a63', '#33240f', '#5d3f18', WEAVE),
+export const COVER_OPTIONS: CoverOption[] = [
+  cover('leather', 'Couro', '#2a1f18', '#fdf3e3', '#e6b667', 'grain'),
+  cover('navy', 'Marinho', '#1b2a3f', '#eaf1fb', '#8fb6e8', 'grain'),
+  cover('burgundy', 'Bordô', '#3d1620', '#fbeaee', '#e08fa2', 'grain'),
+  cover('charcoal', 'Carvão', '#161616', '#f2f2f2', '#b9b9b9', 'weave'),
+  cover('linen', 'Linho', '#ded3c0', '#3a3128', '#8a6a3b', 'weave'),
+  cover('kraft', 'Kraft', '#c79a63', '#33240f', '#5d3f18', 'weave'),
 ];
 
 function paper(
@@ -84,10 +114,15 @@ function paper(
   inkSoft: string,
   accent: string,
   frameBg: string,
-): ThemeOption<PaperId> {
+): PaperOption {
   return {
     id,
     label,
+    base,
+    ink,
+    inkSoft,
+    accent,
+    frameBg,
     swatch: { background: base },
     vars: {
       '--paper-base': base,
@@ -99,7 +134,7 @@ function paper(
   };
 }
 
-export const PAPER_OPTIONS: ThemeOption<PaperId>[] = [
+export const PAPER_OPTIONS: PaperOption[] = [
   paper('cream', 'Creme', '#f7f3ec', '#3a332b', '#8b8175', '#9a6b2f', '#ffffff'),
   paper('white', 'Branco', '#fdfdfb', '#2f2f2f', '#8d8d8d', '#7a6a4f', '#ffffff'),
   paper('kraft', 'Kraft', '#e6d5b8', '#41341f', '#8a7550', '#7a4f1d', '#fbf7ef'),
@@ -131,18 +166,58 @@ export const FONT_OPTIONS: { id: FontId; label: string; stack: string }[] = [
   },
 ];
 
+function optionsOf(theme: AlbumTheme) {
+  return {
+    cover: COVER_OPTIONS.find((o) => o.id === theme.cover) ?? COVER_OPTIONS[0],
+    paper: PAPER_OPTIONS.find((o) => o.id === theme.paper) ?? PAPER_OPTIONS[0],
+    font: FONT_OPTIONS.find((o) => o.id === theme.font) ?? FONT_OPTIONS[0],
+  };
+}
+
 /** Monta as CSS vars do tema para aplicar na raiz do livro. */
 export function themeToStyle(theme: AlbumTheme): CSSProperties {
-  const coverOption =
-    COVER_OPTIONS.find((option) => option.id === theme.cover) ?? COVER_OPTIONS[0];
-  const paperOption =
-    PAPER_OPTIONS.find((option) => option.id === theme.paper) ?? PAPER_OPTIONS[0];
-  const fontOption =
-    FONT_OPTIONS.find((option) => option.id === theme.font) ?? FONT_OPTIONS[0];
+  const { cover: coverOption, paper: paperOption, font } = optionsOf(theme);
 
   return {
     ...coverOption.vars,
     ...paperOption.vars,
-    '--album-font': fontOption.stack,
+    '--album-font': font.stack,
   } as CSSProperties;
+}
+
+/**
+ * O mesmo tema em valores concretos.
+ *
+ * A tela lê `var(--paper-base)` e deixa o navegador resolver; o canvas do PDF
+ * não tem cascata nenhuma e precisa da cor em si. Esta é a única ponte entre os
+ * dois meios — criar um tema novo continua sendo mexer só nas listas acima.
+ */
+export interface AlbumPalette {
+  coverBase: string;
+  coverInk: string;
+  coverAccent: string;
+  coverTexture: TextureId;
+  paperBase: string;
+  paperInk: string;
+  paperInkSoft: string;
+  paperAccent: string;
+  frameBg: string;
+  fontStack: string;
+}
+
+export function resolveAlbumPalette(theme: AlbumTheme): AlbumPalette {
+  const { cover: c, paper: p, font } = optionsOf(theme);
+
+  return {
+    coverBase: c.base,
+    coverInk: c.ink,
+    coverAccent: c.accent,
+    coverTexture: c.texture,
+    paperBase: p.base,
+    paperInk: p.ink,
+    paperInkSoft: p.inkSoft,
+    paperAccent: p.accent,
+    frameBg: p.frameBg,
+    fontStack: font.stack,
+  };
 }

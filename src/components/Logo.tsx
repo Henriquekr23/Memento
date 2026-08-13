@@ -1,13 +1,17 @@
 import Link from 'next/link';
 
 /**
- * A marca: um print antigo — moldura, área de imagem e a faixa branca embaixo,
- * onde se escrevia a legenda à mão — com um M no lugar da fotografia.
+ * A marca: o álbum aberto, com uma foto colada na página da esquerda e a fita
+ * do marcador descendo pela da direita.
  *
- * Desenhada em `currentColor` de propósito: o mesmo arquivo serve o cabeçalho
+ * O produto é um livro que se folheia — e o marcador é o que diz que a viagem
+ * continua, que ainda há página para virar. É o "Keep the Journey" em desenho.
+ *
+ * Feita em `currentColor` de propósito: o mesmo arquivo serve o cabeçalho
  * claro, o escuro e o hover em acento, sem uma variante por tema. O mesmo
- * traçado está em `app/icon.svg` (favicon), lá sim com cores fixas, porque a
- * aba do navegador não herda nada da página.
+ * traçado está em `app/icon.svg` (favicon), lá com cores fixas e sem os
+ * detalhes finos, porque a aba do navegador não herda nada da página — e a 16px
+ * o que é fino some.
  */
 export function LogoMark({
   size = 26,
@@ -25,40 +29,35 @@ export function LogoMark({
       aria-hidden
       className={className}
     >
-      {/* o print */}
-      <rect
-        x="3.25"
-        y="4.25"
-        width="25.5"
-        height="23.5"
-        rx="1.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      {/* a área de imagem */}
-      <rect x="6.5" y="7.5" width="19" height="13" fill="currentColor" opacity="0.1" />
-      {/* o M */}
+      {/* as duas folhas abertas e o vinco no meio */}
       <path
-        d="M10 18.5V10l6 5.2 6-5.2v8.5"
+        d="M16 10.4C13.5 8.2 9.8 7.4 4.6 7.6v14.8c5.2-.2 8.9.6 11.4 2.9"
         stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="miter"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
       />
-      {/* serifas */}
       <path
-        d="M8 18.5h4M20 18.5h4"
+        d="M16 10.4c2.5-2.2 6.2-3 11.4-2.8v14.8c-5.2-.2-8.9.6-11.4 2.9"
         stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
       />
-      {/* a legenda escrita à mão na faixa de baixo */}
+      <path d="M16 10.4v14.9" stroke="currentColor" strokeWidth="1.6" />
+
+      {/* a foto colada na página da esquerda */}
+      <rect x="7.3" y="11.6" width="6.3" height="4.9" fill="currentColor" opacity="0.22" />
+      {/* a legenda escrita à mão embaixo dela */}
       <path
-        d="M9 24h9"
+        d="M7.5 18.9h5"
         stroke="currentColor"
         strokeWidth="1.2"
         strokeLinecap="round"
         opacity="0.4"
       />
+
+      {/* O marcador. Sai do livro em cima **e** embaixo de propósito: rente à
+          borda ele virava uma terceira página e o desenho ficava ilegível. */}
+      <path d="M20.6 5.2h2.9v23.1l-1.45-1.95-1.45 1.95z" fill="currentColor" />
     </svg>
   );
 }
