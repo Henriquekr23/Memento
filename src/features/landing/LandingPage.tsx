@@ -215,6 +215,17 @@ export function LandingPage() {
             <p className="mm-rise mt-8 max-w-[52ch] text-[17px] leading-7 text-[color-mix(in_srgb,var(--color-text)_82%,transparent)] [animation-delay:0.12s]">
               {t.heroSub}
             </p>
+
+            {/* Só no celular: ali em cima o botão de montar não cabe na barra,
+                e sem ele a única porta de entrada ficaria a uma rolagem de
+                distância. No desktop a barra já resolve. */}
+            <Link
+              href="/album"
+              aria-label={t.ctaAria}
+              className="mm-rise btn btn-primary mt-8 [animation-delay:0.24s] sm:hidden"
+            >
+              {t.cta}
+            </Link>
           </div>
 
           {/* Três fotos penduradas no mesmo fio: o que o álbum faz, sem texto. */}

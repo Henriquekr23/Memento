@@ -30,6 +30,11 @@ type SharedPageProps = Omit<
   'page' | 'side' | 'caption' | 'interactive'
 >;
 
+/** Distância mínima, em px, para um arraste no toque valer como virada. */
+const SWIPE_THRESHOLD_PX = 44;
+/** Deslocamento máximo para o gesto ainda contar como toque parado. */
+const TAP_TOLERANCE_PX = 6;
+
 interface BookStageProps {
   pages: AlbumPage[];
   view: SpreadView;
@@ -37,6 +42,11 @@ interface BookStageProps {
   turn: TurnState | null;
   captions: Record<string, string>;
   pageProps: SharedPageProps;
+  /** Tela estreita: enquadra uma página por vez em vez do spread inteiro. */
+  singlePage: boolean;
+  /** Qual metade do spread está enquadrada (só vale com `singlePage`). */
+  side: PageSide;
+  onNavigate: (direction: TurnDirection) => void;
   onBeginDrag: (
     direction: TurnDirection,
     startX: number,
@@ -108,6 +118,9 @@ export function BookStage({
   turn,
   captions,
   pageProps,
+  singlePage,
+  side,
+  onNavigate,
   onBeginDrag,
   onUpdateDrag,
   onEndDrag,
@@ -172,29 +185,85 @@ export function BookStage({
     [spread, onBeginDrag, onUpdateDrag, onEndDrag],
   );
 
+  /**
+   * No toque, o livro não é arrastado folha a folha: um gesto horizontal vira,
+   * e um toque parado só abre o álbum fechado. Arrastar a folha com o dedo
+   * disputaria com a rolagem da página, e o dedo tapa justamente a parte do
+   * papel que se quer ver dobrando.
+   *
+   * Nada de `preventDefault` aqui: o toque precisa continuar chegando às fotos
+   * e às legendas embaixo.
+   */
+  const handleSwipe = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      const startX = event.clientX;
+      const startY = event.clientY;
+
+      const handleUp = (upEvent: PointerEvent) => {
+        window.removeEventListener('pointerup', handleUp);
+        window.removeEventListener('pointercancel', handleUp);
+
+        const dx = upEvent.clientX - startX;
+        const dy = upEvent.clientY - startY;
+
+        if (Math.abs(dx) > SWIPE_THRESHOLD_PX && Math.abs(dx) > Math.abs(dy)) {
+          onNavigate(dx < 0 ? 'next' : 'prev');
+          return;
+        }
+        // Com o álbum fechado, tocar a capa abre — como no clique do desktop.
+        if (
+          spread === 0 &&
+          Math.abs(dx) < TAP_TOLERANCE_PX &&
+          Math.abs(dy) < TAP_TOLERANCE_PX
+        ) {
+          onNavigate('next');
+        }
+      };
+
+      window.addEventListener('pointerup', handleUp);
+      window.addEventListener('pointercancel', handleUp);
+    },
+    [spread, onNavigate],
+  );
+
   const animating = Boolean(turn?.animating);
   const leafTransition = animating
     ? `transform ${TURN_DURATION_MS}ms ${EASE}`
     : 'none';
 
+  /* Página única: o livro continua inteiro, com o dobro da largura da tela, e
+     a janela mostra uma metade de cada vez. A alternativa seria remontar a
+     geometria para uma página por spread — muito mais código para o mesmo
+     resultado visual, e o gesto de virar teria de ser reescrito junto. */
+  const framed = singlePage ? (side === 'left' ? 0 : -50) : view.offset;
+
   return (
-    <div
-      className="mt-4 select-none"
-      style={{
-        perspective: '2600px',
-        perspectiveOrigin: '50% 45%',
-        // Fechado, o livro fica centralizado numa capa só — à direita no
-        // começo, à esquerda no fim. O quanto deslocar vem da geometria.
-        transform: `translateX(${view.offset}%)`,
-        transition: animating ? `transform ${TURN_DURATION_MS}ms ${EASE}` : 'none',
-      }}
-    >
+    <div className={`mt-4 select-none${singlePage ? ' overflow-hidden' : ''}`}>
       <div
-        ref={rootRef}
-        onPointerDown={handlePointerDown}
-        style={{ transformStyle: 'preserve-3d' }}
-        className="relative mx-auto aspect-[8/5] w-full max-w-5xl cursor-grab touch-none active:cursor-grabbing"
+        style={{
+          perspective: '2600px',
+          perspectiveOrigin: '50% 45%',
+          width: singlePage ? '200%' : undefined,
+          // Fechado, o livro fica centralizado numa capa só — à direita no
+          // começo, à esquerda no fim. O quanto deslocar vem da geometria.
+          transform: `translateX(${framed}%)`,
+          transition: singlePage
+            ? `transform 340ms ${EASE}`
+            : animating
+              ? `transform ${TURN_DURATION_MS}ms ${EASE}`
+              : 'none',
+        }}
       >
+        <div
+          ref={rootRef}
+          onPointerDown={singlePage ? handleSwipe : handlePointerDown}
+          style={{ transformStyle: 'preserve-3d' }}
+          className={
+            singlePage
+              ? 'relative aspect-[8/5] w-full touch-pan-y'
+              : 'relative mx-auto aspect-[8/5] w-full max-w-5xl cursor-grab touch-none active:cursor-grabbing'
+          }
+        >
         <PageEdges
           side="left"
           remaining={leftIndexOf(spread) + 1}
@@ -341,11 +410,12 @@ export function BookStage({
 
         {/* Vinco central. Fica abaixo da folha que gira (z-20): acima dela, a
             sombra ficava parada cortando a página em movimento. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-1/2 z-[15] w-6 -translate-x-1/2 bg-gradient-to-r from-transparent via-black/35 to-transparent"
-          style={{ opacity: view.openness }}
-        />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 left-1/2 z-[15] w-6 -translate-x-1/2 bg-gradient-to-r from-transparent via-black/35 to-transparent"
+            style={{ opacity: view.openness }}
+          />
+        </div>
       </div>
     </div>
   );
