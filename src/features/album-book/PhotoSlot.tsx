@@ -20,6 +20,8 @@ interface PhotoSlotProps {
   caption: string;
   isSelected: boolean;
   interactive: boolean;
+  /** Ponteiro que não paira: as alças precisam de outro caminho para aparecer. */
+  isTouch: boolean;
   mode: ComposeMode;
   /** Posição atual, em % da área útil da página. */
   rect: SlotRect;
@@ -36,12 +38,26 @@ interface PhotoSlotProps {
 }
 
 const PAN_SENSITIVITY = 1.1;
+/**
+ * Quanto o ponteiro precisa andar para o toque virar arraste.
+ *
+ * O dedo nunca fica parado: com os mesmos 3 px do mouse, encostar na foto já
+ * contava como arraste e o enquadramento saía do lugar sozinho.
+ */
 const DRAG_TOLERANCE_PX = 3;
+const TOUCH_DRAG_TOLERANCE_PX = 9;
 const CORNER_SIZE = 15;
 
-/** Alças que aparecem ao passar o mouse na foto. */
+/**
+ * Alças da foto. Aparecem no hover (mouse) ou quando a foto está escolhida
+ * (toque) — daí a opacidade ser controlada por classe de fora, e não fixa aqui.
+ *
+ * O alvo visível tem 24 px, mas a área de toque é maior que isso: `before:`
+ * estende a região clicável sem inchar o desenho, que ficaria pesado sobre uma
+ * foto pequena.
+ */
 const HANDLE_CLASS =
-  'absolute z-20 flex h-6 w-6 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-neutral-900)_88%,transparent)] text-[11px] leading-none text-[var(--color-neutral-100)] opacity-0 shadow-md transition hover:bg-[var(--color-neutral-900)] group-hover/photo:opacity-100 focus-visible:opacity-100';
+  'absolute z-20 flex h-6 w-6 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-neutral-900)_88%,transparent)] text-[11px] leading-none text-[var(--color-neutral-100)] shadow-md transition hover:bg-[var(--color-neutral-900)] focus-visible:opacity-100 before:absolute before:-inset-2 before:content-[""]';
 const PLACEMENT_TRANSITION =
   'left 260ms cubic-bezier(0.22,0.61,0.36,1), top 260ms cubic-bezier(0.22,0.61,0.36,1), width 260ms cubic-bezier(0.22,0.61,0.36,1), height 260ms cubic-bezier(0.22,0.61,0.36,1)';
 
@@ -64,7 +80,11 @@ function PhotoCorners() {
   );
 }
 
-type GestureKind = 'pan' | 'move' | 'resize' | 'rotate';
+/**
+ * `'tap'` não altera nada: só mede se o dedo andou, para distinguir "escolher
+ * a foto" de "rolar a página com o dedo por cima dela".
+ */
+type GestureKind = 'tap' | 'pan' | 'move' | 'resize' | 'rotate';
 
 interface Gesture {
   kind: GestureKind;
@@ -106,6 +126,7 @@ export function PhotoSlot({
   caption,
   isSelected,
   interactive,
+  isTouch,
   mode,
   rect,
   zIndex,
@@ -173,8 +194,12 @@ export function PhotoSlot({
       moved: false,
     };
 
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setIsBusy(true);
+    // Capturar o ponteiro num 'tap' cancelaria a rolagem da página: o gesto
+    // passaria a pertencer à foto no primeiro pixel.
+    if (kind !== 'tap') {
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setIsBusy(true);
+    }
     if (kind === 'move' || kind === 'resize') {
       onPlace(photo.id, rect, { bringToFront: true });
     }
@@ -186,8 +211,16 @@ export function PhotoSlot({
 
     const dx = event.clientX - gesture.startX;
     const dy = event.clientY - gesture.startY;
-    if (!gesture.moved && Math.hypot(dx, dy) < DRAG_TOLERANCE_PX) return;
+    const tolerance =
+      event.pointerType === 'touch'
+        ? TOUCH_DRAG_TOLERANCE_PX
+        : DRAG_TOLERANCE_PX;
+    if (!gesture.moved && Math.hypot(dx, dy) < tolerance) return;
     gesture.moved = true;
+
+    // O 'tap' já cumpriu seu papel ao saber que o dedo andou: daqui em diante
+    // quem manda no gesto é a rolagem da página.
+    if (gesture.kind === 'tap') return;
 
     const dxPercent = (dx / gesture.refWidth) * 100;
     const dyPercent = (dy / gesture.refHeight) * 100;
@@ -244,6 +277,19 @@ export function PhotoSlot({
     ? isSelected || caption.length > 0
     : caption.length > 0;
 
+  /**
+   * No toque, o primeiro contato com a foto apenas a escolhe.
+   *
+   * Antes o `pointerdown` já começava a reenquadrar: encostar o dedo mexia na
+   * foto, e como a moldura tinha `touch-action: none` a página também não
+   * rolava. Agora a foto só reage a gesto depois de escolhida — e enquanto não
+   * está, o dedo atravessa e rola o álbum.
+   */
+  const isArmed = !isTouch || isSelected;
+  const handlesVisible = isSelected
+    ? 'opacity-100'
+    : 'opacity-0 group-hover/photo:opacity-100';
+
   return (
     <div
       ref={slotRef}
@@ -260,7 +306,9 @@ export function PhotoSlot({
     >
       <div
         ref={setFrameRefs}
-        onPointerDown={(event) => beginGesture(event, isFree ? 'move' : 'pan')}
+        onPointerDown={(event) =>
+          beginGesture(event, isArmed ? (isFree ? 'move' : 'pan') : 'tap')
+        }
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
@@ -277,8 +325,10 @@ export function PhotoSlot({
         }}
         className={[
           'group/photo relative flex h-full w-full flex-col rounded-[3px]',
+          // `touch-none` só quando a foto vai mesmo responder ao dedo. Solto em
+          // toda foto, ele matava a rolagem do álbum inteiro no celular.
           interactive
-            ? `touch-none ${isFree ? 'cursor-move' : 'cursor-grab active:cursor-grabbing'}`
+            ? `${isArmed ? 'touch-none' : 'touch-pan-y'} ${isFree ? 'cursor-move' : 'cursor-grab active:cursor-grabbing'}`
             : '',
           isDragging ? 'opacity-30' : '',
           isOver ? 'ring-2 ring-[var(--color-accent)]' : '',
@@ -327,7 +377,7 @@ export function PhotoSlot({
               onClick={() => onSendToTray(photo.id)}
               title="Tirar da página e mandar para o depósito"
               aria-label={`Tirar ${photo.fileName} da página`}
-              className={HANDLE_CLASS + ' -left-2 -top-2 cursor-pointer'}
+              className={`${HANDLE_CLASS} ${handlesVisible} -left-2 -top-2 cursor-pointer`}
             >
               ↑
             </button>
@@ -342,7 +392,7 @@ export function PhotoSlot({
                 onDoubleClick={() => onAdjust(photo.id, { rotation: 0 })}
                 title="Arraste para girar · clique duas vezes para endireitar"
                 aria-label={`Girar ${photo.fileName}`}
-                className={HANDLE_CLASS + ' -right-2 -top-2 cursor-alias touch-none'}
+                className={`${HANDLE_CLASS} ${handlesVisible} -right-2 -top-2 cursor-alias touch-none`}
               >
                 ↻
               </button>
@@ -357,7 +407,7 @@ export function PhotoSlot({
                 }}
                 title="Arraste para trocar de lugar com outra foto"
                 aria-label={`Trocar ${photo.fileName} de lugar`}
-                className={HANDLE_CLASS + ' -right-2 -top-2 cursor-grab'}
+                className={`${HANDLE_CLASS} ${handlesVisible} -right-2 -top-2 cursor-grab touch-none`}
               >
                 ⠿
               </button>
@@ -372,9 +422,7 @@ export function PhotoSlot({
                 onPointerCancel={handlePointerUp}
                 title="Arraste para redimensionar"
                 aria-label={`Redimensionar ${photo.fileName}`}
-                className={
-                  HANDLE_CLASS + ' -bottom-2 -right-2 cursor-nwse-resize touch-none'
-                }
+                className={`${HANDLE_CLASS} ${handlesVisible} -bottom-2 -right-2 cursor-nwse-resize touch-none`}
               >
                 ◢
               </button>

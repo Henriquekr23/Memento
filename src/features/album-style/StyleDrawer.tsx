@@ -23,8 +23,10 @@ interface StyleDrawerProps {
  * efeito de cada escolha na página. Assim as opções ficam ao lado do álbum e
  * o livro não sai do lugar.
  *
- * A aba de puxar mora na mesma altura do olho, colada na borda: é o que dá a
- * entender que existe algo ali sem ocupar espaço na tela.
+ * Quem abre é o botão "Estilo" da barra do topo. Antes havia uma aba vertical
+ * colada na borda direita da janela: ela não ocupava espaço, mas quase ninguém
+ * a reconhecia como botão — texto de lado, fora de qualquer barra, longe de
+ * onde o olho procura ação.
  */
 export function StyleDrawer({
   open,
@@ -47,18 +49,6 @@ export function StyleDrawer({
 
   return (
     <>
-      {!open && (
-        <button
-          type="button"
-          onClick={() => onOpenChange(true)}
-          aria-expanded={false}
-          aria-controls="style-drawer"
-          className="drawer-handle"
-        >
-          Estilo
-        </button>
-      )}
-
       {open && (
         <button
           type="button"

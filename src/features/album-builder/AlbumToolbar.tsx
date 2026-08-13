@@ -17,6 +17,9 @@ interface AlbumToolbarProps {
   isManuallyOrdered: boolean;
   /** Qual exportação está rodando — `null` quando nenhuma. */
   exporting: ExportKind | null;
+  /** Estilo só existe no modo Álbum: na Grade não há capa nem papel para mudar. */
+  isStyleOpen: boolean;
+  onToggleStyle: () => void;
   onSortByDate: (direction: SortDirection) => void;
   onExport: (kind: ExportKind) => void;
   onClear: () => void;
@@ -49,6 +52,26 @@ function BookIcon() {
       className="opacity-80"
     >
       <path d="M8 3.2v9.4M8 3.2C6.6 2 4.8 1.4 1.6 1.4v9.4c3.2 0 5 .6 6.4 1.8M8 3.2c1.4-1.2 3.2-1.8 6.4-1.8v9.4c-3.2 0-5 .6-6.4 1.8" />
+    </svg>
+  );
+}
+
+/** Pincel: o que muda a aparência, não o conteúdo. */
+function StyleIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M11.6 1.6 5.9 7.3M3.4 12.5c1 0 1.9-.8 1.9-1.9S4.5 8.8 3.4 8.8 1.5 9.6 1.5 10.6c0 .6-.3 1.2-.8 1.5.6.3 1.2.4 2.7.4Z" />
+      <path d="M8.2 4.4 11 1.6a1.4 1.4 0 0 1 2 2L10.2 6.4" />
     </svg>
   );
 }
@@ -88,6 +111,8 @@ export function AlbumToolbar({
   sortDirection,
   isManuallyOrdered,
   exporting,
+  isStyleOpen,
+  onToggleStyle,
   onSortByDate,
   onExport,
   onClear,
@@ -125,6 +150,24 @@ export function AlbumToolbar({
               </button>
             ))}
           </div>
+
+          {/* Estilo mora aqui, entre "como ver" e "levar embora", porque é
+              disso que se trata: mexer no álbum que está na tela. No celular
+              vira só o pincel — a palavra não cabe ao lado do resto. */}
+          {view === 'book' && (
+            <button
+              type="button"
+              onClick={onToggleStyle}
+              aria-pressed={isStyleOpen}
+              aria-expanded={isStyleOpen}
+              aria-controls="style-drawer"
+              title="Capa, papel, moldura e letra do álbum"
+              className="btn btn-secondary"
+            >
+              <StyleIcon />
+              <span className="hidden sm:inline">Estilo</span>
+            </button>
+          )}
 
           {/* Um caminho só de saída: o álbum. Um segundo botão ao lado deste
               dividia a atenção entre "o livro" e "os arquivos", e o livro é o

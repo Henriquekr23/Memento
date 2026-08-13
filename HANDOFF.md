@@ -71,6 +71,11 @@ Dentro de `album-book/`, separado por responsabilidade:
   livro" e "os arquivos". Saiu junto o `jszip`. Está no histórico do git.
 - **Landing** (`/`) com paralaxe, mapa de destino interativo, tema claro/escuro
   e PT/EN.
+- **Celular**: a edição funciona no toque. Tocar numa foto a escolhe e revela
+  as alças dela e os controles da página (no mouse isso é o `hover`); o
+  primeiro toque nunca reenquadra, então dá para rolar o álbum com o dedo por
+  cima das fotos. A tela de importação troca "arraste para cá" por um botão
+  grande, e o painel de ajustes cabe na largura de um celular.
 
 ## Decisões que não devem ser desfeitas sem motivo
 
@@ -100,6 +105,16 @@ Dentro de `album-book/`, separado por responsabilidade:
 10. **`resolveAlbumPalette` é a única ponte entre tema e canvas.** A tela lê
     `var(--paper-base)`; o canvas não tem cascata e precisa do valor. Criar um
     tema novo continua sendo mexer só nas listas de `theme.ts`.
+11. **As classes do design system vivem em `@layer components`.** CSS fora de
+    camada vence CSS dentro de uma, então soltas elas ganhavam dos utilitários
+    do Tailwind: `className="btn hidden sm:inline-flex"` não escondia nada.
+    Componente é a base, utilitário é o ajuste — o ajuste tem de poder vencer.
+    Não tire nada dessa camada.
+12. **Toque não é largura.** `useIsNarrow` (`max-width: 767px`) responde "cabe o
+    spread?"; `useIsTouch` (`hover: none`) responde "dá para pairar?". Tudo que
+    aparecia só no `hover` — as alças da foto, a pílula de layout — usa o
+    segundo. Um laptop com tela sensível ao toque é largo e mesmo assim precisa
+    das alças visíveis.
 
 ## Segurança
 
@@ -131,10 +146,12 @@ npx tsx scripts/checkPdfExport.mts ./fotos album.pdf          # modo alinhado
 npx tsx scripts/checkPdfExport.mts ./fotos livre.pdf livre    # papel escuro, cantoneiras, fotos soltas
 ```
 
-**Limitações do meu ambiente:** não consigo abrir navegador (nenhuma
-verificação visual), não alcanço o Google Fonts (valido o build com um
-substituto local para as fontes) e não consigo apagar arquivos na pasta do
-projeto.
+**Verificação visual.** Dá para rodar o app num Chromium headless e tirar
+capturas de 390px e 1280px, inclusive emulando `hover: none` — sem isso o teste
+serve o caminho do mouse numa tela de celular e não prova nada. É assim que a
+rolagem horizontal da landing e a pílula de controles fora de lugar apareceram.
+O `hasTouch` do Playwright emula os eventos, não as media features; as features
+precisam de `Emulation.setEmulatedMedia` por CDP.
 
 ## Pendências
 
@@ -144,6 +161,10 @@ projeto.
       redirecionamento para `PageControls`; ninguém importa).
 - [ ] Conferir o build com as fontes reais (`npm run build`) na sua máquina.
 - [ ] Modo de página única no mobile: hoje o spread de duas páginas só encolhe.
+- [ ] Varrer o resto do JSX atrás de utilitários que estavam sendo ignorados
+      pelas classes do design system. `hidden sm:inline-flex` no CTA da landing
+      era um; pode haver outros escondidos, porque durante muito tempo eles
+      simplesmente não faziam efeito e ninguém notou.
 - [ ] Legenda e layout de página são guardados pela chave da página, que depende
       da posição — reordenar pode fazer os dois trocarem de página. Ajustes por
       foto e textos não são afetados.

@@ -230,7 +230,10 @@ export function LandingPage() {
 
           {/* Três fotos penduradas no mesmo fio: o que o álbum faz, sem texto. */}
           <div aria-hidden className="pointer-events-none hidden md:block">
-            <svg viewBox="0 0 480 480" width="100%" height="auto" className="block overflow-visible">
+            {/* A altura sai do `viewBox` + CSS. `height="auto"` é atributo de
+                SVG inválido (só existe em CSS) e o navegador reclama no
+                console; a proporção já vinha do viewBox de qualquer forma. */}
+            <svg viewBox="0 0 480 480" className="block h-auto w-full overflow-visible">
               <g
                 className="transition-transform duration-150 ease-out"
                 style={{

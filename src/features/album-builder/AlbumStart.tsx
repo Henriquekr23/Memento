@@ -53,21 +53,24 @@ export function AlbumStart({
 
   return (
     <section className="mx-auto w-full max-w-[680px] py-4">
-      <header className="mb-12">
-        <span className="kicker mb-4">Álbum novo</span>
-        <h1 className="m-0 font-[family-name:var(--font-heading)] text-[clamp(30px,4.4vw,40px)] font-normal leading-[1.14] tracking-[-0.01em]">
+      {/* Os respiros generosos são do desktop. Na tela do celular eles empurram
+          o botão de escolher fotos — a única coisa que a pessoa veio fazer —
+          para fora da primeira dobra. */}
+      <header className="mb-7 sm:mb-12">
+        <span className="kicker mb-3 sm:mb-4">Álbum novo</span>
+        <h1 className="m-0 font-[family-name:var(--font-heading)] text-[clamp(26px,4.4vw,40px)] font-normal leading-[1.14] tracking-[-0.01em]">
           Todo álbum começa pelas fotos.
         </h1>
-        <p className="mt-4 max-w-[52ch] text-[15.5px] leading-[26px] text-[color-mix(in_srgb,var(--color-text)_72%,transparent)]">
+        <p className="mt-3 max-w-[52ch] text-[15px] leading-[24px] text-[color-mix(in_srgb,var(--color-text)_72%,transparent)] sm:mt-4 sm:text-[15.5px] sm:leading-[26px]">
           Dê um nome, escolha como as imagens entram e traga os arquivos. Um
           casamento, uma viagem, uma tarde de dez anos atrás — o que você quiser
           guardar.
         </p>
       </header>
 
-      <div className="space-y-11">
+      <div className="space-y-7 sm:space-y-11">
         <div>
-          <label htmlFor="start-album-name" className="kicker mb-3.5">
+          <label htmlFor="start-album-name" className="kicker mb-2.5 sm:mb-3.5">
             Nome do álbum
           </label>
           <input
@@ -82,10 +85,10 @@ export function AlbumStart({
         {/* `div role="group"` e não `fieldset`: a altura do fieldset não conta
             a linha da legend, e a seção seguinte subia por cima dos cartões. */}
         <div role="group" aria-labelledby="start-mode-label">
-          <span id="start-mode-label" className="kicker mb-3.5">
+          <span id="start-mode-label" className="kicker mb-2.5 sm:mb-3.5">
             Como montar
           </span>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
             {MODES.map((option) => {
               const isActive = mode === option.id;
               return (
@@ -102,7 +105,7 @@ export function AlbumStart({
                       {option.title}
                     </span>
                   </span>
-                  <span className="mt-2 block text-[13.5px] leading-[21px] text-[color-mix(in_srgb,var(--color-text)_58%,transparent)]">
+                  <span className="mt-1.5 block text-[13px] leading-[19px] text-[color-mix(in_srgb,var(--color-text)_58%,transparent)] sm:mt-2 sm:text-[13.5px] sm:leading-[21px]">
                     {option.description}
                   </span>
                 </button>
@@ -112,7 +115,7 @@ export function AlbumStart({
         </div>
 
         <div>
-          <span className="kicker mb-3.5">As fotos</span>
+          <span className="kicker mb-2.5 sm:mb-3.5">As fotos</span>
           <PhotoDropzone
             onFilesSelected={(files) => onStart(files, mode)}
             disabled={isImporting}
@@ -120,7 +123,7 @@ export function AlbumStart({
         </div>
       </div>
 
-      <p className="mt-9 text-center text-xs text-[color-mix(in_srgb,var(--color-text)_42%,transparent)]">
+      <p className="mt-6 text-center text-xs text-[color-mix(in_srgb,var(--color-text)_42%,transparent)] sm:mt-9">
         Tudo acontece no seu navegador. Nenhuma imagem é enviada a um servidor.
       </p>
     </section>

@@ -50,7 +50,7 @@ function Slider({
 }) {
   return (
     <label className="flex min-w-36 flex-1 items-center gap-2 text-xs text-[color-mix(in_srgb,var(--color-text)_60%,transparent)]">
-      <span className="w-20 shrink-0">{label}</span>
+      <span className="w-16 shrink-0 sm:w-20">{label}</span>
       <input
         type="range"
         min={min}
@@ -58,7 +58,9 @@ function Slider({
         step={step}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-[var(--color-surface)] accent-[var(--color-accent)]"
+        // `touch-none`: sem isso o dedo que arrasta o slider rola a página
+        // junto, e o valor pula. `range-thumb` engorda o pegador no toque.
+        className="range-input h-1 flex-1 cursor-pointer touch-none appearance-none rounded-full bg-[var(--color-surface)] accent-[var(--color-accent)]"
       />
       <span className="w-10 shrink-0 text-right tabular-nums text-[color-mix(in_srgb,var(--color-text)_45%,transparent)]">
         {format(value)}
@@ -92,15 +94,18 @@ export function PhotoInspector({
     adjustment.rotation === DEFAULT_ADJUSTMENT.rotation;
 
   return (
-    <div className="inspector-dock flex flex-wrap items-center gap-x-5 gap-y-3 card rounded-[var(--radius-md)] px-4 py-3">
-      <div className="flex min-w-0 items-center gap-3">
+    <div className="inspector-dock card flex flex-wrap items-center gap-x-5 gap-y-3 rounded-[var(--radius-md)] px-3 py-3 sm:px-4">
+      {/* No celular o cabeçalho ocupa a linha inteira e leva o ✕ junto: com o
+          fechar lá no fim, depois de cinco sliders empilhados, sair do painel
+          exigia rolar o painel. */}
+      <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={photo.previewUrl}
           alt=""
           className="h-10 w-10 shrink-0 rounded object-cover"
         />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-medium text-[var(--color-text)]" title={photo.fileName}>
             {photo.fileName}
           </p>
@@ -108,9 +113,17 @@ export function PhotoInspector({
             {formatDateTime(photo.timestamp)}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Fechar ajustes"
+          className="-mr-1 shrink-0 rounded-full px-2 py-2 text-sm text-[color-mix(in_srgb,var(--color-text)_45%,transparent)] transition hover:text-[var(--color-text)] sm:hidden"
+        >
+          ✕
+        </button>
       </div>
 
-      <div className="flex min-w-64 flex-[2] flex-wrap gap-x-5 gap-y-2">
+      <div className="flex w-full min-w-64 flex-[2] flex-wrap gap-x-5 gap-y-3 sm:w-auto">
         {composeMode === 'free' && rect && (
           <Slider
             label="Tamanho"
@@ -181,12 +194,12 @@ export function PhotoInspector({
         />
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
         <button
           type="button"
           onClick={() => onReset(photo.id)}
           disabled={isDefault && composeMode === 'aligned'}
-          className="btn btn-secondary btn-sm disabled:opacity-30"
+          className="btn btn-secondary btn-sm flex-1 disabled:opacity-30 sm:flex-none"
         >
           Voltar ao padrão
         </button>
@@ -194,7 +207,7 @@ export function PhotoInspector({
           type="button"
           onClick={() => onSendToTray(photo.id)}
           title="Tira a foto da página e devolve ao depósito, sem apagar"
-          className="btn btn-secondary btn-sm"
+          className="btn btn-secondary btn-sm flex-1 sm:flex-none"
         >
           ↑ Depósito
         </button>
@@ -202,13 +215,15 @@ export function PhotoInspector({
           type="button"
           onClick={onClose}
           aria-label="Fechar ajustes"
-          className="rounded-full px-2 py-1.5 text-xs text-[color-mix(in_srgb,var(--color-text)_40%,transparent)] transition hover:text-[var(--color-text)]"
+          className="hidden rounded-full px-2 py-1.5 text-xs text-[color-mix(in_srgb,var(--color-text)_40%,transparent)] transition hover:text-[var(--color-text)] sm:block"
         >
           ✕
         </button>
       </div>
 
-      <p className="w-full text-[11px] text-[color-mix(in_srgb,var(--color-text)_35%,transparent)]">
+      {/* A dica fala de gestos de mouse; no toque ela seria mentira, e o painel
+          já é a parte mais apertada da tela pequena. */}
+      <p className="hidden w-full text-[11px] text-[color-mix(in_srgb,var(--color-text)_35%,transparent)] sm:block">
         {composeMode === 'free'
           ? 'Arraste a foto para movê-la pela página · ◢ redimensiona · legenda logo abaixo da foto'
           : 'Arraste a foto para reenquadrar · a alça ⠿ troca de lugar com outra · legenda logo abaixo da foto'}
