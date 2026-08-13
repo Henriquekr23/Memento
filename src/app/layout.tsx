@@ -1,24 +1,33 @@
 import type { Metadata } from 'next';
-import { Cormorant_Garamond, Lora } from 'next/font/google';
+import localFont from 'next/font/local';
 
 import './globals.css';
 
 /**
- * As duas faces do design system Classical, auto-hospedadas pelo `next/font`.
- * Nada é buscado no Google em tempo de execução: sem requisição a terceiros
- * (a CSP do projeto restringe `font-src` a `'self'`) e sem salto de layout.
+ * As duas faces do design system Classical, servidas de dentro do repositório.
+ *
+ * Antes vinham de `next/font/google`. Ele também auto-hospeda o resultado, mas
+ * **baixa os arquivos durante o build** — e um build que precisa de rede é um
+ * build que quebra: sem acesso ao `fonts.gstatic.com` o Turbopack falha com
+ * "Can't resolve @vercel/turbopack-next/internal/font/google/font", e apagar a
+ * pasta `.next` (onde o download fica em cache) basta para derrubar tudo.
+ *
+ * Com os `.woff2` versionados aqui, compilar não depende mais de rede nenhuma.
+ * São as fontes variáveis do subset `latin`, um arquivo por família cobrindo os
+ * pesos 400 e 600 — o `latin` já traz todos os acentos do português, o travessão
+ * e as aspas tipográficas.
  */
-const heading = Cormorant_Garamond({
+const heading = localFont({
+  src: './fonts/cormorant-garamond-latin.woff2',
   variable: '--font-heading',
-  subsets: ['latin'],
-  weight: ['400', '600'],
+  weight: '400 600',
   display: 'swap',
 });
 
-const body = Lora({
+const body = localFont({
+  src: './fonts/lora-latin.woff2',
   variable: '--font-body',
-  subsets: ['latin'],
-  weight: ['400', '600'],
+  weight: '400 600',
   display: 'swap',
 });
 
