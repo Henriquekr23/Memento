@@ -189,7 +189,7 @@ export async function buildShareCard(input: ShareCardInput): Promise<string | nu
 
   context.fillStyle = ACCENT;
   context.font = '600 26px Georgia, "Times New Roman", serif';
-  context.fillText('memento.vercel.app', marginLeft, 520);
+  context.fillText('https://memento-woad.vercel.app', marginLeft, 520);
 
   // 0.82 mantém o arquivo perto de 200 KB — cabe no sessionStorage, que é onde
   // ele espera a próxima página, e é mais que suficiente para uma prévia.

@@ -137,24 +137,13 @@ export function AlbumToolbar({
         />
 
         <div className="flex items-center gap-2.5">
-          <div className="switch" role="group" aria-label="Como ver as fotos">
-            {VIEWS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => onViewChange(option.id)}
-                aria-pressed={view === option.id}
-                className="switch-opt"
-              >
-                {option.icon}
-                {option.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Estilo mora aqui, entre "como ver" e "levar embora", porque é
-              disso que se trata: mexer no álbum que está na tela. No celular
-              vira só o pincel — a palavra não cabe ao lado do resto. */}
+          {/* Estilo vem **antes** do interruptor, e não entre ele e o download.
+              Este grupo é empurrado da direita para a esquerda (o nome do álbum
+              come o espaço que sobra), então tudo que aparece à esquerda de um
+              botão o desloca. Com o Estilo depois do interruptor — e ele só
+              existe no modo Álbum — o par Grade/Álbum pulava de lugar a cada
+              alternância e fugia do cursor de quem acabara de clicar nele.
+              No celular vira só o pincel: a palavra não cabe ao lado do resto. */}
           {view === 'book' && (
             <Tooltip label="Capa, papel, moldura e letra do álbum" side="bottom">
               <button
@@ -171,6 +160,21 @@ export function AlbumToolbar({
               </button>
             </Tooltip>
           )}
+
+          <div className="switch" role="group" aria-label="Como ver as fotos">
+            {VIEWS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onViewChange(option.id)}
+                aria-pressed={view === option.id}
+                className="switch-opt"
+              >
+                {option.icon}
+                {option.label}
+              </button>
+            ))}
+          </div>
 
           {/* Um caminho só de saída: o álbum. Um segundo botão ao lado deste
               dividia a atenção entre "o livro" e "os arquivos", e o livro é o
