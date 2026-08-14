@@ -8,7 +8,7 @@
  *
  * Trocar de domínio é trocar esta linha.
  */
-export const SITE_URL = 'https://memento.vercel.app';
+export const SITE_URL = 'https://memento-woad.vercel.app';
 
 /** Como a URL aparece escrita no meio de uma frase. */
-export const SITE_LABEL = 'memento.vercel.app';
+export const SITE_LABEL = 'memento-woad.vercel.app';

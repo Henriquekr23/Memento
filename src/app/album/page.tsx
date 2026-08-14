@@ -119,8 +119,14 @@ export default function AlbumPage() {
 
       {/* Sangra igual à barra: a régua da barra é de ponta a ponta (ela gruda no
           topo e o fundo precisa cobrir a largura toda), então esta tem de ser
-          também — duas linhas de comprimentos diferentes saltam à vista. */}
-      <hr className="hr hr-bleed mb-6" />
+          também — duas linhas de comprimentos diferentes saltam à vista.
+
+          Sem margem quando a barra existe: aí o respiro em volta dos controles
+          é o `py` da própria barra dos dois lados, e a faixa fica centrada
+          entre as duas réguas. Com o `mb-6` a de cima ficava 40px acima dos
+          botões contra 16px da de baixo, e a barra parecia pendurada. Sem a
+          barra a margem volta, senão a tela inicial encosta na régua. */}
+      <hr className={`hr hr-bleed ${hasPhotos ? '' : 'mb-6'}`} />
 
       {hasPhotos && (
         <AlbumToolbar
