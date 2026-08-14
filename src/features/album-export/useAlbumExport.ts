@@ -29,22 +29,32 @@ export function useAlbumExport() {
   const [progress, setProgress] = useState<ExportProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Devolve `true` quando o arquivo foi entregue.
+   *
+   * O sucesso é retornado, e não só guardado em estado, porque quem chama
+   * precisa reagir na mesma linha do `await` — hoje para levar a pessoa à página
+   * de agradecimento. Ler um `error === null` depois seria olhar o estado do
+   * render anterior.
+   */
   const exportAlbum = useCallback(
-    async (album: AlbumSnapshot, kind: ExportKind = 'pdf') => {
+    async (album: AlbumSnapshot, kind: ExportKind = 'pdf'): Promise<boolean> => {
       // Duas exportações ao mesmo tempo disputariam a memória do navegador
       // justamente quando ela está mais apertada.
-      if (running) return;
+      if (running) return false;
 
       setRunning(kind);
       setError(null);
       try {
         await EXPORTERS[kind].export(album, setProgress);
+        return true;
       } catch (cause) {
         setError(
           cause instanceof Error
             ? cause.message
             : 'Não foi possível gerar o álbum.',
         );
+        return false;
       } finally {
         setRunning(null);
         setProgress(null);

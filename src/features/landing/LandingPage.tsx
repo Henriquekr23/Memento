@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { SiteFooter } from '@/components/SiteFooter';
 import { SiteNav } from '@/components/SiteNav';
+import { FaqWidget } from '@/features/faq/FaqWidget';
 import { COMMON } from '@/features/i18n/common';
 import { useLang } from '@/features/i18n/LangProvider';
 
@@ -322,6 +323,10 @@ export function LandingPage() {
 
         <SiteFooter />
       </div>
+
+      {/* Fora do container de largura máxima: ele é fixo na janela, não na
+          coluna de texto. */}
+      <FaqWidget />
     </div>
   );
 }
