@@ -1,13 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { Wordmark } from '@/components/Logo';
 import { SiteFooter } from '@/components/SiteFooter';
-import { Tooltip } from '@/components/Tooltip';
+import { SiteNav } from '@/components/SiteNav';
 import { FaqWidget } from '@/features/faq/FaqWidget';
 import { buildShareCard } from '@/features/share/shareCard';
 import { saveThankYouHandoff } from '@/features/thank-you/handoff';
@@ -17,6 +15,9 @@ import { AlbumGrid } from '@/features/album-builder/AlbumGrid';
 import { AlbumStart, type StartMode } from '@/features/album-builder/AlbumStart';
 import { AlbumToolbar, type AlbumView } from '@/features/album-builder/AlbumToolbar';
 import { StyleDrawer } from '@/features/album-style/StyleDrawer';
+import { useAlbumSave } from '@/features/album-save/useAlbumSave';
+import { InlineAuthDialog } from '@/features/auth/InlineAuthDialog';
+import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { useAlbum } from '@/features/album-builder/useAlbum';
 import {
   useAlbumExport,
@@ -30,6 +31,7 @@ export default function AlbumPage() {
   const album = useAlbum();
   const book = useAlbumBook(album.includedPhotos);
   const { exportAlbum, running, isExporting, progress, error } = useAlbumExport();
+  const cloud = useAlbumSave();
   const [view, setView] = useState<AlbumView>('grid');
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   // A gaveta de estilo vive aqui, e não dentro do AlbumBook, porque quem a abre
@@ -105,28 +107,18 @@ export default function AlbumPage() {
   );
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[1200px] px-[clamp(20px,5vw,72px)] pb-20">
-      {/* A marca é o caminho de volta: clicar em "Memento" leva ao início, como
-          em qualquer site — um botão só para isso era redundante. */}
-      <header className="flex flex-wrap items-center justify-between gap-4 py-7">
-        <Tooltip label="Voltar ao início" side="bottom">
-          <Wordmark tagline="Guarde a memória" />
-        </Tooltip>
-        <Link href="/sobre" className="nav-link text-sm">
-          Sobre
-        </Link>
-      </header>
+    <main className="page-shell page-body">
+      {/* A mesma barra das outras telas. Antes esta página tinha um cabeçalho
+          próprio, e por isso era a única sem idioma, tema e conta — justamente
+          a tela onde a pessoa passa mais tempo. */}
+      <SiteNav variant="inner" tagline="Guarde a memória" />
 
-      {/* Sangra igual à barra: a régua da barra é de ponta a ponta (ela gruda no
-          topo e o fundo precisa cobrir a largura toda), então esta tem de ser
-          também — duas linhas de comprimentos diferentes saltam à vista.
-
-          Sem margem quando a barra existe: aí o respiro em volta dos controles
-          é o `py` da própria barra dos dois lados, e a faixa fica centrada
-          entre as duas réguas. Com o `mb-6` a de cima ficava 40px acima dos
-          botões contra 16px da de baixo, e a barra parecia pendurada. Sem a
-          barra a margem volta, senão a tela inicial encosta na régua. */}
-      <hr className={`hr hr-bleed ${hasPhotos ? '' : 'mb-6'}`} />
+      {/* Uma régua só, do mesmo comprimento em todo o sistema (`.hr` para no
+          conteúdo). Sem margem quando a barra grudenta vem logo abaixo: o
+          respiro ali é o `py` da própria barra, dos dois lados, e a faixa fica
+          centrada entre as duas réguas. Com margem, a de cima ficava a 40px
+          dos botões contra 16px da de baixo e a barra parecia pendurada. */}
+      <hr className={`hr ${hasPhotos ? '' : 'mb-6'}`} />
 
       {hasPhotos && (
         <AlbumToolbar
@@ -145,8 +137,25 @@ export default function AlbumPage() {
           onSortByDate={album.sortByDate}
           onExport={handleExport}
           onClear={() => setIsClearConfirmOpen(true)}
+          canSaveToCloud={isSupabaseConfigured}
+          isSaving={cloud.isSaving}
+          onSaveToCloud={() =>
+            cloud.save({
+              title: album.name,
+              photos: album.includedPhotos,
+              book,
+            })
+          }
         />
       )}
+
+      {/* Entrar sem sair da página: navegar destruiria o álbum, que só existe
+          na memória desta aba. Ver `InlineAuthDialog`. */}
+      <InlineAuthDialog
+        open={cloud.needsAuth}
+        onClose={cloud.cancelAuth}
+        onSignedIn={cloud.resume}
+      />
 
       <StyleDrawer
         open={isStyleOpen && isBookView}
@@ -181,6 +190,10 @@ export default function AlbumPage() {
             onNameChange={album.setName}
             isImporting={album.status.isImporting}
             onStart={handleStart}
+            // O mesmo estado do livro: o que for escolhido aqui já vale para a
+            // primeira página desenhada, e continua editável pela gaveta.
+            theme={book.theme}
+            onThemeChange={book.setTheme}
           />
         )}
 
@@ -213,7 +226,14 @@ export default function AlbumPage() {
           </p>
         )}
 
+        {cloud.progress && (
+          <p className="text-sm text-[color-mix(in_srgb,var(--color-text)_60%,transparent)]">
+            Guardando na nuvem… {cloud.progress.processed}/{cloud.progress.total}
+          </p>
+        )}
+
         {error && <p className="text-sm text-red-400">{error}</p>}
+        {cloud.error && <p className="text-sm text-red-400">{cloud.error}</p>}
 
 
         {hasPhotos &&

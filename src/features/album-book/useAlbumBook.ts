@@ -10,6 +10,7 @@ import {
   type StoryInsertion,
 } from '@/lib/paginate';
 import { DEFAULT_THEME, type AlbumTheme } from '@/features/album-style/theme';
+import type { AlbumComposition } from '@/features/album-save/composition';
 import {
   DEFAULT_ADJUSTMENT,
   clampRect,
@@ -28,18 +29,36 @@ import { usePageTurn } from './usePageTurn';
  * Estado editorial do álbum: o que existe em cada página e como está composto.
  * A navegação (em que spread estamos, folha virando) mora em `usePageTurn`.
  */
-export function useAlbumBook(photos: readonly Photo[]) {
+/**
+ * `initial` só é lido na primeira renderização — é o estado inicial de um
+ * álbum vindo do banco (ver `features/album-save/composition`). Passar sem ele
+ * é o caminho da Fase 1: álbum novo, tudo no padrão.
+ */
+export function useAlbumBook(
+  photos: readonly Photo[],
+  initial?: AlbumComposition,
+) {
   const [layoutOverrides, setLayoutOverrides] = useState<
     Record<string, PageLayoutId>
-  >({});
-  const [captions, setCaptions] = useState<Record<string, string>>({});
-  const [adjustments, setAdjustments] = useState<Record<string, PhotoAdjustment>>(
-    {},
+  >(() => initial?.layoutOverrides ?? {});
+  const [captions, setCaptions] = useState<Record<string, string>>(
+    () => initial?.captions ?? {},
   );
-  const [photoCaptions, setPhotoCaptions] = useState<Record<string, string>>({});
-  const [stories, setStories] = useState<StoryInsertion[]>([]);
-  const [emptyPages, setEmptyPages] = useState<EmptyPageInsertion[]>([]);
-  const [theme, setThemeState] = useState<AlbumTheme>(DEFAULT_THEME);
+  const [adjustments, setAdjustments] = useState<Record<string, PhotoAdjustment>>(
+    () => initial?.adjustments ?? {},
+  );
+  const [photoCaptions, setPhotoCaptions] = useState<Record<string, string>>(
+    () => initial?.photoCaptions ?? {},
+  );
+  const [stories, setStories] = useState<StoryInsertion[]>(
+    () => initial?.stories ?? [],
+  );
+  const [emptyPages, setEmptyPages] = useState<EmptyPageInsertion[]>(
+    () => initial?.emptyPages ?? [],
+  );
+  const [theme, setThemeState] = useState<AlbumTheme>(
+    () => initial?.theme ?? DEFAULT_THEME,
+  );
   /**
    * Modo de composição **por página**: uma página pode ter as fotos encaixadas
    * no layout enquanto a seguinte tem tudo solto. Era uma chave do livro
@@ -47,15 +66,21 @@ export function useAlbumBook(photos: readonly Photo[]) {
    */
   const [pageComposeModes, setPageComposeModes] = useState<
     Record<string, ComposeMode>
-  >({});
+  >(() => initial?.composeModes ?? {});
   /**
    * Inclinação automática do modo espontâneo. Separada do modo porque uma
    * coisa é querer posicionar as fotos à mão, outra é querer todas tortas.
    */
-  const [autoTiltEnabled, setAutoTiltEnabled] = useState(true);
-  const [placements, setPlacements] = useState<Record<string, PhotoPlacement>>({});
+  const [autoTiltEnabled, setAutoTiltEnabled] = useState(
+    () => initial?.autoTilt ?? true,
+  );
+  const [placements, setPlacements] = useState<Record<string, PhotoPlacement>>(
+    () => initial?.placements ?? {},
+  );
   /** Foto → grupo de página, quando o usuário a colocou numa página à mão. */
-  const [groupKeys, setGroupKeys] = useState<Record<string, string>>({});
+  const [groupKeys, setGroupKeys] = useState<Record<string, string>>(
+    () => initial?.groupKeys ?? {},
+  );
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
 
   /** Contador de empilhamento: quem foi mexido por último fica por cima. */
@@ -342,6 +367,11 @@ export function useAlbumBook(photos: readonly Photo[]) {
     adjustments,
     placements,
     pageComposeModes,
+    // Fase 2: os dois últimos completam o que precisa ser salvo — sem eles a
+    // composição volta do banco sem as páginas montadas à mão.
+    layoutOverrides,
+    groupKeys,
+    emptyPages,
     getAdjustment,
     updateAdjustment,
     resetAdjustment,

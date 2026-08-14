@@ -27,12 +27,21 @@ export type TimestampSource = 'exif' | 'file';
 
 export interface Photo {
   id: string;
-  file: File;
+  /**
+   * O arquivo escolhido pelo usuário. `null` num álbum carregado do banco:
+   * ali existe a imagem, não o arquivo original — quem precisa dos bytes
+   * (só o PDF) busca pelo `previewUrl`.
+   */
+  file: File | null;
   fileName: string;
   /** Extensão em minúsculas, sem ponto. Ex: "jpg" */
   extension: string;
   sizeInBytes: number;
-  /** Object URL para preview. Precisa ser revogado ao remover a foto. */
+  /**
+   * Object URL para preview — ou, num álbum vindo do banco, a URL assinada da
+   * foto no Storage. Object URLs precisam ser revogadas ao remover a foto;
+   * URLs assinadas não (não há nada preso na memória do navegador).
+   */
   previewUrl: string;
   exif: PhotoExif;
   /** Data efetiva usada para ordenar (EXIF quando existe, senão lastModified). */

@@ -187,11 +187,209 @@ html {
   margin: 0;
   background: var(--color-divider);
 }
-/* Mesma sangria da barra do álbum. Continua sendo classe, e não um `-mx-*`
-   utilitário no JSX, porque o valor é a mesma expressão `clamp()` usada no
-   padding das telas: escrita em dois lugares, uma hora as duas divergem. */
-.hr-bleed {
-  margin-inline: calc(clamp(20px, 5vw, 72px) * -1);
+/* ── Régua das telas ──────────────────────────────────────────────────────
+   Uma medida só para todas as páginas: a mesma largura máxima, a mesma
+   margem lateral, o mesmo respiro no topo. Antes cada tela repetia
+   `mx-auto max-w-[1200px] px-[clamp(...)]` no JSX e algumas linhas divisórias
+   sangravam até a borda enquanto outras paravam no conteúdo — duas larguras
+   de linha no mesmo produto.
+
+   Agora `.hr` tem **um** comprimento: o do conteúdo. Quem precisar de fundo
+   até a borda (a barra grudenta do álbum) usa fundo, não sangria de linha. */
+.page-shell {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: clamp(20px, 5vw, 72px);
+}
+
+/* Cabeçalho de tela: título à esquerda, ações à direita, mesma altura em
+   todas. `items-end` alinha o título grande com os botões pela base. */
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+  padding-block: var(--space-6);
+}
+
+/* Barra de navegação: mesmo respiro vertical do `.page-head`, para que a
+   marca fique na mesma linha ótica em toda tela. */
+.site-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block: var(--space-6);
+}
+
+/* Distância padrão entre a régua do topo e o conteúdo da tela. */
+.page-body {
+  padding-block-start: var(--space-6);
+  padding-block-end: 80px;
+}
+
+/* ── Formulários ──────────────────────────────────────────────────────────
+   Um campo é rótulo + controle + ajuda, com o mesmo respiro em toda tela.
+   Antes cada formulário escolhia o seu (`space-y-1.5` aqui, `mb-2` ali) e o
+   rótulo terminava colado no campo, que é o que faz um formulário parecer
+   torto mesmo quando tudo está alinhado. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.field > label,
+.field > .field-label {
+  font-size: 13.5px;
+  line-height: 1.2;
+  color: color-mix(in srgb, var(--color-text) 78%, transparent);
+}
+
+.field-hint {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+
+/* Coluna de campos: a distância entre dois campos é maior do que a de dentro
+   de um deles — senão o rótulo do seguinte parece pertencer ao anterior. */
+.field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Largura de leitura de um campo. Um input de 1000px pede um olho que a linha
+   não merece: nome, e-mail e senha são curtos. */
+.field-width {
+  width: 100%;
+  max-width: 380px;
+}
+
+/* Cartão de seção das telas de formulário. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-surface) 45%, transparent);
+}
+
+.panel-title {
+  font-family: var(--font-heading), serif;
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Rodapé de ações de um painel: separado do último campo por uma régua, para
+   o botão não parecer parte do campo de cima. */
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-divider);
+}
+
+/* ── Conta ────────────────────────────────────────────────────────────────
+   A inicial do nome dentro de um círculo. Some texto no celular e sobra o
+   círculo, que continua sendo alvo de toque de 34px. */
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+  color: var(--color-accent-700);
+  font-family: var(--font-heading), serif;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* O alvo da conta: o círculo, o nome e o espaço em volta são um botão só.
+   Sem o hover, num item que abre menu, não havia sinal nenhum de que era
+   clicável — o círculo parecia enfeite. */
+.account-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px 10px 3px 3px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.account-trigger:hover,
+.account-trigger:focus-visible,
+.account-trigger[data-open='true'] {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  border-color: var(--color-divider);
+}
+
+.account-trigger:hover .avatar,
+.account-trigger[data-open='true'] .avatar {
+  background: color-mix(in srgb, var(--color-accent) 34%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 62%, transparent);
+}
+
+.avatar {
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 50;
+  min-width: 208px;
+  padding: var(--space-1);
+  background: var(--color-bg);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  text-align: left;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+.menu-sep {
+  height: 1px;
+  margin: var(--space-1) 4px;
+  background: var(--color-divider);
 }
 
 .btn {

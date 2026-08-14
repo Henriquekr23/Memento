@@ -12,13 +12,16 @@ partir das fotos. Lê os metadados EXIF (data, hora, GPS), ordena
 cronologicamente e deixa o usuário compor as páginas à mão. **Sem IA
 generativa e sem visão computacional** — decisão de escopo, não sugerir.
 
-**Fase 1 (atual):** 100% no navegador, orçamento zero, nenhuma foto sai da
-máquina. Fase 2 (futura): contas e persistência via Supabase no free tier.
+**Fase 1 (pronta):** 100% no navegador, orçamento zero, nenhuma foto sai da
+máquina — e continua assim para quem não pede o contrário.
+**Fase 2 (atual):** conta opcional, álbum guardado no Supabase e link público
+para compartilhar. Sem conta, o app é exatamente o da Fase 1.
 
 ## Stack
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 ·
-`exifr` (EXIF) · `@dnd-kit` (arrastar) · zero backend.
+`exifr` (EXIF) · `@dnd-kit` (arrastar) · `@supabase/ssr` + `@supabase/supabase-js`
+(contas, banco e storage, no free tier).
 
 Sete dependências de produção, e é para continuar assim. A exportação em PDF é
 feita à mão, sem biblioteca, e as fontes moram no repositório: **o build não
@@ -51,12 +54,26 @@ src/
 │   ├── album-builder/     → useAlbum (estado), AlbumGrid, AlbumToolbar, AlbumStart
 │   ├── album-book/        → o livro 3D (ver abaixo)
 │   ├── album-style/       → temas de capa/papel/moldura/letra
-│   └── album-export/      → AlbumExporter (contrato) + useAlbumExport
-│       └── pdf/           → o álbum em PDF (ver abaixo)
+│   ├── album-export/      → AlbumExporter (contrato) + useAlbumExport
+│   │   └── pdf/           → o álbum em PDF (ver abaixo)
+│   ├── auth/              → actions (server), state, name (como chamar a
+│   │                        pessoa), useSessionUser, AccountMenu (a conta na
+│   │                        barra), AuthForm (/entrar), AccountForms (/conta),
+│   │                        InlineAuthDialog (entrar sem sair do álbum)
+│   ├── album-save/        → composition (serialização), prepareUpload
+│   │                        (redimensiona), saveAlbum (navegador→Storage),
+│   │                        actions (server), snapshot, useAlbumSave
+│   └── album-view/        → loadAlbum (servidor), AlbumViewer (o livro em
+│                            modo leitura), ShareControls, AlbumCard
 ├── components/            → ConfirmDialog, Logo (LogoMark + Wordmark),
-│                            SiteNav, SiteFooter, Tooltip (compartilhados pelas 3 telas)
+│                            SiteNav (a barra do topo de **todas** as telas),
+│                            SiteFooter, Tooltip
 ├── lib/                   → paginate.ts, sortPhotos.ts, format.ts (funções puras),
 │                            author.ts (dados e links do autor, fonte única)
+│   └── supabase/          → env (config + flag `isSupabaseConfigured`),
+│                            client (navegador), server (RSC/actions),
+│                            middleware (renovação de sessão), types
+├── proxy.ts               → o antigo `middleware.ts` (renomeado no Next 16)
 └── types/                 → photo.ts, page.ts
 ```
 
@@ -181,6 +198,10 @@ TypeScript rodados com `tsx` sobre as funções puras (paginação, geometria,
 rotação, escolha de destino). Não há framework de teste instalado — os asserts
 são scripts avulsos, rodados fora do repositório.
 
+Para a Fase 2 há `scripts/checkComposition.mts` (`npx tsx
+scripts/checkComposition.mts`): ida e volta da composição pelo JSON, entradas
+corrompidas que não podem derrubar o álbum e a poda das chaves órfãs.
+
 Para o PDF há `scripts/checkPdfExport.mts` (fora do `tsconfig`, por causa da
 dependência nativa): troca o canvas do navegador por um de Node e gera um álbum
 de amostra em disco, para conferir as páginas sem abrir a aplicação.
@@ -216,6 +237,106 @@ precisam de `Emulation.setEmulatedMedia` por CDP.
       as constantes ficam no topo de `pdf/pdfExporter.ts`.
 - [ ] `public/` ainda tem os SVGs do template do Next (`next.svg`, `vercel.svg`,
       `file.svg`, `globe.svg`, `window.svg`). Ninguém importa; podem sair.
+
+## Fase 2 — o que existe e por quê
+
+- **Conta é opcional.** `/album` não é rota protegida: montar e baixar o PDF
+  nunca pede login. A conta só entra ao clicar "Salvar na nuvem".
+- **Entrar não navega.** O álbum montado só existe na memória da aba; um
+  redirect para a tela de login o destruiria. Por isso o `InlineAuthDialog`
+  fala com o Supabase pelo cliente do navegador e, terminado o login,
+  `useAlbumSave.resume()` continua o salvamento de onde parou.
+- **O que é salvo:** uma linha por foto (ordem, caminho no Storage, data) e a
+  composição inteira num JSONB. Colunas para layout/legenda/posição seriam uma
+  migração a cada ajuste de UI, e nenhuma consulta filtra por elas.
+  `features/album-save/composition.ts` é a fronteira: `parseComposition` nunca
+  lança, então álbum salvo por versão antiga continua abrindo.
+- **As fotos sobem redimensionadas** (máx. 2000px, JPEG, ~300 KB) direto do
+  navegador para o Storage, sem passar pelo servidor do Next — o corpo de
+  requisição do free tier não aguentaria um álbum inteiro. O canvas não copia
+  metadados: o EXIF, e portanto o GPS, não sobe. O PDF continua usando o
+  arquivo original em resolução cheia.
+- **Autorização é RLS.** Nenhuma consulta do app filtra por `user_id`.
+  `supabase/schema.sql` é a fonte da verdade; `supabase/CHECKLIST.md` é o passo
+  a passo do painel.
+- **O estilo pode ser escolhido antes das fotos.** A tela de álbum novo tem a
+  seção "O estilo", fechada por padrão (aberta, empurraria o botão de escolher
+  fotos para fora da primeira dobra do celular). É o mesmo `StylePanel` da
+  gaveta e o mesmo estado — os ajustes de página dele (`Tortinhas`, `refazer
+  páginas`) são opcionais e ficam de fora ali, onde ainda não existe página.
+- **A página pública reusa o livro**, não uma galeria: `BookStage` ganhou
+  `readOnly`, que desliga a edição sem duplicar componente. Folhear é o produto.
+- **O app roda sem back-end.** Sem as variáveis de ambiente,
+  `isSupabaseConfigured` é falso: o botão da nuvem e o link "Meus álbuns" não
+  existem, `/albums` manda para `/album` e o `npm run build` passa igual.
+- **Salvar não altera o estado do álbum.** `useAlbum` e `useAlbumBook` não
+  sabem que a nuvem existe; `snapshotComposition` lê o estado de fora.
+
+### A régua das telas (design system)
+
+Três classes em `globals.css` guardam a medida de todas as páginas, e o JSX
+não repete mais `mx-auto max-w-[1200px] px-[clamp(...)]`:
+
+- `.page-shell` — largura máxima e margem lateral;
+- `.page-body` — respiro do topo e do rodapé;
+- `.page-head` — cabeçalho de tela (título à esquerda, ação à direita);
+- `.site-nav` — a barra do topo, com o mesmo respiro vertical do `.page-head`.
+
+**Toda régua tem um comprimento só**: o do conteúdo. Antes, `.hr-bleed`
+esticava algumas até a borda da janela enquanto outras paravam no conteúdo —
+duas larguras de linha no mesmo produto. A classe foi removida, e a barra
+grudenta do álbum deixou de sangrar: quem precisa de fundo até a borda usa
+fundo, não sangria de linha. Se aparecer uma linha de outro tamanho, é bug.
+
+### Formulários
+
+`.field`, `.field-stack`, `.field-width`, `.panel`, `.panel-title` e
+`.panel-actions`, em `globals.css`, definem o respiro de rótulo, campo e ajuda.
+Antes cada formulário escolhia o seu (`space-y-1.5` aqui, `mb-2` ali) e o
+rótulo terminava colado no campo — é isso que faz uma tela parecer torta mesmo
+com tudo alinhado. Campo tem largura de leitura (`max-width: 380px`): nome,
+e-mail e senha são curtos, e um input de 1000px pede um olho que a linha não
+merece.
+
+### A barra do topo
+
+Um `SiteNav` para todas as telas, inclusive `/album` — que tinha cabeçalho
+próprio e por isso era a única sem idioma, tema e conta, justamente onde a
+pessoa passa mais tempo.
+
+A ordem é: **para onde ir** (links) · **como vejo** (idioma e tema) · **quem sou
+eu** (conta, encostada na margem direita, que é onde toda interface põe o
+perfil). O espaço entre grupos (28px) é maior do que o de dentro deles (20px) —
+é a distância que agrupa. O gatilho da conta é um alvo só (círculo + nome), com
+hover e estado aberto: sem isso, um item que abre menu não dava sinal nenhum de
+ser clicável.
+
+Deslogado: "Entrar" discreto e "Criar conta" em destaque (no celular, só
+"Entrar" — a tela de login já oferece o cadastro). Logado: um menu atrás do
+nome, com "Meus álbuns", "Minha conta" e "Sair". Foi isso que tirou o "Sair" da
+lista de álbuns, onde ele dividia a linha com "Montar um álbum": a ação mais
+destrutiva do mesmo tamanho e ao lado da mais construtiva.
+
+O nome vem do `user_metadata.full_name` do Supabase Auth — sem tabela de
+perfil. `features/auth/name.ts` centraliza como chamar a pessoa (nome, primeiro
+nome, inicial) e é lido no servidor e no navegador; `useSessionUser` lê a sessão
+do **cookie local**, então a barra não custa uma requisição por página.
+
+O álbum salvo guarda `author_name` na própria linha: quem abre um link público
+não pode consultar `auth.users`, e o nome de quem compartilhou faz parte do
+álbum.
+
+### Pendências da Fase 2
+
+- [ ] Reabrir um álbum salvo **para edição** (hoje só leitura). O caminho está
+      pronto: `loadAlbum` já devolve `Photo[]` + composição, e `useAlbumBook`
+      já aceita estado inicial — falta a tela e o "salvar por cima".
+- [ ] Rascunhos (`status = 'draft'`) de uploads interrompidos ficam no banco
+      ocupando storage. Uma limpeza periódica resolve; nada os mostra hoje.
+- [ ] Recuperação de senha ("esqueci a senha"): só pelo painel por enquanto.
+      Trocar a senha sabendo a atual já existe em `/conta`.
+- [ ] Trocar o e-mail da conta (exige confirmação nos dois endereços).
+- [ ] Migrar `'unsafe-inline'` da CSP para nonce — agora existe proxy.
 
 **Resolvido desde a última versão deste arquivo:** git inicializado e commitado ·
 `LayoutPicker.tsx` apagado · build conferido com as fontes reais (e agora sem

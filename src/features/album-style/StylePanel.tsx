@@ -12,9 +12,14 @@ interface StylePanelProps {
   theme: AlbumTheme;
   onChange: (patch: Partial<AlbumTheme>) => void;
   /** Inclinação automática das fotos — só faz sentido no modo espontâneo. */
-  autoTiltEnabled: boolean;
-  onAutoTiltChange: (enabled: boolean) => void;
-  onResetPages: () => void;
+  autoTiltEnabled?: boolean;
+  /**
+   * Ausentes na tela de álbum novo: são ajustes de página, e lá ainda não
+   * existe página nenhuma para inclinar ou refazer. Mostrá-los desabilitados
+   * seria pior — promete um efeito que não acontece.
+   */
+  onAutoTiltChange?: (enabled: boolean) => void;
+  onResetPages?: () => void;
 }
 
 function Section({
@@ -37,7 +42,7 @@ function Section({
 export function StylePanel({
   theme,
   onChange,
-  autoTiltEnabled,
+  autoTiltEnabled = true,
   onAutoTiltChange,
   onResetPages,
 }: StylePanelProps) {
@@ -87,6 +92,7 @@ export function StylePanel({
       </Section>
 
       <Section title="Fotos">
+        {onAutoTiltChange && (
         <button
           type="button"
           onClick={() => onAutoTiltChange(!autoTiltEnabled)}
@@ -101,6 +107,7 @@ export function StylePanel({
         >
           Tortinhas
         </button>
+        )}
         {FRAME_OPTIONS.map((option) => (
           <button
             key={option.id}
@@ -144,14 +151,16 @@ export function StylePanel({
           ))}
         </div>
 
-        <button
-          type="button"
-          onClick={onResetPages}
-          title="Volta layouts, posições e enquadramentos ao automático (o texto fica)"
-          className="mt-2 text-[11px] text-[color-mix(in_srgb,var(--color-text)_40%,transparent)] underline-offset-2 transition hover:text-[color-mix(in_srgb,var(--color-text)_70%,transparent)] hover:underline"
-        >
-          refazer páginas
-        </button>
+        {onResetPages && (
+          <button
+            type="button"
+            onClick={onResetPages}
+            title="Volta layouts, posições e enquadramentos ao automático (o texto fica)"
+            className="mt-2 text-[11px] text-[color-mix(in_srgb,var(--color-text)_40%,transparent)] underline-offset-2 transition hover:text-[color-mix(in_srgb,var(--color-text)_70%,transparent)] hover:underline"
+          >
+            refazer páginas
+          </button>
+        )}
       </div>
     </div>
   );

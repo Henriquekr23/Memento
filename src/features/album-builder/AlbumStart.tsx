@@ -2,6 +2,14 @@
 
 import { useState } from 'react';
 
+import { StylePanel } from '@/features/album-style/StylePanel';
+import {
+  COVER_OPTIONS,
+  FONT_OPTIONS,
+  FRAME_OPTIONS,
+  PAPER_OPTIONS,
+  type AlbumTheme,
+} from '@/features/album-style/theme';
 import { PhotoDropzone } from '@/features/photo-upload/PhotoDropzone';
 
 /** Onde as fotos importadas caem: montadas por data ou paradas no depósito. */
@@ -12,6 +20,26 @@ interface AlbumStartProps {
   onNameChange: (name: string) => void;
   isImporting: boolean;
   onStart: (files: File[], mode: StartMode) => void;
+  /** O mesmo tema do livro: escolher aqui ou depois muda o mesmo estado. */
+  theme: AlbumTheme;
+  onThemeChange: (patch: Partial<AlbumTheme>) => void;
+}
+
+/** "Couro · Creme · Polaroid · Serifada" — o estilo em uma linha. */
+function themeSummary(theme: AlbumTheme): string {
+  const label = <T extends { id: string; label: string }>(
+    options: readonly T[],
+    id: string,
+  ) => options.find((option) => option.id === id)?.label ?? '';
+
+  return [
+    label(COVER_OPTIONS, theme.cover),
+    label(PAPER_OPTIONS, theme.paper),
+    label(FRAME_OPTIONS, theme.frame),
+    label(FONT_OPTIONS, theme.font),
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 const MODES: {
@@ -48,8 +76,17 @@ export function AlbumStart({
   onNameChange,
   isImporting,
   onStart,
+  theme,
+  onThemeChange,
 }: AlbumStartProps) {
   const [mode, setMode] = useState<StartMode>('album');
+  /**
+   * O estilo nasce fechado: é a única escolha desta tela que não bloqueia
+   * nada — quem não abrir sai com o padrão e muda depois. Aberto por padrão,
+   * ele empurraria o botão de escolher fotos para fora da primeira dobra do
+   * celular, e escolher fotos é o que a pessoa veio fazer.
+   */
+  const [isStyleOpen, setIsStyleOpen] = useState(false);
 
   return (
     <section className="mx-auto w-full max-w-[680px] py-4">
@@ -112,6 +149,43 @@ export function AlbumStart({
               );
             })}
           </div>
+        </div>
+
+        <div role="group" aria-labelledby="start-style-label">
+          <span id="start-style-label" className="kicker mb-2.5 sm:mb-3.5">
+            O estilo
+          </span>
+
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 rounded-[var(--radius-md)] border border-[var(--color-divider)] px-3.5 py-3">
+            <p className="text-[13.5px] leading-[20px]">
+              {themeSummary(theme)}
+              <span className="block text-[12.5px] text-[color-mix(in_srgb,var(--color-text)_50%,transparent)]">
+                Capa, papel, moldura e letra — dá para mudar quando quiser, pelo
+                botão <strong>Estilo</strong> da barra do álbum.
+              </span>
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setIsStyleOpen((open) => !open)}
+              aria-expanded={isStyleOpen}
+              aria-controls="start-style-panel"
+              className="btn btn-secondary btn-sm"
+            >
+              {isStyleOpen ? 'Fechar' : 'Escolher'}
+            </button>
+          </div>
+
+          {isStyleOpen && (
+            <div
+              id="start-style-panel"
+              className="mt-3 rounded-[var(--radius-md)] border border-[var(--color-divider)] px-3.5 py-4"
+            >
+              {/* Sem os ajustes de página: aqui ainda não existe página
+                  nenhuma para inclinar ou refazer. */}
+              <StylePanel theme={theme} onChange={onThemeChange} />
+            </div>
+          )}
         </div>
 
         <div>

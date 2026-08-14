@@ -24,6 +24,30 @@ interface AlbumToolbarProps {
   onSortByDate: (direction: SortDirection) => void;
   onExport: (kind: ExportKind) => void;
   onClear: () => void;
+  /** Fase 2. Sem back-end configurado, o botão da nuvem simplesmente não existe. */
+  canSaveToCloud: boolean;
+  isSaving: boolean;
+  onSaveToCloud: () => void;
+}
+
+/** Nuvem com a seta subindo: guardar fora daqui. */
+function CloudIcon() {
+  return (
+    <svg
+      width="15"
+      height="13"
+      viewBox="0 0 16 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4.3 11.2A3.3 3.3 0 0 1 4.6 4.7a4 4 0 0 1 7.6.9 2.9 2.9 0 0 1-.5 5.6" />
+      <path d="M8 12.6V6.6M5.9 8.5 8 6.4l2.1 2.1" />
+    </svg>
+  );
 }
 
 /** Quatro quadradinhos: a grade de contato, folha de miniaturas. */
@@ -117,11 +141,18 @@ export function AlbumToolbar({
   onSortByDate,
   onExport,
   onClear,
+  canSaveToCloud,
+  isSaving,
+  onSaveToCloud,
 }: AlbumToolbarProps) {
   const isExporting = exporting !== null;
   const isEmpty = includedCount === 0;
   return (
-    <div className="sticky top-0 z-20 -mx-[clamp(20px,5vw,72px)] mb-6 border-b border-[var(--color-divider)] bg-[color-mix(in_srgb,var(--color-bg)_88%,transparent)] px-[clamp(20px,5vw,72px)] py-4 backdrop-blur">
+    /* Sem sangria lateral: a borda de baixo desta barra é uma das réguas do
+       sistema e precisa ter o mesmo comprimento das outras. O fundo continua
+       cobrindo o conteúdo que passa por baixo, porque o conteúdo também vive
+       dentro da mesma margem. */
+    <div className="sticky top-0 z-20 mb-6 border-b border-[var(--color-divider)] bg-[color-mix(in_srgb,var(--color-bg)_88%,transparent)] py-4 backdrop-blur">
       {/* Uma linha só: o nome à esquerda ocupa o que sobrar, e à direita fica
           o que existe nos dois modos. Com os botões da Grade nesta linha, o par
           Grade/Álbum trocava de lugar a cada alternância — e o alvo do clique
@@ -136,7 +167,11 @@ export function AlbumToolbar({
           className="title-input min-w-[200px] flex-1"
         />
 
-        <div className="flex items-center gap-2.5">
+        {/* `flex-wrap` (e não só no pai): com o botão da nuvem, a fila de
+            controles passa de 390px e a página inteira ganhava rolagem
+            horizontal. Quebrando a linha, no celular os botões descem para uma
+            segunda fila alinhada à direita em vez de vazarem da tela. */}
+        <div className="flex flex-wrap items-center justify-end gap-2.5">
           {/* Estilo vem **antes** do interruptor, e não entre ele e o download.
               Este grupo é empurrado da direita para a esquerda (o nome do álbum
               come o espaço que sobra), então tudo que aparece à esquerda de um
@@ -175,6 +210,33 @@ export function AlbumToolbar({
               </button>
             ))}
           </div>
+
+          {/* A nuvem fica **antes** do download, e em tom secundário: baixar o
+              PDF continua sendo a ação principal, a que não pede conta nenhuma.
+              No celular sobra só o ícone — a palavra não cabe ao lado do resto. */}
+          {canSaveToCloud && (
+            <Tooltip
+              label={
+                isEmpty
+                  ? 'Inclua ao menos uma foto para guardar'
+                  : 'Guardar na sua conta e gerar um link para compartilhar'
+              }
+              side="bottom"
+            >
+              <button
+                type="button"
+                onClick={onSaveToCloud}
+                disabled={isSaving || isEmpty || isExporting}
+                aria-label="Salvar na nuvem"
+                className="btn btn-secondary"
+              >
+                <CloudIcon />
+                <span className="hidden sm:inline">
+                  {isSaving ? 'Guardando…' : 'Salvar na nuvem'}
+                </span>
+              </button>
+            </Tooltip>
+          )}
 
           {/* Um caminho só de saída: o álbum. Um segundo botão ao lado deste
               dividia a atenção entre "o livro" e "os arquivos", e o livro é o

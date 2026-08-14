@@ -3,6 +3,27 @@ import type { NextConfig } from 'next';
 const isDev = process.env.NODE_ENV === 'development';
 
 /**
+ * Origem do Supabase, quando configurado.
+ *
+ * A CSP é montada a partir da variável de ambiente, e não com um curinga
+ * `*.supabase.co`: liberar o domínio inteiro permitiria enviar as fotos para
+ * *qualquer* projeto Supabase do mundo. Assim o único destino possível é o
+ * projeto deste app — e quem não configura back-end nenhum continua com um
+ * `connect-src 'self'` puro, como na Fase 1.
+ */
+function supabaseOrigin(): string | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return null;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+
+const supabase = supabaseOrigin();
+
+/**
  * Política de segurança de conteúdo.
  *
  * Só é aplicada em produção, de propósito. A CSP existe para proteger o app
@@ -30,10 +51,13 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' blob: data:",
+  // Fase 2: as fotos salvas voltam como URL assinada do Storage. Sem
+  // back-end configurado, nada é acrescentado aqui.
+  `img-src 'self' blob: data:${supabase ? ` ${supabase}` : ''}`,
   "media-src 'self' blob:",
   "font-src 'self'",
-  "connect-src 'self'",
+  // Sem `wss:`: nada aqui usa realtime. Se um dia usar, acrescente.
+  `connect-src 'self'${supabase ? ` ${supabase}` : ''}`,
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",

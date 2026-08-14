@@ -83,7 +83,7 @@ export function ThankYouPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[1200px] px-[clamp(20px,5vw,72px)]">
+      <div className="page-shell">
         <SiteNav variant="inner" tagline={t.kicker} />
 
         <main className="py-[clamp(40px,6vw,68px)]">

@@ -145,3 +145,42 @@ muda de figura e passa a valer o de sempre:
 - Reforçar a CSP com `connect-src` apontando só para o domínio do Supabase.
 - Aí sim passa a existir dado de terceiros para proteger, e vale revisar
   novamente este documento.
+
+
+## Fase 2 — contas, banco e storage
+
+O que mudou no modelo de ameaças quando o app deixou de ser só client-side.
+
+**Nenhum segredo no servidor.** O app inteiro roda com a *publishable key* do
+Supabase, que é pública por design. A `service_role`/`secret key` não é usada em
+lugar nenhum — nem para assinar as fotos de um álbum público, que dependem de
+uma política de storage e não de chave privilegiada. Não há, portanto, chave a
+vazar por `NEXT_PUBLIC_` ou por log de servidor.
+
+**Autorização é RLS, não código do app.** Nenhuma consulta do app filtra por
+`user_id`: quem filtra é a política no banco. Um `select` esquecido devolve
+zero linhas em vez de devolver o álbum de outra pessoa. As regras estão em
+`supabase/schema.sql`, e as tabelas nascem com RLS ligada.
+
+**O original continua sem sair da máquina.** O que sobe é uma cópia
+redesenhada em canvas (máx. 2000px, JPEG) — `features/album-save/prepareUpload`.
+Como o canvas copia pixels e não metadados, **o EXIF não atravessa**: o GPS de
+casa não vai para a nuvem nem para o link compartilhado. A data fica numa coluna
+do banco, que o dono apaga junto com o álbum.
+
+**Bucket privado.** Nada é servido por URL pública; toda imagem é URL assinada
+com validade de uma hora. Um link de imagem copiado por engano expira.
+
+**Link público é link, não vitrine.** As páginas de álbum saem do índice
+(`robots: noindex`) e um id inexistente, privado ou apagado devolve o mesmo 404
+— a página não confirma a estranhos que aquele álbum existe.
+
+**CSP.** `connect-src` e `img-src` liberam **a origem exata** do projeto
+Supabase (lida de `NEXT_PUBLIC_SUPABASE_URL`), nunca `*.supabase.co`: com o
+curinga, uma dependência comprometida poderia mandar as fotos para outro
+projeto Supabase qualquer. Sem back-end configurado, a CSP volta a ser a da
+Fase 1, com `connect-src 'self'`.
+
+**O que continua em aberto:** `'unsafe-inline'` em `script-src` (agora existe
+proxy/middleware, então dá para migrar para nonce) e limite de tamanho por
+upload confiado ao bucket (10 MB por arquivo, definido no SQL).

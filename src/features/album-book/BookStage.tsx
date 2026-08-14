@@ -46,6 +46,12 @@ interface BookStageProps {
   singlePage: boolean;
   /** Qual metade do spread está enquadrada (só vale com `singlePage`). */
   side: PageSide;
+  /**
+   * Fase 2: o mesmo livro, sem edição — é assim que a página pública mostra o
+   * álbum. Folhear continua funcionando; alças, legendas editáveis e troca de
+   * layout, não.
+   */
+  readOnly?: boolean;
   onNavigate: (direction: TurnDirection) => void;
   onBeginDrag: (
     direction: TurnDirection,
@@ -120,6 +126,7 @@ export function BookStage({
   pageProps,
   singlePage,
   side,
+  readOnly = false,
   onNavigate,
   onBeginDrag,
   onUpdateDrag,
@@ -289,7 +296,7 @@ export function BookStage({
             page={view.leftStatic}
             side="left"
             caption={view.leftStatic ? captions[view.leftStatic.key] : undefined}
-            interactive={!turn}
+            interactive={!turn && !readOnly}
           />
         </div>
         <div
@@ -305,7 +312,7 @@ export function BookStage({
             page={view.rightStatic}
             side="right"
             caption={view.rightStatic ? captions[view.rightStatic.key] : undefined}
-            interactive={!turn}
+            interactive={!turn && !readOnly}
           />
         </div>
 

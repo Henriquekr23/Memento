@@ -107,7 +107,7 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[1200px] px-[clamp(20px,5vw,72px)]">
+      <div className="page-shell">
         <SiteNav variant="landing" tagline={t.tagline} />
 
         {/* ── Hero ──────────────────────────────────────────────────────── */}

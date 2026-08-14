@@ -20,6 +20,11 @@ export interface CommonCopy {
   navHow: string;
   navFeatures: string;
   navAbout: string;
+  navMyAlbums: string;
+  navSignIn: string;
+  navSignUp: string;
+  navAccount: string;
+  navSignOut: string;
   navHome: string;
   footerMadeBy: string;
   footerRole: string;
@@ -44,10 +49,15 @@ export const COMMON: Record<Lang, CommonCopy> = {
     navHow: 'Como funciona',
     navFeatures: 'Recursos',
     navAbout: 'Sobre',
+    navMyAlbums: 'Meus álbuns',
+    navSignIn: 'Entrar',
+    navSignUp: 'Criar conta',
+    navAccount: 'Minha conta',
+    navSignOut: 'Sair',
     navHome: 'Início',
     footerMadeBy: 'Feito por',
     footerRole: 'Desenvolvedor',
-    footerNote: 'Memento — Guarde a memória. Em desenvolvimento, Fase 1.',
+    footerNote: 'Memento — Guarde a memória. Em desenvolvimento, Fase 2.',
     footerLinksLabel: 'Contato e links',
     tipGithub: 'Perfil no GitHub',
     tipLinkedin: 'Perfil no LinkedIn',
@@ -66,10 +76,15 @@ export const COMMON: Record<Lang, CommonCopy> = {
     navHow: 'How it works',
     navFeatures: 'Features',
     navAbout: 'About',
+    navMyAlbums: 'My albums',
+    navSignIn: 'Sign in',
+    navSignUp: 'Create account',
+    navAccount: 'My account',
+    navSignOut: 'Sign out',
     navHome: 'Home',
     footerMadeBy: 'Built by',
     footerRole: 'Developer',
-    footerNote: 'Memento — Keep the Memory. In development, Phase 1.',
+    footerNote: 'Memento — Keep the Memory. In development, Phase 2.',
     footerLinksLabel: 'Contact and links',
     tipGithub: 'GitHub profile',
     tipLinkedin: 'LinkedIn profile',
