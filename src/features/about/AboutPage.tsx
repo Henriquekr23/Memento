@@ -6,6 +6,7 @@ import { LogoMark } from '@/components/Logo';
 import { SiteFooter } from '@/components/SiteFooter';
 import { SiteNav } from '@/components/SiteNav';
 import { Tooltip } from '@/components/Tooltip';
+import { FaqWidget } from '@/features/faq/FaqWidget';
 import { COMMON } from '@/features/i18n/common';
 import { useLang } from '@/features/i18n/LangProvider';
 import { AUTHOR } from '@/lib/author';
@@ -109,6 +110,8 @@ export function AboutPage() {
 
         <SiteFooter />
       </div>
+
+      <FaqWidget />
     </div>
   );
 }

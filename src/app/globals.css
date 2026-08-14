@@ -829,6 +829,136 @@ html {
   }
 }
 
+/* ── FAQ flutuante ─────────────────────────────────────────────────────
+   Botão fixo no canto inferior direito e o painel que abre acima dele.
+
+   `position: fixed` no contêiner (e não no botão) para o painel ancorar no
+   botão sem uma segunda coordenada para manter em sincronia. z-index 70 fica
+   acima da barra grudada do álbum (20) e da gaveta de estilo (50); a bolha de
+   dica, dentro dele, sobe junto. */
+.faq-root {
+  position: fixed;
+  right: clamp(14px, 3vw, 26px);
+  bottom: clamp(14px, 3vw, 26px);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.faq-fab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--color-accent);
+  border-radius: 999px;
+  background: var(--color-bg);
+  color: var(--color-accent-700);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.2s cubic-bezier(0.22, 0.61, 0.36, 1),
+    box-shadow 0.2s ease;
+}
+.faq-fab:hover {
+  background: var(--color-accent);
+  color: var(--color-neutral-100);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+.faq-fab[aria-expanded='true'] {
+  background: var(--color-accent);
+  color: var(--color-neutral-100);
+}
+
+.faq-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(392px, calc(100vw - 28px));
+  max-height: min(70vh, 560px);
+  overflow: hidden;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-lg);
+  animation: faq-in 0.2s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes faq-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* A rolagem é do miolo, não do painel: cabeçalho e o link do rodapé ficam
+   sempre à vista, mesmo com oito perguntas na lista. */
+.faq-list {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.faq-item + .faq-item {
+  border-top: 1px solid var(--color-divider);
+}
+.faq-question {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+.faq-question:hover {
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+.faq-question[aria-expanded='true'] {
+  color: var(--color-accent-700);
+}
+.faq-chevron {
+  flex: none;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  line-height: 1.1;
+  color: var(--color-accent);
+  transition: transform 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.faq-question[aria-expanded='true'] .faq-chevron {
+  transform: rotate(45deg);
+}
+.faq-answer {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.26s ease,
+    opacity 0.22s ease;
+}
+.faq-question[aria-expanded='true'] + .faq-answer {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
 /* ── Links do rodapé ───────────────────────────────────────────────────
    Alvo de 36px de altura porque no celular quem clica é o dedo. */
 .footer-link {

@@ -31,6 +31,7 @@ src/
 ├── app/
 │   ├── page.tsx           → landing (/)
 │   ├── sobre/page.tsx     → página "Sobre" (/sobre)
+│   ├── obrigado/page.tsx  → agradecimento após o download (/obrigado)
 │   ├── album/page.tsx     → a aplicação (/album)
 │   ├── globals.css        → tokens do design system + @layer components
 │   ├── fonts/             → os .woff2 (ver "Fontes")
@@ -41,6 +42,10 @@ src/
 │   ├── theme/             → ThemeToggle (claro/escuro via data-theme no <html>)
 │   ├── landing/           → copy pt/en, hero, BeforeAfter (antes e depois), paralaxe
 │   ├── about/             → AboutPage + copy pt/en
+│   ├── faq/               → FaqWidget (botão fixo "?" + painel) + copy pt/en
+│   ├── share/             → shareMessage (texto puro), shareTargets (X/WhatsApp/
+│   │                        Telegram/e-mail + Web Share), shareCard (canvas 1200×630), ShareRow
+│   ├── thank-you/         → ThankYouPage, copy pt/en, handoff (sessionStorage)
 │   ├── photo-upload/      → dropzone, botão + Fotos, importPhotos
 │   ├── exif-reader/       → parseExif (nunca lança; EXIF ausente é a regra)
 │   ├── album-builder/     → useAlbum (estado), AlbumGrid, AlbumToolbar, AlbumStart
@@ -114,8 +119,11 @@ Dentro de `album-book/`, separado por responsabilidade:
    vivem em `src/app/fonts/` e entram por `next/font/local`. Nenhuma CDN. A CSP
    (`connect-src 'self'`, `font-src 'self'`) transforma "as fotos não saem da
    máquina" em garantia do navegador. Ver "Fontes" abaixo.
-7. **Sem persistência**: nada de `localStorage`/cookies. Recarregar perde o
-   álbum — é intencional nesta fase.
+7. **Sem persistência de conteúdo**: nenhuma foto, página ou legenda é guardada.
+   Recarregar perde o álbum — é intencional nesta fase. As duas exceções não são
+   conteúdo: o idioma escolhido (`localStorage`, `features/i18n/langStore.ts`) e
+   a ponte para `/obrigado` (`sessionStorage`, apagada na leitura,
+   `features/thank-you/handoff.ts` — nome do álbum, contagens e o cartão).
 8. **Movimento de mouse não passa pelo React** na landing: variáveis CSS
    escritas via ref dentro de `requestAnimationFrame`.
 9. **O PDF redesenha a página, não fotografa o DOM.** Capturar a tela traria a

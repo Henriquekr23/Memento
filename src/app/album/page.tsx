@@ -1,12 +1,16 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Wordmark } from '@/components/Logo';
 import { SiteFooter } from '@/components/SiteFooter';
 import { Tooltip } from '@/components/Tooltip';
+import { FaqWidget } from '@/features/faq/FaqWidget';
+import { buildShareCard } from '@/features/share/shareCard';
+import { saveThankYouHandoff } from '@/features/thank-you/handoff';
 import { AlbumBook } from '@/features/album-book/AlbumBook';
 import { useAlbumBook } from '@/features/album-book/useAlbumBook';
 import { AlbumGrid } from '@/features/album-builder/AlbumGrid';
@@ -14,9 +18,15 @@ import { AlbumStart, type StartMode } from '@/features/album-builder/AlbumStart'
 import { AlbumToolbar, type AlbumView } from '@/features/album-builder/AlbumToolbar';
 import { StyleDrawer } from '@/features/album-style/StyleDrawer';
 import { useAlbum } from '@/features/album-builder/useAlbum';
-import { useAlbumExport } from '@/features/album-export/useAlbumExport';
+import {
+  useAlbumExport,
+  type ExportKind,
+} from '@/features/album-export/useAlbumExport';
+import { useLang } from '@/features/i18n/LangProvider';
 
 export default function AlbumPage() {
+  const router = useRouter();
+  const { lang } = useLang();
   const album = useAlbum();
   const book = useAlbumBook(album.includedPhotos);
   const { exportAlbum, running, isExporting, progress, error } = useAlbumExport();
@@ -37,6 +47,61 @@ export default function AlbumPage() {
       setView('book');
     },
     [addFiles],
+  );
+
+  /**
+   * Baixar o álbum e, dando certo, ir para o agradecimento.
+   *
+   * A ordem importa: o cartão é desenhado **antes** da navegação, porque ele lê
+   * as fotos por object URL — e object URL morre com o documento que o criou.
+   * O que atravessa é o cartão já rasterizado, guardado em `sessionStorage`.
+   *
+   * Um cartão que falha não cancela nada: a página de agradecimento funciona sem
+   * ele, e o arquivo do álbum já está no disco da pessoa a essa altura.
+   */
+  const handleExport = useCallback(
+    async (kind: ExportKind) => {
+      const succeeded = await exportAlbum(
+        {
+          name: album.name,
+          photos: album.includedPhotos,
+          photoCaptions: book.photoCaptions,
+          stories: book.stories,
+          // O PDF precisa da composição para sair igual ao que está na tela; o
+          // ZIP simplesmente ignora este campo.
+          book: {
+            pages: book.pages,
+            theme: book.theme,
+            pageCaptions: book.captions,
+            composeModes: book.pageComposeModes,
+            adjustments: book.adjustments,
+            placements: book.placements,
+            autoTilt: book.autoTiltEnabled,
+          },
+        },
+        kind,
+      );
+
+      if (!succeeded) return;
+
+      const cardDataUrl = await buildShareCard({
+        albumName: album.name,
+        photoCount: album.includedPhotos.length,
+        pageCount: book.pages.length,
+        previewUrls: album.includedPhotos.slice(0, 3).map((photo) => photo.previewUrl),
+        lang,
+      }).catch(() => null);
+
+      saveThankYouHandoff({
+        albumName: album.name,
+        photoCount: album.includedPhotos.length,
+        pageCount: book.pages.length,
+        cardDataUrl,
+      });
+
+      router.push('/obrigado');
+    },
+    [album.name, album.includedPhotos, book, exportAlbum, lang, router],
   );
 
   return (
@@ -72,28 +137,7 @@ export default function AlbumPage() {
           isStyleOpen={isStyleOpen}
           onToggleStyle={() => setIsStyleOpen((open) => !open)}
           onSortByDate={album.sortByDate}
-          onExport={(kind) =>
-            exportAlbum(
-              {
-                name: album.name,
-                photos: album.includedPhotos,
-                photoCaptions: book.photoCaptions,
-                stories: book.stories,
-                // O PDF precisa da composição para sair igual ao que está na
-                // tela; o ZIP simplesmente ignora este campo.
-                book: {
-                  pages: book.pages,
-                  theme: book.theme,
-                  pageCaptions: book.captions,
-                  composeModes: book.pageComposeModes,
-                  adjustments: book.adjustments,
-                  placements: book.placements,
-                  autoTilt: book.autoTiltEnabled,
-                },
-              },
-              kind,
-            )
-          }
+          onExport={handleExport}
           onClear={() => setIsClearConfirmOpen(true)}
         />
       )}
@@ -191,6 +235,8 @@ export default function AlbumPage() {
       </div>
 
       <SiteFooter />
+
+      <FaqWidget />
     </main>
   );
 }
