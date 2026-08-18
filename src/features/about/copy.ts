@@ -37,11 +37,11 @@ export const ABOUT: Record<Lang, AboutCopy> = {
       },
       {
         heading: 'Por que tudo no navegador',
-        body: 'As fotos são lidas na sua máquina e não sobem para servidor nenhum: não há conta, não há upload, não há banco de dados guardando o seu casamento. Fechar a aba é o bastante para não sobrar rastro. É também o que mantém o projeto de pé sem custo de infraestrutura.',
+        body: 'As fotos são lidas na sua máquina e nada é enviado sem um pedido explícito seu: sem conta, sem upload, sem banco de dados guardando o seu casamento. Quem quiser guardar o álbum e compartilhar por link cria uma conta e clica em salvar — e mesmo aí sobe uma cópia reduzida, sem os metadados do arquivo, que você apaga quando quiser. É esse limite que mantém o projeto de pé sem custo de infraestrutura.',
       },
       {
         heading: 'Em que ponto está',
-        body: 'Fase 1: importar, ordenar, montar as páginas e baixar o álbum em ZIP ou PDF, tudo local. A Fase 2 prevista traz conta de usuário, álbuns salvos e link para compartilhar — sem mudar o que já funciona nem sair do free tier.',
+        body: 'Fase 1, pronta: importar, ordenar, montar as páginas e baixar o álbum em PDF, tudo local. Fase 2, em uso agora: conta opcional, álbum guardado e link público para compartilhar — sem mudar o que já funcionava e sem sair do free tier. A seguir: reabrir um álbum salvo para editar.',
       },
     ],
     stackKicker: 'Como foi feito',
@@ -62,11 +62,11 @@ export const ABOUT: Record<Lang, AboutCopy> = {
       },
       {
         heading: 'Why it all runs in the browser',
-        body: 'Photos are read on your machine and never uploaded: no account, no upload, no database holding your wedding. Closing the tab is enough to leave no trace. It is also what keeps the project alive with zero infrastructure cost.',
+        body: 'Photos are read on your machine and nothing is sent without you asking for it: no account, no upload, no database holding your wedding. Anyone who wants to keep an album and share it by link creates an account and hits save — and even then what goes up is a reduced copy, stripped of file metadata, that you can delete whenever you like. That boundary is what keeps the project alive with zero infrastructure cost.',
       },
       {
         heading: 'Where it stands',
-        body: 'Phase 1: import, sort, build the pages and download the album as ZIP or PDF, all local. The planned Phase 2 adds user accounts, saved albums and a shareable link — without changing what already works or leaving the free tier.',
+        body: 'Phase 1, done: import, sort, build the pages and download the album as a PDF, all local. Phase 2, live now: optional account, saved albums and a public link to share — without changing what already worked or leaving the free tier. Next: reopening a saved album to edit it.',
       },
     ],
     stackKicker: 'How it was built',

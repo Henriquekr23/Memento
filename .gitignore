@@ -50,6 +50,8 @@ yarn-error.log*
 # service_role key do Supabase) jamais pode usar esse prefixo.
 .env*
 !.env.example
+# o modelo da Fase 2 (o `.env*` acima o pegava também, e ele precisa ir para o repositório)
+!.env.local.example
 
 # vercel
 .vercel

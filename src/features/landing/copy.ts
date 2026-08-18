@@ -59,7 +59,7 @@ export const COPY: Record<Lang, LandingCopy> = {
     heroLine1: 'Você envia as fotos.',
     heroLine2: 'A memória vira um álbum.',
     heroSecondary: 'Ver antes e depois',
-    heroNote: 'Sem cadastro, sem envio para servidor. Roda no seu navegador.',
+    heroNote: 'Sem cadastro para começar. As fotos ficam no seu navegador — só vão para a nuvem se você pedir.',
     heroSub:
       'Um casamento, uma viagem, o aniversário de dez anos atrás. Arraste as imagens para cá e o Memento coloca tudo em ordem pela data e hora gravadas em cada arquivo. Daí em diante quem monta é você: escolhe as páginas, ajusta a sequência, escreve o que só você lembra — e leva o álbum pronto para guardar.',
     photoPlaceholder: 'Suas fotos, em ordem',
@@ -105,7 +105,7 @@ export const COPY: Record<Lang, LandingCopy> = {
       },
       {
         title: 'Tudo no seu navegador',
-        body: 'As fotos são lidas na sua máquina e não sobem para servidor nenhum. Fechar a aba basta para não sobrar rastro em lugar algum.',
+        body: 'As fotos são lidas na sua máquina, e nada sobe sem você mandar. Guardar o álbum na nuvem para compartilhar é um botão, não o caminho padrão — e o que sobe é uma cópia reduzida, sem os metadados do arquivo.',
       },
       {
         title: 'Metadados a seu favor',
@@ -135,7 +135,7 @@ export const COPY: Record<Lang, LandingCopy> = {
     heroLine1: 'You bring the photos.',
     heroLine2: 'The memory becomes an album.',
     heroSecondary: 'See before and after',
-    heroNote: 'No sign-up, nothing uploaded. It runs in your browser.',
+    heroNote: 'No sign-up to start. Photos stay in your browser — they go to the cloud only if you ask.',
     heroSub:
       'A wedding, a trip, a birthday from ten years ago. Drag the images in and Memento puts everything in order by the date and time written into each file. From there it’s yours to build: pick the pages, adjust the sequence, write down what only you remember — and take the finished album with you.',
     photoPlaceholder: 'Your photos, in order',

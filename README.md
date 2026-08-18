@@ -4,8 +4,14 @@ Monta o álbum de uma viagem a partir das fotos: lê os metadados EXIF, ordena p
 data/hora, permite reordenar e compor as páginas à mão e exporta o álbum pronto
 em PDF — capa, miolo e contracapa, uma página do arquivo por página do livro.
 
-**Fase 1 (atual):** 100% client-side. Nenhuma foto sai do navegador, nenhum
-backend, nenhum custo de infraestrutura.
+**Fase 1:** 100% client-side. Nenhuma foto sai do navegador, nenhum backend,
+nenhum custo de infraestrutura.
+
+**Fase 2 (atual):** conta **opcional** via Supabase, álbum salvo na nuvem e
+link público. A Fase 1 continua inteira: montar o álbum e baixar o PDF não pede
+login e não fala com servidor nenhum. Sem as variáveis do Supabase
+configuradas, o app roda exatamente como na Fase 1 — o botão de salvar não
+aparece e `npm run build` passa igual.
 
 ## Telas
 
@@ -13,10 +19,16 @@ backend, nenhum custo de infraestrutura.
 | --- | --- |
 | `/` | Landing: apresentação do produto, mapa de destino interativo, tema claro/escuro e português/inglês |
 | `/album` | A aplicação: importar, montar, folhear e exportar o álbum |
+| `/sobre` | Quem fez e por quê |
+| `/obrigado` | Depois do download: cartão do álbum e convite para compartilhar |
+| `/entrar` | Criar conta ou entrar (só quando o Supabase está configurado) |
+| `/conta` | Nome, e-mail, senha e sair |
+| `/albums` | Os álbuns guardados na nuvem |
+| `/album/[id]` | O álbum salvo — a página que o link compartilhado abre |
 
 ## Visual
 
-O sistema visual é o **Classical** (`_ds/classical/`): fundo quase branco,
+O sistema visual é o **Classical**: fundo quase branco,
 Cormorant Garamond sobre Lora, filetes no lugar de blocos preenchidos, botões
 com contorno em vez de fundo, e fotografia sempre passada pela moldura
 `.plate`. Os tokens vivem em `src/app/globals.css` — nenhum componente inventa
@@ -47,6 +59,12 @@ npm run dev     # http://localhost:3000
 
 Outros comandos: `npm run build`, `npm run lint`, `npx tsc --noEmit`.
 
+Isso já dá o app inteiro da Fase 1 — importar, montar, folhear e exportar em
+PDF, sem conta e sem servidor. Para ligar a nuvem, copie `.env.local.example`
+para `.env.local` e preencha as duas variáveis do Supabase
+(`supabase/CHECKLIST.md` explica onde achá-las). Sem elas, as telas de conta
+avisam em vez de estourar e o botão de salvar não aparece.
+
 Na primeira tela o usuário dá nome ao álbum e escolhe como as fotos entram:
 **organizar por data** (o álbum já nasce montado, um dia por página) ou
 **eu monto** (tudo vai para o depósito e ele decide o que entra em cada
@@ -66,16 +84,28 @@ O app tem duas visões sobre o mesmo estado:
 
 ```
 src/
-├── app/                      # Rotas (App Router): / é a landing, /album é a aplicação
+├── app/                      # Rotas (App Router) — ver a tabela de telas acima
 ├── features/
 │   ├── landing/              # Página de entrada: copy pt/en, mapa, paralaxe
 │   ├── photo-upload/         # Dropzone + File[] → Photo[] (importPhotos.ts)
 │   ├── exif-reader/          # parseExif.ts — exifr → PhotoExif normalizado
 │   ├── album-builder/        # useAlbum (estado), AlbumGrid (dnd-kit), AlbumToolbar, PhotoCard
 │   ├── album-book/           # Livro 3D (ver abaixo)
-│   └── album-export/         # AlbumExporter (contrato) + pdf/ (canvas → JPEG → PDF, sem biblioteca)
-├── lib/                      # Funções puras: sortPhotos.ts, paginate.ts, format.ts
+│   ├── album-style/          # Temas de capa, papel, moldura e tipografia
+│   ├── album-export/         # AlbumExporter (contrato) + pdf/ (canvas → JPEG → PDF, sem biblioteca)
+│   ├── album-save/           # Fase 2: upload, composição serializada, Server Actions
+│   ├── album-view/           # Fase 2: leitura do álbum salvo, lista, controles de link
+│   ├── auth/                 # Fase 2: entrar, criar conta, diálogo em linha
+│   ├── i18n/ · theme/        # Idioma (pt/en) e claro/escuro
+│   └── share/ · faq/ · about/ · thank-you/
+├── components/               # ConfirmDialog, Logo, SiteNav, SiteFooter, Tooltip
+├── lib/                      # Funções puras: sortPhotos, paginate, format, safeNext + lib/supabase/
+├── proxy.ts                  # O antigo middleware.ts (renomeado no Next 16): renova a sessão
 └── types/                    # Tipos de domínio (Photo, PhotoExif, Album, PageLayout)
+
+supabase/
+├── schema.sql                # Tabelas, RLS, bucket — a fonte da verdade
+└── CHECKLIST.md              # O passo a passo no painel do Supabase
 ```
 
 Dentro de `features/album-book/`, a divisão é por responsabilidade:
@@ -294,30 +324,40 @@ mais leve hoje, mas não remedi.) Três decisões seguram esse número:
 
 ## Segurança
 
-Modelo de ameaças, o que foi verificado e o que ficou em aberto: **[SECURITY.md](SECURITY.md)**.
+Modelo de ameaças, controles e limitações assumidas: **[SECURITY.md](SECURITY.md)**.
 
-Resumo: não existe servidor nem segredo para proteger nesta fase, então o
-esforço foi em (1) tornar verificável a promessa de que as fotos não saem da
-máquina — `connect-src 'self'` na CSP faz o próprio navegador bloquear
-qualquer envio, mesmo que uma dependência tentasse; (2) não vazar localização
-no arquivo que a pessoa compartilha; (3) não derrubar a aba com arquivo grande
-demais.
+Resumo em quatro linhas:
 
-## Caminho para a Fase 2
+- **`connect-src` na CSP é a promessa virando garantia.** Sem back-end,
+  `'self'` puro. Com back-end, a **origem exata** do projeto Supabase — nunca
+  `*.supabase.co`, que deixaria mandar as fotos para qualquer projeto do mundo.
+- **O original nunca sai da máquina.** O PDF é rasterizado num canvas e o que
+  sobe para a nuvem é uma cópia redesenhada: o EXIF (inclusive o GPS) não
+  atravessa nenhum dos dois caminhos.
+- **Autorização é RLS**, ligada desde a primeira tabela — a chave publicável é
+  pública por definição, e sem política ela daria acesso ao banco inteiro. Mas
+  RLS autoriza, não filtra: listagem ainda precisa do próprio `where`.
+- **Nenhum segredo no projeto.** O app roda inteiro com a chave publicável; a
+  `service_role key` não é usada em lugar nenhum.
 
-A migração não deve tocar em `exif-reader`, `lib/` nem na UI do
-`album-builder`. Os dois pontos de costura já estão isolados:
+## Fase 2 — a nuvem, sem virar a porta de entrada
 
-- `features/album-export/types.ts` define o contrato `AlbumExporter`. Criar um
-  `apiAlbumExporter` que faz upload e devolve link público e acrescentá-lo ao
-  mapa `EXPORTERS` de `useAlbumExport()` dá um terceiro destino sem mudar
-  componente nenhum.
-- `useAlbum` concentra todo o estado do álbum; a persistência entra como um
-  efeito adicional, sem alterar o formato do estado.
-- O estado editorial do livro (layouts, posições livres, legendas, histórias,
-  tema) vive em `useAlbumBook` e é serializável: são todos objetos simples
-  indexados por chave estável, prontos para virar uma linha de banco.
+A Fase 2 não tocou em `exif-reader`, `lib/paginate` nem na UI do
+`album-builder`. O que a tornou barata foi o formato do estado, que já era
+serializável:
 
-E o item de segurança que **não** pode ser esquecido lá: ligar Row Level
-Security desde a primeira tabela do Supabase. A chave anônima é pública por
-definição; sem RLS ela dá acesso ao banco inteiro.
+- **`album-save/snapshot.ts` e `composition.ts` são a fronteira.** O estado
+  editorial (layouts, posições livres, legendas, histórias, tema) vira um JSON
+  e volta por um parser que **nunca lança** — álbum salvo por versão antiga do
+  esquema continua abrindo.
+- **A página pública reusa o `BookStage`** com a prop `readOnly`, em vez de uma
+  galeria à parte. Folhear *é* o produto; uma grade de imagens seria outro
+  produto com o mesmo conteúdo.
+- **Conta é opcional e não navega.** `/album` nunca exige login; entrar só
+  acontece ao clicar "Salvar na nuvem", e por um diálogo em linha — um redirect
+  destruiria o álbum, que só existe na memória daquela aba.
+- **As fotos sobem direto do navegador para o Storage**, sem escala no servidor
+  do Next: no free tier da Vercel, um álbum de 40 fotos passaria do limite de
+  corpo de requisição.
+
+Para configurar o Supabase: **[supabase/CHECKLIST.md](supabase/CHECKLIST.md)**.

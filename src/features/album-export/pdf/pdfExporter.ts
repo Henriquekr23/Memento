@@ -49,7 +49,11 @@ const JPEG_QUALITY = 0.88;
 async function loadImage(photo: Photo): Promise<LoadedImage | null> {
   try {
     if (typeof createImageBitmap === 'function') {
-      const bitmap = await createImageBitmap(photo.file, {
+      // Álbum carregado da nuvem não tem `File`: os bytes vêm da URL assinada.
+      // É a mesma imagem — só chegou pela rede em vez do disco.
+      const source: Blob =
+        photo.file ?? (await fetch(photo.previewUrl).then((r) => r.blob()));
+      const bitmap = await createImageBitmap(source, {
         imageOrientation: 'from-image',
       });
       return { source: bitmap, width: bitmap.width, height: bitmap.height };
