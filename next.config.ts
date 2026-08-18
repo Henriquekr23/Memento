@@ -42,10 +42,15 @@ const supabase = supabaseOrigin();
  * `blob:` em img-src/media-src é obrigatório: as prévias são object URLs
  * geradas localmente a partir dos arquivos escolhidos pelo usuário.
  *
- * Ponto fraco conhecido: `'unsafe-inline'` em script-src. O Next injeta o
- * script de bootstrap inline e, sem middleware, não há nonce para liberar só
- * ele. Quando a Fase 2 trouxer middleware, dá para migrar para nonce e tirar
- * essa exceção.
+ * Ponto fraco conhecido, e assumido: `'unsafe-inline'` em script-src. O Next
+ * injeta inline o script de bootstrap e os dados de hidratação. Dá para
+ * trocar por nonce agora que existe o `proxy`, mas o nonce muda a cada
+ * requisição — e um cabeçalho que muda a cada requisição obriga toda página a
+ * ser renderizada sob demanda, incluindo a landing e a "Sobre", que hoje são
+ * estáticas. O que se ganharia é defesa contra *execução* de um XSS; o que
+ * este app oferece a um XSS é pouco: nenhum `dangerouslySetInnerHTML`, nenhum
+ * `eval`, nenhum HTML de usuário renderizado — todo texto passa pelo escape do
+ * React. Reavaliar se algum dia entrar conteúdo rico (markdown, HTML colado).
  */
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -59,7 +64,11 @@ const contentSecurityPolicy = [
   // Sem `wss:`: nada aqui usa realtime. Se um dia usar, acrescente.
   `connect-src 'self'${supabase ? ` ${supabase}` : ''}`,
   "worker-src 'self' blob:",
+  "manifest-src 'self'",
   "object-src 'none'",
+  // O app não embute nada: sem `frame-src`, um `<iframe>` injetado herdaria o
+  // `default-src 'self'` e ainda poderia carregar uma rota do próprio site.
+  "frame-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
@@ -68,6 +77,15 @@ const contentSecurityPolicy = [
 
 const securityHeaders = [
   { key: 'Content-Security-Policy', value: contentSecurityPolicy },
+  {
+    // Dois anos, subdomínios inclusos. Sem isto, a primeira visita digitada
+    // como `memento…` sai em HTTP e é interceptável antes do redirecionamento
+    // — e é justamente nessa requisição que o cookie de sessão viaja.
+    // `upgrade-insecure-requests` na CSP cobre o que a página pede; o HSTS
+    // cobre a navegação até ela.
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
+  },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'Referrer-Policy', value: 'no-referrer' },

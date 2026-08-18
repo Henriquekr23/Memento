@@ -39,7 +39,7 @@ create table if not exists public.album_photos (
   -- `text`, e não `uuid`: em navegador sem `crypto.randomUUID` (contexto não
   -- seguro) o app gera um id no formato `photo_xxx`. Recusá-lo aqui quebraria
   -- o salvamento por um detalhe que não é do banco.
-  id                text primary key check (char_length(id) between 8 and 64),
+  id                text not null check (char_length(id) between 8 and 64),
   album_id          uuid not null references public.albums (id) on delete cascade,
   position          integer not null,
   storage_path      text not null,
@@ -49,7 +49,15 @@ create table if not exists public.album_photos (
   taken_at          timestamptz,
   timestamp_source  text not null default 'file'
                     check (timestamp_source in ('exif', 'file')),
-  created_at        timestamptz not null default now()
+  created_at        timestamptz not null default now(),
+
+  -- A chave é o par, não o id sozinho. O id da foto é gerado no navegador uma
+  -- vez por importação e continua o mesmo enquanto a aba estiver aberta —
+  -- então salvar o mesmo conjunto de fotos duas vezes (o gesto mais natural
+  -- depois de mexer no álbum) criava um álbum novo com os *mesmos* ids e
+  -- esbarrava na chave primária. Único por álbum é o que o app realmente
+  -- precisa: a composição referencia a foto dentro do próprio álbum.
+  primary key (album_id, id)
 );
 
 -- ── Reconciliação ────────────────────────────────────────────────────────
@@ -67,6 +75,107 @@ alter table public.albums
 -- type uuid" e o álbum falha depois das fotos já terem subido.
 alter table public.album_photos
   alter column id type text;
+
+-- Chave primária antiga (só `id`) → chave composta (`album_id`, `id`).
+-- Com a antiga, salvar o mesmo conjunto de fotos num segundo álbum falhava com
+-- "duplicate key value violates unique constraint" **depois** de todas as
+-- fotos já terem subido para o Storage.
+do $$
+declare
+  key_columns integer;
+begin
+  select cardinality(c.conkey) into key_columns
+  from pg_constraint c
+  where c.conrelid = 'public.album_photos'::regclass and c.contype = 'p';
+
+  if key_columns = 1 then
+    -- Linhas de instalações antigas podem ter ids repetidos entre álbuns? Não:
+    -- a chave antiga justamente os impedia. A troca é segura.
+    alter table public.album_photos drop constraint album_photos_pkey;
+    alter table public.album_photos
+      add constraint album_photos_pkey primary key (album_id, id);
+  end if;
+end $$;
+
+-- ── Limites de tamanho ───────────────────────────────────────────────────
+-- Os mesmos tetos que `album-save/actions.ts` aplica, agora onde não dá para
+-- pular. O server action não é a única porta do banco: quem tem a chave
+-- publicável — isto é, qualquer visitante — pode falar direto com o PostgREST
+-- e inserir a linha sem passar por `finalizeAlbum`. A RLS deixa, porque ela só
+-- pergunta "este álbum é seu?". Validação que só existe no servidor protege o
+-- caminho feliz; estas restrições protegem o banco.
+--
+-- O `update` antes de cada restrição não é zelo excessivo: uma linha já gravada
+-- fora do limite faria o `alter table` falhar e derrubaria a execução inteira
+-- deste arquivo no meio.
+
+update public.albums set title = left(title, 200) where char_length(title) > 200;
+update public.albums set author_name = left(author_name, 200)
+  where char_length(author_name) > 200;
+update public.albums set photo_count = 0 where photo_count < 0;
+
+update public.album_photos set file_name = left(file_name, 255)
+  where char_length(file_name) > 255;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'albums_sizes' and conrelid = 'public.albums'::regclass
+  ) then
+    alter table public.albums add constraint albums_sizes check (
+      char_length(title) <= 200
+      and char_length(author_name) <= 200
+      and photo_count >= 0
+    );
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'album_photos_sizes' and conrelid = 'public.album_photos'::regclass
+  ) then
+    alter table public.album_photos add constraint album_photos_sizes check (
+      char_length(file_name) <= 255
+      and char_length(storage_path) <= 512
+      and position >= 0
+      and position < 1000
+    );
+  end if;
+end $$;
+
+-- Teto de fotos por álbum, no banco.
+--
+-- `finalizeAlbum` já recusa mais de 500, mas uma chamada forjada direto ao
+-- PostgREST não passa por ele — e um `insert` de dezenas de milhares de linhas
+-- encheria os 500 MB do free tier sem violar nenhuma política.
+--
+-- Por statement e com tabela de transição, não por linha: salvar um álbum é um
+-- `insert` único de até 500 linhas, e um gatilho por linha faria 500 contagens
+-- onde uma basta. A contagem usa o índice `(album_id, position)`.
+create or replace function public.enforce_album_photo_cap()
+returns trigger language plpgsql as $$
+declare
+  offender uuid;
+begin
+  select touched.album_id into offender
+  from (select distinct album_id from new_rows) as touched
+  where (
+    select count(*) from public.album_photos ap where ap.album_id = touched.album_id
+  ) > 500
+  limit 1;
+
+  if offender is not null then
+    raise exception 'teto de fotos por álbum excedido';
+  end if;
+
+  return null;
+end $$;
+
+drop trigger if exists album_photos_cap on public.album_photos;
+create trigger album_photos_cap
+  after insert on public.album_photos
+  referencing new table as new_rows
+  for each statement execute function public.enforce_album_photo_cap();
 
 create index if not exists album_photos_album_position_idx
   on public.album_photos (album_id, position);
@@ -151,10 +260,21 @@ create policy "fotos: quem lê o álbum lê as fotos"
   to anon, authenticated
   using (public.can_read_album(album_id));
 
+-- O `starts_with` repete a conferência que `finalizeAlbum` já faz — de novo
+-- porque o server action é evitável e a política não é. Sem ele, a linha pode
+-- apontar para qualquer lugar do bucket: as políticas de `storage.objects`
+-- continuam impedindo a leitura do arquivo de outra pessoa, mas o índice do
+-- álbum deixaria de descrever o que está guardado, e a exclusão em
+-- `deleteAlbum` (que varre a pasta `{usuário}/{álbum}`) passaria longe do
+-- arquivo. A convenção do caminho é `{usuário}/{álbum}/{foto}.jpg`: mudou aqui,
+-- mude em `saveAlbum.ts` e nas políticas de storage lá embaixo.
 drop policy if exists "fotos: dono escreve" on public.album_photos;
 create policy "fotos: dono escreve"
   on public.album_photos for insert
-  with check (public.owns_album(album_id));
+  with check (
+    public.owns_album(album_id)
+    and starts_with(storage_path, auth.uid()::text || '/' || album_id::text || '/')
+  );
 
 drop policy if exists "fotos: dono apaga" on public.album_photos;
 create policy "fotos: dono apaga"

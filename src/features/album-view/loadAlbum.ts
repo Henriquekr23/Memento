@@ -149,14 +149,32 @@ export interface AlbumListItem {
   createdAt: string;
 }
 
-/** Álbuns do usuário da requisição. A RLS já filtra por dono. */
+/**
+ * Álbuns do usuário da requisição.
+ *
+ * O `eq('user_id', …)` **não** é redundante com a RLS, e essa é a pegadinha:
+ * políticas de `select` são permissivas e se somam com **ou**. A tabela tem
+ * duas — "dono lê" e "público lê" — então, sem este filtro, a consulta traz
+ * também todo álbum público de qualquer pessoa, e a lista "Meus álbuns" passa
+ * a mostrar álbuns de estranhos com os botões de apagar e de link público ao
+ * lado (que a RLS depois recusa, sem explicar por quê).
+ *
+ * A regra geral do projeto continua valendo: a RLS é quem *autoriza*. Aqui o
+ * filtro está *selecionando* — são coisas diferentes, e a segunda é do app.
+ */
 export async function listMyAlbums(): Promise<AlbumListItem[]> {
   if (!isSupabaseConfigured) return [];
 
   const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const { data } = await supabase
     .from('albums')
     .select('id, title, is_public, photo_count, created_at')
+    .eq('user_id', user.id)
     .eq('status', 'ready')
     .order('created_at', { ascending: false })
     .returns<

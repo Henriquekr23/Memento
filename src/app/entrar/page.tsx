@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { SiteFooter } from '@/components/SiteFooter';
 import { SiteNav } from '@/components/SiteNav';
 import { AuthForm, type AuthMode } from '@/features/auth/AuthForm';
+import { safeNext } from '@/lib/safeNext';
 import { getSessionUser } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
@@ -11,13 +12,6 @@ export const metadata: Metadata = {
   title: 'Entrar — Memento',
   robots: { index: false },
 };
-
-/** Só caminhos internos: `next` chega pela URL. */
-function safeNext(value: string | undefined): string {
-  return value && value.startsWith('/') && !value.startsWith('//')
-    ? value
-    : '/albums';
-}
 
 export default async function EntrarPage({
   searchParams,

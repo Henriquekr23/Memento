@@ -198,7 +198,7 @@ export function AlbumStart({
       </div>
 
       <p className="mt-6 text-center text-xs text-[color-mix(in_srgb,var(--color-text)_42%,transparent)] sm:mt-9">
-        Tudo acontece no seu navegador. Nenhuma imagem é enviada a um servidor.
+        Tudo acontece no seu navegador. Nenhuma imagem sai daqui sem você pedir.
       </p>
     </section>
   );

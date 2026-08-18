@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
+import { safeNext } from '@/lib/safeNext';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 import type { AuthFormState } from './state';
@@ -19,12 +20,6 @@ import type { AuthFormState } from './state';
  */
 
 const fail = (error: string): AuthFormState => ({ error, notice: null });
-
-/** Destino pós-login. Só caminhos internos: `next` vem do navegador. */
-function safeNext(raw: FormDataEntryValue | null): string {
-  const value = typeof raw === 'string' ? raw : '';
-  return value.startsWith('/') && !value.startsWith('//') ? value : '/albums';
-}
 
 function readCredentials(formData: FormData) {
   return {
