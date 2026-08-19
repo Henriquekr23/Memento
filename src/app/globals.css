@@ -70,9 +70,15 @@
   --color-cta-hover: var(--color-accent-700);
   --color-on-cta: #fffdfa;
 
-  /* Tinta sobre foto: o herói é o único lugar onde texto claro pousa em cima
-     de imagem, e ele não segue o tema — a foto é escura nos dois. */
-  --color-on-photo: #f9f4ed;
+  /* Tinta sobre foto: o herói é o único lugar onde texto pousa em cima de
+     imagem. Ele segue o tema como o resto — o véu por cima da foto é que
+     muda de lado (papel no claro, noite no escuro), e a tinta acompanha.
+     Antes estes três eram fixos no escuro e o herói ficava idêntico nos dois
+     temas: era a única tela que ignorava o interruptor. */
+  --color-on-photo: #241c15;
+  --hero-veil-tint: #fdf6e8;
+  --hero-accent: var(--color-accent-700);
+  --hero-photo-filter: saturate(1.02) brightness(1.06);
 
   --space-1: 4.4px;
   --space-2: 8.8px;
@@ -113,6 +119,11 @@
     --color-cta: var(--color-accent-400);
     --color-cta-hover: var(--color-accent-300);
     --color-on-cta: #21160f;
+    /* O herói inverte junto: véu de noite, tinta clara, palavra em pêssego. */
+    --color-on-photo: #f9f4ed;
+    --hero-veil-tint: #120d0a;
+    --hero-accent: var(--color-accent-300);
+    --hero-photo-filter: saturate(0.95) brightness(0.9);
   }
 }
 
@@ -127,6 +138,10 @@
   --color-cta: var(--color-accent-400);
   --color-cta-hover: var(--color-accent-300);
   --color-on-cta: #21160f;
+  --color-on-photo: #f9f4ed;
+  --hero-veil-tint: #120d0a;
+  --hero-accent: var(--color-accent-300);
+  --hero-photo-filter: saturate(0.95) brightness(0.9);
 }
 
 @theme inline {
@@ -279,13 +294,40 @@ html {
 }
 
 /* Barra de navegação: mesmo respiro vertical do `.page-head`, para que a
-   marca fique na mesma linha ótica em toda tela. */
+   marca fique na mesma linha ótica em toda tela.
+
+   Grade de três colunas, e não `justify-content: space-between`: com o
+   espaço distribuído, os links do meio andavam para os lados conforme o
+   tamanho do bloco da direita (a conta aparece só logado, o rótulo do idioma
+   muda de largura) e nunca ficavam no centro da tela. As laterais são `1fr`
+   iguais, então a coluna do meio é o centro real da régua, independente do
+   que cada ponta carrega. `align-items: center` é o que põe marca, links e
+   controles todos na mesma linha. */
 .site-nav {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-4);
   padding-block: var(--space-6);
+}
+/* A marca não pode esticar até a largura da coluna: a bolha da dica é
+   centrada no elemento que embrulha, e esticada ela nasceria no meio da
+   coluna em vez de embaixo do logo. */
+.site-nav > :first-child {
+  justify-self: start;
+}
+.site-nav-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  font-size: 14px;
+}
+.site-nav-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 /* Distância padrão entre a régua do topo e o conteúdo da tela. */
@@ -653,20 +695,6 @@ html {
 .nav-link:hover::after,
 .nav-link:focus-visible::after {
   transform: scaleX(1);
-}
-
-/* Filete vertical entre os grupos da barra do topo. Herda a cor do texto para
-   funcionar igual sobre o papel e sobre a foto do herói. */
-.nav-sep {
-  display: none;
-  width: 1px;
-  height: 18px;
-  background: color-mix(in srgb, currentcolor 22%, transparent);
-}
-@media (min-width: 640px) {
-  .nav-sep {
-    display: block;
-  }
 }
 
 .input {
@@ -1421,17 +1449,27 @@ html {
   box-shadow: 0 1px 2px color-mix(in srgb, #17130f 14%, transparent);
   backdrop-filter: blur(8px);
 }
-/* Sobre a foto do herói, a barra inteira é clara — inclusive o que herda cor
-   do tema (marca, links, ícones de idioma e tema). */
+/* Sobre a foto do herói, a barra inteira usa a tinta do véu — inclusive o que
+   herda cor do tema (marca, links, ícones de idioma e tema). Como
+   `--color-on-photo` vira com o tema, a barra clareia no escuro e escurece no
+   claro sem uma segunda regra. */
 .nav-bar[data-solid='false'] {
   color: var(--color-on-photo);
+  /* Uma faixa da tinta do véu descendo do topo: à direita da barra o véu do
+     herói é fraco (é onde a paisagem aparece), e os controles ficavam sobre
+     céu puro. A faixa garante o contraste dos ícones sem apagar a foto. */
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--hero-veil-tint) 52%, transparent),
+    transparent
+  );
 }
 .nav-bar[data-solid='false'] .btn-secondary {
-  border-color: color-mix(in srgb, #f9f4ed 45%, transparent);
+  border-color: color-mix(in srgb, var(--color-on-photo) 45%, transparent);
   color: var(--color-on-photo);
 }
 .nav-bar[data-solid='false'] .btn-secondary:hover:not(:disabled) {
-  background: color-mix(in srgb, #f9f4ed 14%, transparent);
+  background: color-mix(in srgb, var(--color-on-photo) 14%, transparent);
 }
 .nav-bar .nav-link {
   white-space: nowrap;
@@ -1442,15 +1480,20 @@ html {
 }
 .nav-bar[data-solid='false'] .wordmark:hover,
 .nav-bar[data-solid='false'] .nav-link:hover {
-  color: #ffd7b4;
+  color: var(--hero-accent);
 }
 
 /* ── Herói ────────────────────────────────────────────────────────────────
    Uma fotografia de fundo, um véu escuro por cima e o texto por cima dele.
 
    O véu não é enfeite: é o que garante contraste do texto sem depender de
-   como é a foto. Com ele, `--color-on-photo` fica em ~15:1 contra o fundo —
-   e trocar `public/hero.jpg` por outra imagem não quebra a legibilidade. */
+   como é a foto. Com ele, `--color-on-photo` fica em ~14:1 contra o fundo —
+   e trocar `public/hero.jpg` por outra imagem não quebra a legibilidade.
+
+   Tudo aqui é pintado a partir de `--hero-veil-tint`, `--color-on-photo` e
+   `--hero-accent`, que viram no tema: no claro o véu é papel e a tinta é
+   escura, no escuro é o inverso. Nenhuma cor literal nestas regras — foi o
+   que fazia o herói ficar igual nos dois temas. */
 .hero {
   position: relative;
   display: flex;
@@ -1474,7 +1517,7 @@ html {
 }
 .hero-photo img {
   object-fit: cover;
-  filter: saturate(0.95) brightness(0.9);
+  filter: var(--hero-photo-filter);
 }
 .hero-veil {
   position: absolute;
@@ -1487,14 +1530,14 @@ html {
   background:
     linear-gradient(
       100deg,
-      color-mix(in srgb, #120d0a 86%, transparent) 0%,
-      color-mix(in srgb, #120d0a 72%, transparent) 45%,
-      color-mix(in srgb, #120d0a 48%, transparent) 100%
+      color-mix(in srgb, var(--hero-veil-tint) 90%, transparent) 0%,
+      color-mix(in srgb, var(--hero-veil-tint) 76%, transparent) 45%,
+      color-mix(in srgb, var(--hero-veil-tint) 48%, transparent) 100%
     ),
     linear-gradient(
       180deg,
-      color-mix(in srgb, #120d0a 30%, transparent) 0%,
-      color-mix(in srgb, #120d0a 55%, transparent) 100%
+      color-mix(in srgb, var(--hero-veil-tint) 32%, transparent) 0%,
+      color-mix(in srgb, var(--hero-veil-tint) 58%, transparent) 100%
     );
 }
 .hero-body {
@@ -1526,7 +1569,7 @@ html {
   padding-block: 0.08em;
   margin-block: -0.08em;
   vertical-align: bottom;
-  color: var(--color-accent-300);
+  color: var(--hero-accent);
 }
 .hero-word {
   display: inline-block;
@@ -1565,13 +1608,13 @@ html {
   max-width: 52ch;
   font-size: 18px;
   line-height: 1.6;
-  color: color-mix(in srgb, #f9f4ed 86%, transparent);
+  color: color-mix(in srgb, var(--color-on-photo) 88%, transparent);
 }
 .hero-note {
   margin: 18px 0 0;
   font-size: 13px;
   line-height: 1.5;
-  color: color-mix(in srgb, #f9f4ed 72%, transparent);
+  color: color-mix(in srgb, var(--color-on-photo) 72%, transparent);
 }
 /* Ação secundária do herói: um sublinhado, não um segundo botão. Dois botões
    sólidos lado a lado tiram o destaque do primeiro. */
@@ -1579,7 +1622,7 @@ html {
   display: inline-flex;
   align-items: center;
   padding-bottom: 2px;
-  border-bottom: 1px solid color-mix(in srgb, #f9f4ed 55%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-on-photo) 55%, transparent);
   font-family: var(--font-heading);
   font-weight: 700;
   font-size: 15px;
