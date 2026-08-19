@@ -655,6 +655,20 @@ html {
   transform: scaleX(1);
 }
 
+/* Filete vertical entre os grupos da barra do topo. Herda a cor do texto para
+   funcionar igual sobre o papel e sobre a foto do herói. */
+.nav-sep {
+  display: none;
+  width: 1px;
+  height: 18px;
+  background: color-mix(in srgb, currentcolor 22%, transparent);
+}
+@media (min-width: 640px) {
+  .nav-sep {
+    display: block;
+  }
+}
+
 .input {
   width: 100%;
   min-height: 36px;
@@ -1497,6 +1511,55 @@ html {
   letter-spacing: -0.03em;
   color: var(--color-on-photo);
 }
+/* A palavra que troca ("a viagem", "o casamento", …): rolo vertical — a nova
+   desce de cima enquanto a anterior cai para baixo, as duas atravessando uma
+   janela que corta o que sai. O `overflow: hidden` é o que faz o corte; o
+   respiro em `padding-block` existe para o acento de "álbum" não ser cortado
+   junto, e o `vertical-align: bottom` mantém a palavra na linha de base do
+   resto do título (uma caixa com overflow alinha pela borda, não pela base).
+   A palavra que sai é absoluta: assim a largura da janela é sempre a da
+   palavra que fica. */
+.hero-roll {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  padding-block: 0.08em;
+  margin-block: -0.08em;
+  vertical-align: bottom;
+  color: var(--color-accent-300);
+}
+.hero-word {
+  display: inline-block;
+  animation: heroWordIn 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.hero-word-out {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  animation: heroWordOut 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+@keyframes heroWordIn {
+  from {
+    opacity: 0;
+    transform: translateY(-105%);
+  }
+}
+@keyframes heroWordOut {
+  to {
+    opacity: 0;
+    transform: translateY(105%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-word,
+  .hero-word-out {
+    animation: none;
+  }
+  .hero-word-out {
+    display: none;
+  }
+}
+
 .hero-sub {
   margin: 22px 0 0;
   max-width: 52ch;

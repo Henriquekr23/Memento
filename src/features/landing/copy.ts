@@ -27,7 +27,16 @@ export interface BeforeAfterPanel {
 export interface LandingCopy {
   tagline: string;
   heroLine1: string;
-  heroLine2: string;
+  /** Pedaço da segunda linha antes da palavra que troca. */
+  heroLine2Before: string;
+  /**
+   * As palavras que se revezam no herói. Cada uma já vem com o artigo, porque
+   * o gênero muda ("a viagem", "o casamento") e concatenar artigo fixo daria
+   * frase errada em português.
+   */
+  heroWords: string[];
+  /** A terceira linha, depois da palavra que troca — sempre em linha própria. */
+  heroLine2After: string;
   heroSub: string;
   heroSecondary: string;
   heroNote: string;
@@ -56,7 +65,9 @@ export const COPY: Record<Lang, LandingCopy> = {
   pt: {
     tagline: 'Guarde a memória',
     heroLine1: 'Clique.',
-    heroLine2: 'E a viagem virou álbum.',
+    heroLine2Before: 'E ',
+    heroWords: ['a viagem', 'o casamento', 'a formatura', 'o ano', 'a memória'],
+    heroLine2After: 'virou álbum.',
     heroSub:
       'Cada foto carrega a data em que foi tirada. O Memento usa isso pra montar a ordem, e o resto do álbum é você quem escreve.',
     heroSecondary: 'Ver antes e depois',
@@ -124,7 +135,9 @@ export const COPY: Record<Lang, LandingCopy> = {
   en: {
     tagline: 'Keep the Memory',
     heroLine1: 'Click.',
-    heroLine2: 'And the trip became an album.',
+    heroLine2Before: 'And the ',
+    heroWords: ['trip', 'wedding', 'graduation', 'year', 'memory'],
+    heroLine2After: 'became an album.',
     heroSub:
       'Every photo carries the date it was taken. Memento uses that to sort them out, and the rest of the album is yours to write.',
     heroSecondary: 'See before and after',

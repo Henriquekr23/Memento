@@ -1,14 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" rx="6" fill="#201f1d"/>
-  <!-- Mesmo desenho do components/Logo.tsx, sem a legenda à mão: a 16px na aba
-       do navegador um traço de 1.2 vira ruído. -->
-  <g transform="translate(16 16) scale(0.84) translate(-16 -16)" fill="none" stroke="#c28d41" stroke-width="2" stroke-linejoin="round">
-    <path d="M16 10.4C13.5 8.2 9.8 7.4 4.6 7.6v14.8c5.2-.2 8.9.6 11.4 2.9"/>
-    <path d="M16 10.4c2.5-2.2 6.2-3 11.4-2.8v14.8c-5.2-.2-8.9.6-11.4 2.9"/>
-    <path d="M16 10.4v14.9"/>
-    <rect x="7.3" y="11.6" width="6.3" height="4.9" fill="#c28d41" opacity="0.3" stroke="none"/>
-    <!-- Marcador mais largo que o do componente: a 16px na aba, 2.9 de largura
-         desaparece. -->
-    <path d="M20.3 4.6h3.6v24l-1.8-2.2-1.8 2.2z" fill="#c28d41" stroke="none"/>
+  <rect width="32" height="32" rx="6" fill="#201e1d"/>
+  <!-- Mesmo desenho de `components/Logo.tsx` — as duas fotos empilhadas fora de
+       esquadro —, aqui com cores fixas: a aba do navegador não herda nada da
+       página, então não dá para usar `currentColor`.
+
+       O grupo recentraliza e encolhe a marca: o desenho do componente ocupa a
+       moldura inteira, e aqui precisa de respiro até o canto arredondado. O
+       traço da foto de trás vai de 1.6 para 2.2 e a opacidade de 0.45 para
+       0.62 porque a 16px, na aba, o valor original some. -->
+  <g transform="translate(16 16) scale(0.84) translate(-14.7 -15.6)">
+    <rect x="4.5" y="8.5" width="14" height="18" rx="3"
+          transform="rotate(11 11.5 17.5)"
+          fill="none" stroke="#c67139" stroke-width="2.2" opacity="0.62"/>
+    <rect x="11" y="4.5" width="14" height="18" rx="3"
+          transform="rotate(-10 18 13.5)" fill="#c67139"/>
   </g>
 </svg>
