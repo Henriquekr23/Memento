@@ -35,6 +35,9 @@ scripts avulsos rodados via `tsx` (não fazem parte do `tsconfig`/build):
 ```bash
 npx tsx scripts/checkComposition.mts     # ida/volta da composição por JSON, entradas corrompidas, poda de chaves órfãs
 
+# Supabase (exige conta de verdade; apaga o álbum de teste no fim):
+MEMENTO_EMAIL=... MEMENTO_PASSWORD=... npx tsx scripts/checkSupabaseSave.mts
+
 # PDF (exige dependência nativa não versionada, instalar sob demanda):
 npm i --no-save @napi-rs/canvas tsx
 npx tsx scripts/checkPdfExport.mts ./fotos album.pdf          # modo alinhado
