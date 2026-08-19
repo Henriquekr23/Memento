@@ -80,7 +80,7 @@ export function SiteFooter() {
         <div>
           <span className="inline-flex items-center gap-2.5">
             <LogoMark size={20} className="text-[var(--color-accent)]" />
-            <span className="font-[family-name:var(--font-heading)] text-[17px] font-semibold">
+            <span className="font-[family-name:var(--font-heading)] text-[17px] font-bold">
               {t.footerMadeBy} {AUTHOR.name}
             </span>
           </span>

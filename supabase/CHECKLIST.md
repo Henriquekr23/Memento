@@ -92,6 +92,40 @@ modelo versionado é o `.env.local.example`, e ele é vazio de propósito.
    políticas de `select` se somam com **ou**, e a RLS sozinha não faz esse
    recorte.
 
+### Quando salvar falha
+
+*"As fotos subiram, mas o índice do álbum falhou"* quer dizer que o Storage
+aceitou os arquivos e o banco recusou a linha. `finalizeAlbum` esconde o texto
+do Postgres da tela de propósito — nome de política e de coluna descrevem o
+esquema para quem estiver sondando —, então o erro real fica em dois lugares:
+no `console.error` do servidor (o terminal do `npm run dev`, ou os logs da
+Vercel), e no script:
+
+```bash
+npm i --no-save tsx
+MEMENTO_EMAIL=voce@exemplo.com MEMENTO_PASSWORD=suasenha \
+  npx tsx scripts/checkSupabaseSave.mts
+```
+
+Ele entra com uma conta de verdade, refaz a sequência inteira (rascunho →
+upload → índice → concluir), imprime o erro completo de qualquer passo que
+falhe e apaga o álbum de teste no fim.
+
+**Na prática, a causa quase sempre é o esquema do painel estar atrasado em
+relação a `supabase/schema.sql`** — é o que o script diz em quase todos os
+casos que reconhece. Os sintomas:
+
+| Erro | O que está velho no painel |
+|---|---|
+| `invalid input syntax for type uuid` | `album_photos.id` ainda é `uuid`; o app manda texto |
+| `duplicate key value violates unique constraint` | a chave primária ainda é só `id`, não o par (`album_id`, `id`) |
+| `new row violates row-level security policy` | falta a política de insert de `album_photos` |
+| `column albums.author_name does not exist` | a coluna do nome de quem compartilhou nunca foi criada |
+
+A correção é sempre a mesma: **cole `supabase/schema.sql` inteiro no SQL
+Editor e rode**. O bloco "Reconciliação" acerta tabelas de versões anteriores
+sem perder álbum nenhum, e rodar de novo não custa nada.
+
 ## 7. Endurecer antes de divulgar o site
 
 Até aqui o projeto está configurado para desenvolver. O que segue é o que muda

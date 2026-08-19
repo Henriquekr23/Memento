@@ -16,18 +16,20 @@ import { Wordmark } from './Logo';
  * Barra do topo, uma só para todas as telas — inclusive o álbum, que antes
  * tinha um cabeçalho próprio e por isso não oferecia idioma, tema nem conta.
  *
- * O botão de montar o álbum **não** vive aqui: ele é a ação principal do
- * produto e aparece grande no começo da landing, onde o olho já está. Na barra
- * ele competia com a navegação.
- *
  * A ordem é por finalidade, da esquerda para a direita: para onde ir (links do
- * site) · quem sou eu (conta) · como vejo (idioma e tema). O espaço entre os
- * grupos é maior do que o de dentro deles — é isso que faz a barra parecer
- * três blocos em vez de sete botões soltos.
+ * site) · quem sou eu (conta) · como vejo (idioma e tema) · o que fazer (o
+ * botão). O espaço entre os grupos é maior do que o de dentro deles — é isso
+ * que faz a barra parecer três blocos em vez de sete botões soltos.
  *
  * `variant` decide o que são os links do meio: na landing são âncoras das
  * seções da própria página; fora dela, âncoras não existem — o link vira
  * "Início".
+ *
+ * O botão de montar o álbum só aparece na landing, e só a partir de `md`. Ele
+ * é a ação principal do produto e vive grande no herói; aqui em cima ele é a
+ * repetição que pega quem já rolou a página inteira. No celular ele sai: ao
+ * lado da marca, do idioma e do tema, não sobra largura — e o herói com o
+ * botão grande está a uma rolagem de distância.
  */
 export function SiteNav({
   variant = 'landing',
@@ -39,14 +41,14 @@ export function SiteNav({
   const { lang } = useLang();
   const t = COMMON[lang];
 
-  const links =
-    variant === 'landing'
-      ? [
-          { href: '#o-album', label: t.navAlbum },
-          { href: '#como-funciona', label: t.navHow },
-          { href: '#recursos', label: t.navFeatures },
-        ]
-      : [{ href: '/', label: t.navHome }];
+  const isLanding = variant === 'landing';
+  const links = isLanding
+    ? [
+        { href: '#antes-depois', label: t.navBeforeAfter },
+        { href: '#como-funciona', label: t.navHow },
+        { href: '#recursos', label: t.navFeatures },
+      ]
+    : [{ href: '/', label: t.navHome }];
 
   return (
     <nav className="site-nav">
@@ -54,8 +56,8 @@ export function SiteNav({
         <Wordmark tagline={tagline} />
       </Tooltip>
 
-      {/* O espaço entre grupos é maior do que o de dentro de cada um
-          (28px contra 20px): é a distância que agrupa, não a borda. */}
+      {/* O espaço entre grupos é maior do que o de dentro de cada um: é a
+          distância que agrupa, não a borda. */}
       <div className="flex items-center gap-4 sm:gap-7">
         {/* Âncoras somem no celular: não cabem ao lado da marca e a rolagem já
             entrega as seções na ordem. "Sobre" fica, porque é outra página. */}
@@ -81,10 +83,23 @@ export function SiteNav({
           <ThemeToggle />
         </div>
 
-        {/* A conta é a última coisa da barra, encostada na margem direita: é
-            onde toda interface põe o perfil, e é para lá que a mão vai quando
-            a pergunta é "quem sou eu aqui". */}
+        {/* A conta é a última coisa antes do botão: é onde toda interface põe o
+            perfil, e é para lá que a mão vai quando a pergunta é "quem sou eu
+            aqui". */}
         {isSupabaseConfigured && <AccountMenu />}
+
+        {isLanding && (
+          <Link
+            href="/album"
+            aria-label={t.ctaAria}
+            /* Na barra o botão é menor do que no herói: ali ele é a ação da
+               página, aqui é um atalho. Os utilitários vencem o `.btn-hero`
+               porque a camada de componentes vem antes na cascata. */
+            className="btn btn-hero hidden px-5 py-2.5 text-[13.5px] md:inline-flex"
+          >
+            {t.cta}
+          </Link>
+        )}
       </div>
     </nav>
   );

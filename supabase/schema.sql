@@ -73,8 +73,20 @@ alter table public.albums
 -- de localhost), ele cai num id do tipo `photo_ab12…`, que não é um UUID. Com a
 -- coluna `uuid`, o Postgres recusa a linha inteira com "invalid input syntax for
 -- type uuid" e o álbum falha depois das fotos já terem subido.
-alter table public.album_photos
-  alter column id type text;
+--
+-- Condicional porque `alter column ... type` reescreve a tabela inteira: rodar
+-- este arquivo de novo numa base já acertada não deve custar isso.
+do $$
+begin
+  if exists (
+    select 1 from pg_attribute a
+    where a.attrelid = 'public.album_photos'::regclass
+      and a.attname = 'id'
+      and a.atttypid <> 'text'::regtype
+  ) then
+    alter table public.album_photos alter column id type text;
+  end if;
+end $$;
 
 -- Chave primária antiga (só `id`) → chave composta (`album_id`, `id`).
 -- Com a antiga, salvar o mesmo conjunto de fotos num segundo álbum falhava com
@@ -128,6 +140,25 @@ begin
       and char_length(author_name) <= 200
       and photo_count >= 0
     );
+  end if;
+
+  -- O `check (char_length(id) between 8 and 64)` da definição da tabela só
+  -- nasce junto com ela: numa base criada por versão anterior, `create table
+  -- if not exists` pulou a tabela inteira e o limite nunca existiu. Como
+  -- constraint separada, e não dentro de `album_photos_sizes`, porque essa
+  -- outra já existe nas bases que rodaram a versão anterior deste arquivo —
+  -- e o `if not exists` a pularia junto com o limite novo.
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'album_photos_id_size' and conrelid = 'public.album_photos'::regclass
+  ) and not exists (
+    -- Uma linha antiga fora do limite faria o `alter table` derrubar a
+    -- execução inteira. Nenhum id de verdade cai aqui (uuid tem 36
+    -- caracteres), então o aviso é sinal de linha adulterada, não de rotina.
+    select 1 from public.album_photos where char_length(id) not between 8 and 64
+  ) then
+    alter table public.album_photos add constraint album_photos_id_size
+      check (char_length(id) between 8 and 64);
   end if;
 
   if not exists (

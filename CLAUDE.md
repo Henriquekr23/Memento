@@ -35,6 +35,9 @@ scripts avulsos rodados via `tsx` (não fazem parte do `tsconfig`/build):
 ```bash
 npx tsx scripts/checkComposition.mts     # ida/volta da composição por JSON, entradas corrompidas, poda de chaves órfãs
 
+# Supabase (exige conta de verdade; apaga o álbum de teste no fim):
+MEMENTO_EMAIL=... MEMENTO_PASSWORD=... npx tsx scripts/checkSupabaseSave.mts
+
 # PDF (exige dependência nativa não versionada, instalar sob demanda):
 npm i --no-save @napi-rs/canvas tsx
 npx tsx scripts/checkPdfExport.mts ./fotos album.pdf          # modo alinhado
@@ -70,6 +73,17 @@ abaixo), `album-style` (temas de capa/papel/moldura/tipografia), `album-export`
 abaixo), `i18n` (pt/en via localStorage), `theme` (claro/escuro via
 `data-theme` no `<html>`, sem estado React).
 
+O visual é o design system **Organic** (papel areia, acento terracota, cantos
+de 8/16/28px e controles pequenos em pílula), portado de `_ds/organic/` para os
+tokens no topo de `globals.css`. Ele substituiu o Classical (papel cinza,
+acento dourado, cantos de 2/4/7px, tipografia serifada) — nenhum componente
+inventa cor, fonte ou espaçamento fora dali. A landing (`features/landing/`) é
+a única tela com seções que sangram até a borda da janela: barra fixa que ganha
+fundo ao rolar, herói com foto e parallax (`useHeroScroll`), "antes e depois",
+passos, recursos e as perguntas frequentes abertas no corpo da página
+(`LandingFaq`, mesma lista de `features/faq/copy.ts`). A bolha flutuante de FAQ
+continua servindo as telas internas, e não aparece na landing.
+
 ### `album-book/` — divisão por responsabilidade
 
 | Arquivo | Responsabilidade |
@@ -102,10 +116,14 @@ usuário) — não voltar a juntá-los.
 5. **Geometria do livro é função pura** (`bookGeometry.ts`) — testável sem
    navegador; é a parte que mais quebra ao mexer no visual.
 6. **Zero requisição a terceiros, em execução e no build.** As fontes
-   (`Cormorant Garamond`, `Lora`) são `.woff2` versionados em `src/app/fonts/`
-   carregados via `next/font/local` — **nunca volte para `next/font/google`**,
-   que baixa arquivos durante o build e quebra sem rede. A CSP
-   (`connect-src 'self'`, `font-src 'self'`) faz o navegador garantir isso.
+   (`Bricolage Grotesque` para título, `Figtree` para texto) são `.woff2`
+   versionados em `src/app/fonts/` carregados via `next/font/local` — **nunca
+   volte para `next/font/google`**, que baixa arquivos durante o build e quebra
+   sem rede; o `styles.css` original do design system abre com um `@import` do
+   Google Fonts pelo mesmo motivo, e ele também não entra. Vale para imagem: a
+   foto do herói é `public/hero.jpg`, versionada, não um link de banco de
+   imagens. A CSP (`connect-src 'self'`, `font-src 'self'`, `img-src 'self'`)
+   faz o navegador garantir isso.
 7. **O PDF redesenha a página num canvas, não fotografa o DOM.** Em
    `album-export/pdf/drawPage.ts` a régua é `unit` = 1px de tela do livro:
    todo número ali espelha o Tailwind de `BookPage`/`PhotoSlot` (`px-5` →
@@ -115,8 +133,8 @@ usuário) — não voltar a juntá-los.
    e canvas** — o canvas não tem cascata CSS. Tema novo = editar listas em
    `album-style/theme.ts`, nunca tocar componente.
 9. **As classes do design system (`.btn`, `.input`, `.card`, `.seg`, `.kicker`,
-   `.page-shell`, `.field`, etc.) vivem em `@layer components` dentro de
-   `globals.css`.** CSS fora de camada vence CSS dentro de uma — soltas, elas
+   `.page-shell`, `.field`, `.hero`, `.nav-bar`, etc.) vivem em `@layer
+   components` dentro de `globals.css`.** CSS fora de camada vence CSS dentro de uma — soltas, elas
    perdiam para utilitários do Tailwind (`className="btn hidden sm:inline-flex"`
    não escondia nada). Não tirar nada dessa camada.
 10. **`useIsNarrow` (`max-width: 767px`) ≠ `useIsTouch` (`hover: none`).**
