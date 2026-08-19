@@ -5,6 +5,13 @@ import type { Lang } from '@/features/i18n/lang';
 export interface FaqItem {
   question: string;
   answer: string;
+  /**
+   * Marca as perguntas que aparecem no fim da landing. Lá o acordeão compete
+   * com a decisão de começar: a lista inteira vira uma parede de texto e o
+   * botão final some da tela. A bolha das telas internas continua mostrando
+   * todas — quem a abre já está com uma dúvida específica na mão.
+   */
+  landing?: boolean;
 }
 
 export interface FaqCopy {
@@ -34,11 +41,13 @@ export const FAQ: Record<Lang, FaqCopy> = {
     items: [
       {
         question: 'Minhas fotos são enviadas para algum servidor?',
+        landing: true,
         answer:
           'Só se você pedir. Montar o álbum e baixar o PDF acontece inteiro no seu navegador, sem conta e sem upload. As fotos só saem da sua máquina se você clicar em "Salvar na nuvem" — e aí sobe uma cópia, não o arquivo original.',
       },
       {
         question: 'Preciso criar conta?',
+        landing: true,
         answer:
           'Não para usar. A conta serve para duas coisas: guardar o álbum para voltar depois e gerar um link para compartilhar. Sem conta, o Memento funciona como sempre funcionou — monte e baixe o PDF na mesma sessão.',
       },
@@ -54,6 +63,7 @@ export const FAQ: Record<Lang, FaqCopy> = {
       },
       {
         question: 'Como funciona o link para compartilhar?',
+        landing: true,
         answer:
           'Em "Meus álbuns", ligue a chave "Link público" e copie o endereço. Quem receber abre e folheia o álbum sem precisar de conta. Com a chave desligada, o álbum é só seu. Essas páginas ficam fora dos buscadores: quem tem o link entra, ninguém descobre por busca.',
       },
@@ -84,11 +94,13 @@ export const FAQ: Record<Lang, FaqCopy> = {
       },
       {
         question: 'Que formatos de imagem funcionam?',
+        landing: true,
         answer:
           'JPEG, PNG, WebP, GIF e AVIF, até 80 MB por arquivo. HEIC do iPhone só abre se o próprio navegador souber decodificar — no Safari costuma funcionar; nos outros, converta para JPEG antes.',
       },
       {
         question: 'Como o álbum é baixado?',
+        landing: true,
         answer:
           'Como um PDF de páginas, na ordem e na composição que você montou — o mesmo arquivo serve para mandar para alguém, guardar ou imprimir. Baixar não exige conta.',
       },
@@ -99,6 +111,7 @@ export const FAQ: Record<Lang, FaqCopy> = {
       },
       {
         question: 'É de graça? Tem pegadinha?',
+        landing: true,
         answer:
           'De graça, com ou sem conta. O que roda no navegador não custa servidor, e a parte guardada na nuvem cabe no plano gratuito dos serviços que usamos. O código é aberto, dá para conferir.',
       },
@@ -114,11 +127,13 @@ export const FAQ: Record<Lang, FaqCopy> = {
     items: [
       {
         question: 'Are my photos uploaded to a server?',
+        landing: true,
         answer:
           'Only if you ask. Building the album and downloading the PDF happens entirely in your browser, with no account and no upload. Photos leave your machine only when you click "Save to the cloud" — and what goes up is a copy, not your original file.',
       },
       {
         question: 'Do I need an account?',
+        landing: true,
         answer:
           'Not to use it. The account does two things: it keeps the album so you can come back, and it creates a link to share. Without one, Memento works exactly as it always did — build and download the PDF in the same session.',
       },
@@ -134,6 +149,7 @@ export const FAQ: Record<Lang, FaqCopy> = {
       },
       {
         question: 'How does the shareable link work?',
+        landing: true,
         answer:
           'Under "My albums", flip the "Public link" switch and copy the address. Whoever gets it can open and page through the album with no account. With the switch off, the album is yours alone. These pages stay out of search engines: having the link is the way in.',
       },
@@ -164,11 +180,13 @@ export const FAQ: Record<Lang, FaqCopy> = {
       },
       {
         question: 'Which image formats work?',
+        landing: true,
         answer:
           'JPEG, PNG, WebP, GIF and AVIF, up to 80 MB per file. iPhone HEIC only opens if the browser itself can decode it — Safari usually can; elsewhere, convert to JPEG first.',
       },
       {
         question: 'How is the album downloaded?',
+        landing: true,
         answer:
           'As a paged PDF, in the order and composition you built — the same file works to send to someone, to keep or to print. Downloading needs no account.',
       },
@@ -179,6 +197,7 @@ export const FAQ: Record<Lang, FaqCopy> = {
       },
       {
         question: 'Is it free? What is the catch?',
+        landing: true,
         answer:
           'Free, with or without an account. What runs in the browser costs no server, and the part kept in the cloud fits the free plan of the services we use. The code is open, so you can check.',
       },

@@ -47,6 +47,19 @@ export interface SpreadView {
   leftStatic: AlbumPage | null;
   rightStatic: AlbumPage | null;
   leaf: LeafView | null;
+  /**
+   * Quanto de papel cobre cada metade, de 0 a 1 — é a opacidade da sombra
+   * projetada por aquela metade.
+   *
+   * Não dá para amarrar a sombra à página estática: durante a virada a página
+   * que estava ali vira folha em movimento, `leftStatic`/`rightStatic` passa a
+   * apontar para outra coisa (ou para nada, no fim do álbum) e a sombra sumia
+   * de um quadro para o outro — o papel continuava na tela, a sombra dele não.
+   * Contando também a folha, a sombra acompanha o papel: cheia enquanto a
+   * metade está coberta, e some junto com ela.
+   */
+  leftShadow: number;
+  rightShadow: number;
   /** Graus de rotação da folha: negativo vira para a esquerda. */
   angle: number;
   /** 0 = álbum fechado (uma capa só), 1 = aberto. No meio = virando. */
@@ -61,6 +74,23 @@ export interface SpreadView {
 
 function at(pages: readonly AlbumPage[], index: number): AlbumPage | null {
   return pages[index] ?? null;
+}
+
+/**
+ * Cobertura de uma metade durante a virada. A folha cruza a lombada na
+ * metade do caminho (90°): antes disso ela ainda está do lado de onde saiu,
+ * depois já pousou do outro. Daí o `progress * 2` nas duas pontas.
+ */
+function coverage(
+  staticPage: AlbumPage | null,
+  leafLeaving: AlbumPage | null,
+  leafArriving: AlbumPage | null,
+  progress: number,
+): number {
+  if (staticPage) return 1;
+  if (leafLeaving) return Math.max(0, 1 - progress * 2);
+  if (leafArriving) return Math.max(0, progress * 2 - 1);
+  return 0;
 }
 
 /** Meia página: o quanto o livro anda para centralizar uma capa isolada. */
@@ -110,37 +140,52 @@ export function resolveSpreadView(
       leaf: null,
       angle: 0,
       openness,
+      leftShadow: at(pages, left) ? 1 : 0,
+      rightShadow: at(pages, right) ? 1 : 0,
       offset,
     };
   }
 
   if (turn.direction === 'next') {
+    const leafFront = at(pages, right);
+    const leafBack = at(pages, right + 1);
     return {
       leftStatic: at(pages, left),
       rightStatic: at(pages, right + 2),
       leaf: {
-        front: at(pages, right),
-        back: at(pages, right + 1),
+        front: leafFront,
+        back: leafBack,
         frontSide: 'right',
         backSide: 'left',
       },
       angle: -turn.progress * 180,
       openness,
+      leftShadow: coverage(at(pages, left), null, leafBack, turn.progress),
+      rightShadow: coverage(
+        at(pages, right + 2),
+        leafFront,
+        null,
+        turn.progress,
+      ),
       offset,
     };
   }
 
+  const leafFront = at(pages, left);
+  const leafBack = at(pages, left - 1);
   return {
     leftStatic: at(pages, left - 2),
     rightStatic: at(pages, right),
     leaf: {
-      front: at(pages, left),
-      back: at(pages, left - 1),
+      front: leafFront,
+      back: leafBack,
       frontSide: 'left',
       backSide: 'right',
     },
     angle: turn.progress * 180,
     openness,
+    leftShadow: coverage(at(pages, left - 2), leafFront, null, turn.progress),
+    rightShadow: coverage(at(pages, right), null, leafBack, turn.progress),
     offset,
   };
 }
