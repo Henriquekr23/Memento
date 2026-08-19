@@ -11,6 +11,7 @@ import { useLang } from '@/features/i18n/LangProvider';
 import { BeforeAfter } from './BeforeAfter';
 import { COPY } from './copy';
 import { LandingFaq } from './LandingFaq';
+import { RotatingWord } from './RotatingWord';
 import { useHeroScroll } from './useHeroScroll';
 
 /**
@@ -61,7 +62,13 @@ export function LandingPage() {
         <div className="hero-body page-shell">
           <h1 className="hero-title">
             <span className="block">{t.heroLine1}</span>
-            <span className="block">{t.heroLine2}</span>
+            {/* A palavra que troca termina a linha: palavras de larguras
+                diferentes no meio da frase reflowiam o resto a cada 2,4s. */}
+            <span className="block">
+              {t.heroLine2Before}
+              <RotatingWord words={t.heroWords} />
+            </span>
+            <span className="block">{t.heroLine2After}</span>
           </h1>
           <p className="hero-sub">{t.heroSub}</p>
 

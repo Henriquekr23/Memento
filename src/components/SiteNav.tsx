@@ -58,12 +58,14 @@ export function SiteNav({
 
       {/* O espaço entre grupos é maior do que o de dentro de cada um: é a
           distância que agrupa, não a borda. */}
-      <div className="flex items-center gap-4 sm:gap-7">
-        {/* Âncoras somem no celular: não cabem ao lado da marca e a rolagem já
-            entrega as seções na ordem. "Sobre" fica, porque é outra página. */}
-        <div className="hidden items-center gap-5 text-sm md:flex">
+      <div className="flex items-center gap-4 sm:gap-6">
+        {/* Um grupo só de links, na ordem em que as seções aparecem na página.
+            As âncoras somem no celular (não cabem ao lado da marca, e a rolagem
+            já entrega as seções na ordem); "Sobre" fica sempre, porque é outra
+            página — antes ela era repetida em dois blocos para isso. */}
+        <div className="flex items-center gap-5 text-sm">
           {links.map((link) => (
-            <a key={link.href} href={link.href} className="nav-link">
+            <a key={link.href} href={link.href} className="nav-link hidden md:inline-block">
               {link.label}
             </a>
           ))}
@@ -72,21 +74,19 @@ export function SiteNav({
           </Link>
         </div>
 
-        {/* No celular "Sobre" sai da fila e vira o único link solto — trazer o
-            grupo inteiro junto com ele não caberia. */}
-        <Link href="/sobre" className="nav-link text-sm md:hidden">
-          {t.navAbout}
-        </Link>
+        {/* Filete separando "para onde ir" de "como vejo / quem sou eu": sem
+            ele, sete controles na mesma linha lêem como uma fila única. */}
+        <span aria-hidden className="nav-sep" />
 
         <div className="flex items-center gap-2">
           <LangToggle />
           <ThemeToggle />
-        </div>
 
-        {/* A conta é a última coisa antes do botão: é onde toda interface põe o
-            perfil, e é para lá que a mão vai quando a pergunta é "quem sou eu
-            aqui". */}
-        {isSupabaseConfigured && <AccountMenu />}
+          {/* A conta é a última coisa antes do botão: é onde toda interface põe
+              o perfil, e é para lá que a mão vai quando a pergunta é "quem sou
+              eu aqui". */}
+          {isSupabaseConfigured && <AccountMenu />}
+        </div>
 
         {isLanding && (
           <Link

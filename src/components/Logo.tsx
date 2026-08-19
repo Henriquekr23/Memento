@@ -10,8 +10,10 @@ import Link from 'next/link';
  *
  * Feita em `currentColor` de propósito: o mesmo arquivo serve o cabeçalho
  * claro, o escuro e a barra transparente sobre a foto do herói, sem uma
- * variante por tema. O mesmo desenho está em `app/icon.svg` (favicon), lá com
- * cores fixas — a aba do navegador não herda nada da página.
+ * variante por tema. O mesmo desenho está em `app/icon.svg` (favicon) e nos
+ * binários gerados a partir dele (`favicon.ico`, `apple-icon.png`), lá com
+ * cores fixas sobre papel escuro — a aba do navegador não herda nada da
+ * página. Mexeu nos retângulos aqui, regere os três.
  */
 export function LogoMark({
   size = 26,
