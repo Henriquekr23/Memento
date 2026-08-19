@@ -13,7 +13,7 @@ export type { Lang };
 export interface LandingStep {
   title: string;
   body: string;
-  /** Aparece quando o passo é aberto na seção "Como funciona". */
+  /** Linha miúda embaixo do passo, com o detalhe que não cabe no resumo. */
   detail: string;
 }
 
@@ -31,73 +31,62 @@ export interface LandingCopy {
   heroSub: string;
   heroSecondary: string;
   heroNote: string;
-  photoPlaceholder: string;
-  plateCta: string;
-  plateAria: string;
-  splitKicker: string;
-  splitTitle: string;
-  splitBody: string;
+  /** Texto alternativo da foto de fundo do herói. */
+  heroPhotoAlt: string;
   comoKicker: string;
-  comoHint: string;
   steps: LandingStep[];
   recursosKicker: string;
+  recursosTitle: string;
   features: { title: string; body: string }[];
   beforeAfter: {
     kicker: string;
-    hint: string;
     title: string;
-    ctaNote: string;
+    lead: string;
+    /** Legenda da ilustração da página montada, no painel "Depois". */
+    afterCaption: string;
     before: BeforeAfterPanel;
     after: BeforeAfterPanel;
   };
+  faqTitle: string;
   closingTitle: string;
+  closingBody: string;
 }
 
 export const COPY: Record<Lang, LandingCopy> = {
   pt: {
     tagline: 'Guarde a memória',
-    heroLine1: 'Você envia as fotos.',
-    heroLine2: 'A memória vira um álbum.',
-    heroSecondary: 'Ver antes e depois',
-    heroNote: 'Sem cadastro para começar. As fotos ficam no seu navegador — só vão para a nuvem se você pedir.',
+    heroLine1: 'Clique.',
+    heroLine2: 'E a viagem virou álbum.',
     heroSub:
-      'Um casamento, uma viagem, o aniversário de dez anos atrás. Arraste as imagens para cá e o Memento coloca tudo em ordem pela data e hora gravadas em cada arquivo. Daí em diante quem monta é você: escolhe as páginas, ajusta a sequência, escreve o que só você lembra — e leva o álbum pronto para guardar.',
-    photoPlaceholder: 'Suas fotos, em ordem',
-    plateCta: 'Comece o seu álbum',
-    plateAria: 'Começar a montar um álbum agora',
-    splitKicker: 'O álbum',
-    splitTitle: 'A ordem das fotos já conta metade da história',
-    splitBody:
-      'Cada imagem carrega a data e a hora em que foi feita — muitas vezes o lugar também. O Memento lê só isso e devolve a sequência real do que aconteceu, seja uma festa, uma viagem ou uma tarde qualquer que virou lembrança. O resto do trabalho é bom que continue seu: o que cada momento significou ninguém tem como adivinhar.',
+      'Cada foto carrega a data em que foi tirada. O Memento usa isso pra montar a ordem, e o resto do álbum é você quem escreve.',
+    heroSecondary: 'Ver antes e depois',
+    heroNote: 'Sem cadastro pra começar. Suas fotos ficam no seu navegador.',
+    heroPhotoAlt: '',
     comoKicker: 'Como funciona',
-    comoHint: 'Clique em um passo para ver o detalhe',
     steps: [
       {
         title: 'Enviar',
-        body: 'Arraste as fotos ou escolha do dispositivo, quantas quiser de uma vez.',
-        detail:
-          'A leitura acontece na sua própria máquina. Nenhuma imagem é enviada a um servidor, então a espera é só o tempo do seu computador abrir os arquivos.',
+        body: 'Arraste quantas fotos quiser, do computador ou do celular.',
+        detail: 'A leitura acontece na sua máquina: a espera é só o tempo de abrir os arquivos.',
       },
       {
         title: 'Ordenar',
-        body: 'O Memento lê data e hora de cada imagem e monta a linha do tempo sozinho.',
-        detail:
-          'Fotos sem esses dados não ficam de fora: entram pela data do arquivo e recebem um selo, para você conferir se a posição ficou certa.',
+        body: 'O Memento lê a data de cada foto e monta a linha do tempo sozinho.',
+        detail: 'Foto sem data entra pela data do arquivo e recebe um selo, pra você conferir.',
       },
       {
         title: 'Montar',
-        body: 'Escolha o layout das páginas, troque fotos de lugar, escreva as legendas.',
-        detail:
-          'Cada página tem seu próprio arranjo, e o que você tira do álbum vai para o depósito em vez de sumir — dá para voltar atrás a qualquer momento.',
+        body: 'Escolha o layout de cada página, troque fotos de lugar e escreva as legendas.',
+        detail: 'O que você tira do álbum vai pro depósito em vez de sumir — dá pra voltar atrás.',
       },
       {
         title: 'Guardar',
-        body: 'Dê um nome ao álbum e baixe o resultado pronto.',
-        detail:
-          'Sai um arquivo ZIP com as fotos renomeadas na ordem final e um índice de texto com as legendas e as páginas que você escreveu.',
+        body: 'Baixe o álbum pronto em PDF: capa, miolo e contracapa.',
+        detail: 'Gerado do arquivo original, em resolução cheia, sem passar por servidor nenhum.',
       },
     ],
     recursosKicker: 'Recursos',
+    recursosTitle: 'O que o Memento faz — e o que ele deixa pra você.',
     features: [
       {
         title: 'Sem inteligência artificial',
@@ -105,7 +94,7 @@ export const COPY: Record<Lang, LandingCopy> = {
       },
       {
         title: 'Tudo no seu navegador',
-        body: 'As fotos são lidas na sua máquina, e nada sobe sem você mandar. Guardar o álbum na nuvem para compartilhar é um botão, não o caminho padrão — e o que sobe é uma cópia reduzida, sem os metadados do arquivo.',
+        body: 'As fotos são lidas na sua máquina, e nada sobe sem você mandar. Salvar na nuvem é um botão, não o caminho padrão — e o que sobe é uma cópia reduzida, sem os metadados do arquivo.',
       },
       {
         title: 'Metadados a seu favor',
@@ -114,66 +103,58 @@ export const COPY: Record<Lang, LandingCopy> = {
     ],
     beforeAfter: {
       kicker: 'Antes e depois',
-      hint: 'As duas telas, lado a lado',
-      title: 'A mesma viagem, na galeria do celular e no álbum',
-      ctaNote: 'Leva o tempo de escolher as fotos.',
+      title: 'A mesma viagem, guardada de dois jeitos.',
+      lead: 'De um lado, milhares de fotos soltas na galeria do celular. Do outro, um álbum com começo, meio e fim.',
+      afterCaption: 'Uma página do álbum montado',
       before: {
         badge: 'Antes',
-        title: 'Uma grade sem fim',
-        body: 'No aplicativo de fotos tudo tem o mesmo tamanho e o mesmo peso: a paisagem, o recibo, a foto repetida três vezes. Achar aquele dia é rolar até cansar — e a memória fica onde ninguém volta.',
+        title: 'Um rolo sem fim',
+        body: 'Foto boa, foto tremida e print de conversa, tudo do mesmo tamanho. Achar aquele dia é rolar até cansar.',
       },
       after: {
         badge: 'Depois',
         title: 'Um álbum com páginas',
-        body: 'No Memento a foto que importa fica grande, o resto acompanha, e a legenda diz o que a imagem não conta. As datas dão a ordem; você dá o sentido — e no fim baixa o álbum pronto.',
+        body: 'A foto que importa fica grande, a data dá a ordem, e a legenda guarda o resto.',
       },
     },
+    faqTitle: 'Perguntas frequentes',
     closingTitle: 'Comece pelas fotos que você já tem.',
+    closingBody: 'Leva o tempo de escolher as fotos.',
   },
   en: {
     tagline: 'Keep the Memory',
-    heroLine1: 'You bring the photos.',
-    heroLine2: 'The memory becomes an album.',
-    heroSecondary: 'See before and after',
-    heroNote: 'No sign-up to start. Photos stay in your browser — they go to the cloud only if you ask.',
+    heroLine1: 'Click.',
+    heroLine2: 'And the trip became an album.',
     heroSub:
-      'A wedding, a trip, a birthday from ten years ago. Drag the images in and Memento puts everything in order by the date and time written into each file. From there it’s yours to build: pick the pages, adjust the sequence, write down what only you remember — and take the finished album with you.',
-    photoPlaceholder: 'Your photos, in order',
-    plateCta: 'Start your album',
-    plateAria: 'Start building an album now',
-    splitKicker: 'The album',
-    splitTitle: 'The order of the photos already tells half the story',
-    splitBody:
-      'Every image carries the date and time it was taken — often the place, too. Memento reads only that and gives back the real sequence of what happened, whether it was a party, a trip or an ordinary afternoon that turned into a keepsake. The rest is better left to you: what each moment meant is not something to be guessed.',
+      'Every photo carries the date it was taken. Memento uses that to sort them out, and the rest of the album is yours to write.',
+    heroSecondary: 'See before and after',
+    heroNote: 'No sign-up to start. Your photos stay in your browser.',
+    heroPhotoAlt: '',
     comoKicker: 'How it works',
-    comoHint: 'Click a step to see the detail',
     steps: [
       {
         title: 'Upload',
-        body: 'Drag the photos in or pick them from your device, as many as you like.',
-        detail:
-          'Reading happens on your own machine. No image is sent to a server, so the only wait is your computer opening the files.',
+        body: 'Drag in as many photos as you like, from your computer or phone.',
+        detail: 'Reading happens on your own machine: the only wait is opening the files.',
       },
       {
         title: 'Sort',
-        body: 'Memento reads the date and time of each image and builds the timeline on its own.',
-        detail:
-          'Photos without that data aren’t left out: they come in by file date and get a badge, so you can check whether the position looks right.',
+        body: 'Memento reads the date on each photo and builds the timeline on its own.',
+        detail: 'A photo with no date comes in by file date and gets a badge, so you can check it.',
       },
       {
         title: 'Build',
-        body: 'Choose the page layouts, move photos around, write the captions.',
-        detail:
-          'Each page has its own arrangement, and anything you take out of the album goes to the tray instead of disappearing — you can always put it back.',
+        body: "Choose each page's layout, move photos around, write the captions.",
+        detail: 'Anything you take out goes to the tray instead of disappearing — you can undo it.',
       },
       {
         title: 'Keep',
-        body: 'Name the album and download the finished result.',
-        detail:
-          'You get a ZIP with the photos renamed in final order and a text index with the captions and pages you wrote.',
+        body: 'Download the finished album as a PDF: cover, body and back cover.',
+        detail: 'Built from the original file, at full resolution, without touching a server.',
       },
     ],
     recursosKicker: 'Features',
+    recursosTitle: 'What Memento does — and what it leaves to you.',
     features: [
       {
         title: 'No artificial intelligence',
@@ -181,7 +162,7 @@ export const COPY: Record<Lang, LandingCopy> = {
       },
       {
         title: 'Runs in your browser',
-        body: 'Photos are read on your machine and never uploaded anywhere. Closing the tab is enough to leave no trace behind.',
+        body: 'Photos are read on your machine, and nothing goes up unless you say so. Saving to the cloud is a button, not the default path — and what goes up is a reduced copy, without the file metadata.',
       },
       {
         title: 'Metadata working for you',
@@ -190,20 +171,22 @@ export const COPY: Record<Lang, LandingCopy> = {
     ],
     beforeAfter: {
       kicker: 'Before and after',
-      hint: 'Both screens, side by side',
-      title: 'The same trip, in the phone gallery and in the album',
-      ctaNote: 'It takes as long as picking the photos.',
+      title: 'The same trip, kept two different ways.',
+      lead: 'On one side, thousands of loose photos in your phone gallery. On the other, an album with a beginning, a middle and an end.',
+      afterCaption: 'A page from the finished album',
       before: {
         badge: 'Before',
-        title: 'An endless grid',
-        body: 'In the photo app everything has the same size and the same weight: the landscape, the receipt, the shot taken three times. Finding that one day means scrolling until you give up — and the memory stays where nobody goes back.',
+        title: 'An endless roll',
+        body: 'A good shot, a blurry one and a screenshot of a chat, all the same size. Finding that one day means scrolling until you give up.',
       },
       after: {
         badge: 'After',
         title: 'An album with pages',
-        body: 'In Memento the photo that matters is the big one, the rest follows it, and the caption says what the image cannot. Dates give the order; you give the meaning — and at the end you download the finished album.',
+        body: 'The photo that matters is the big one, the date gives the order, and the caption keeps the rest.',
       },
     },
+    faqTitle: 'Frequently asked questions',
     closingTitle: 'Start with the photos you already have.',
+    closingBody: 'It takes as long as picking the photos.',
   },
 };

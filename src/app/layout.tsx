@@ -6,30 +6,32 @@ import { LangProvider } from '@/features/i18n/LangProvider';
 import './globals.css';
 
 /**
- * As duas faces do design system Classical, servidas de dentro do repositório.
+ * As duas faces do design system Organic, servidas de dentro do repositório.
  *
  * Antes vinham de `next/font/google`. Ele também auto-hospeda o resultado, mas
  * **baixa os arquivos durante o build** — e um build que precisa de rede é um
  * build que quebra: sem acesso ao `fonts.gstatic.com` o Turbopack falha com
  * "Can't resolve @vercel/turbopack-next/internal/font/google/font", e apagar a
- * pasta `.next` (onde o download fica em cache) basta para derrubar tudo.
+ * pasta `.next` (onde o download fica em cache) basta para derrubar tudo. O
+ * `styles.css` original do Organic abre com um `@import` do Google Fonts pelo
+ * mesmo motivo — e é justamente o que a CSP (`font-src 'self'`) proíbe aqui.
  *
- * Com os `.woff2` versionados aqui, compilar não depende mais de rede nenhuma.
- * São as fontes variáveis do subset `latin`, um arquivo por família cobrindo os
- * pesos 400 e 600 — o `latin` já traz todos os acentos do português, o travessão
- * e as aspas tipográficas.
+ * Com os `.woff2` versionados nesta pasta, compilar não depende de rede
+ * nenhuma. São as fontes variáveis do subset `latin`, um arquivo por família
+ * cobrindo o eixo `wght` inteiro — o `latin` já traz todos os acentos do
+ * português, o travessão e as aspas tipográficas.
  */
 const heading = localFont({
-  src: './fonts/cormorant-garamond-latin.woff2',
+  src: './fonts/bricolage-grotesque-latin.woff2',
   variable: '--font-heading',
-  weight: '400 600',
+  weight: '400 800',
   display: 'swap',
 });
 
 const body = localFont({
-  src: './fonts/lora-latin.woff2',
+  src: './fonts/figtree-latin.woff2',
   variable: '--font-body',
-  weight: '400 600',
+  weight: '300 900',
   display: 'swap',
 });
 

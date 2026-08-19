@@ -17,6 +17,7 @@ export interface CommonCopy {
   themeTip: string;
   homeTip: string;
   navAlbum: string;
+  navBeforeAfter: string;
   navHow: string;
   navFeatures: string;
   navAbout: string;
@@ -46,6 +47,7 @@ export const COMMON: Record<Lang, CommonCopy> = {
     themeTip: 'Alternar claro e escuro',
     homeTip: 'Voltar ao início',
     navAlbum: 'O álbum',
+    navBeforeAfter: 'Antes e depois',
     navHow: 'Como funciona',
     navFeatures: 'Recursos',
     navAbout: 'Sobre',
@@ -73,6 +75,7 @@ export const COMMON: Record<Lang, CommonCopy> = {
     themeTip: 'Switch light and dark',
     homeTip: 'Back to home',
     navAlbum: 'The album',
+    navBeforeAfter: 'Before and after',
     navHow: 'How it works',
     navFeatures: 'Features',
     navAbout: 'About',
