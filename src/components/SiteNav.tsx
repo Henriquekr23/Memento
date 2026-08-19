@@ -25,11 +25,9 @@ import { Wordmark } from './Logo';
  * seções da própria página; fora dela, âncoras não existem — o link vira
  * "Início".
  *
- * O botão de montar o álbum só aparece na landing, e só a partir de `md`. Ele
- * é a ação principal do produto e vive grande no herói; aqui em cima ele é a
- * repetição que pega quem já rolou a página inteira. No celular ele sai: ao
- * lado da marca, do idioma e do tema, não sobra largura — e o herói com o
- * botão grande está a uma rolagem de distância.
+ * A barra não repete o botão de montar o álbum: ele já vive grande no herói e
+ * de novo no fim da landing, e aqui em cima só disputava espaço com os
+ * controles.
  */
 export function SiteNav({
   variant = 'landing',
@@ -82,24 +80,10 @@ export function SiteNav({
           <LangToggle />
           <ThemeToggle />
 
-          {/* A conta é a última coisa antes do botão: é onde toda interface põe
-              o perfil, e é para lá que a mão vai quando a pergunta é "quem sou
-              eu aqui". */}
+          {/* A conta fecha a barra: é onde toda interface põe o perfil, e é
+              para lá que a mão vai quando a pergunta é "quem sou eu aqui". */}
           {isSupabaseConfigured && <AccountMenu />}
         </div>
-
-        {isLanding && (
-          <Link
-            href="/album"
-            aria-label={t.ctaAria}
-            /* Na barra o botão é menor do que no herói: ali ele é a ação da
-               página, aqui é um atalho. Os utilitários vencem o `.btn-hero`
-               porque a camada de componentes vem antes na cascata. */
-            className="btn btn-hero hidden px-5 py-2.5 text-[13.5px] md:inline-flex"
-          >
-            {t.cta}
-          </Link>
-        )}
       </div>
     </nav>
   );

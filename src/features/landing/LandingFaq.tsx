@@ -10,9 +10,14 @@ import { COPY } from './copy';
 /**
  * As perguntas frequentes na própria página, e não na bolha flutuante.
  *
- * As perguntas são as mesmas de `features/faq/copy.ts` — a lista existe uma
- * vez só, e a bolha continua servindo as telas internas (`/album`, `/albums`),
- * onde não há corpo de página para abrir um acordeão.
+ * As perguntas vêm de `features/faq/copy.ts` — a lista existe uma vez só, e a
+ * bolha continua servindo as telas internas (`/album`, `/albums`), onde não há
+ * corpo de página para abrir um acordeão.
+ *
+ * Aqui entram só as marcadas com `landing`: no fim da página as perguntas
+ * competem com a decisão de começar, e a lista completa empurrava o botão
+ * final para longe. As outras continuam a um clique na bolha e na página
+ * Sobre.
  *
  * A resposta fechada continua no DOM (só com altura zero), então o Ctrl+F do
  * navegador acha o texto mesmo com o item recolhido.
@@ -21,6 +26,7 @@ export function LandingFaq() {
   const { lang } = useLang();
   const t = COPY[lang];
   const faq = FAQ[lang];
+  const items = faq.items.filter((item) => item.landing);
   const [open, setOpen] = useState(-1);
 
   return (
@@ -34,7 +40,7 @@ export function LandingFaq() {
       </p>
 
       <div className="mt-6 flex flex-col">
-        {faq.items.map((item, index) => {
+        {items.map((item, index) => {
           const isOpen = index === open;
           return (
             <div key={item.question} className="qa-row">

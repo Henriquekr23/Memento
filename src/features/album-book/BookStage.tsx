@@ -73,6 +73,51 @@ function foldGradient(side: PageSide): string {
 }
 
 /**
+ * Vinco da lombada: meia-largura em px e o quanto ele escurece no pico, junto
+ * ao centro. Os dois valores são usados em dois lugares — a faixa parada sobre
+ * as páginas de baixo e a metade que viaja na folha — e é essa igualdade que
+ * faz uma virar a outra sem salto. Mexer num, mexer no outro.
+ */
+const CREASE_HALF_PX = 12;
+const CREASE_PEAK = 0.35;
+
+/**
+ * Quanto o vinco aprofunda no auge da virada. Papel levantado dobra mais perto
+ * da costura do que papel deitado; o realce nasce e morre em zero (`sin`), então
+ * a folha começa e termina exatamente com o vinco de repouso.
+ */
+const CREASE_LIFT = 0.55;
+
+/**
+ * A metade do vinco que pertence à folha em movimento.
+ *
+ * O vinco parado vive abaixo da folha (z-15), então, no instante em que o
+ * arraste começava, a metade segurada perdia a faixa escura — e a recuperava de
+ * um quadro para o outro quando a folha pousava. Era o piscar que se via ao
+ * soltar a página. Desenhado aqui dentro da face, o vinco nasce idêntico ao que
+ * estava ali e gira junto com o papel, que é o que um vinco de verdade faz.
+ */
+function SpineCrease({ side, depth }: { side: PageSide; depth: number }) {
+  // `side` é o lado do livro que a face ocupa: a lombada é a borda de dentro.
+  const spineOnLeft = side === 'right';
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-y-0"
+      style={{
+        left: spineOnLeft ? 0 : 'auto',
+        right: spineOnLeft ? 'auto' : 0,
+        width: `${CREASE_HALF_PX}px`,
+        background: `linear-gradient(to ${
+          spineOnLeft ? 'right' : 'left'
+        }, rgba(0,0,0,${CREASE_PEAK}), transparent)`,
+        opacity: depth,
+      }}
+    />
+  );
+}
+
+/**
  * Espessura do livro: as folhas que sobram de cada lado.
  *
  * Só aparece com o álbum aberto. De frente para um livro fechado você vê a
@@ -238,6 +283,16 @@ export function BookStage({
     ? `transform ${TURN_DURATION_MS}ms ${EASE}`
     : 'none';
 
+  /* Profundidade do vinco que viaja na folha. Em repouso (`progress` 0 ou 1) é
+     exatamente a da faixa parada — é o que garante a troca invisível nas duas
+     pontas da virada —, e engrossa no meio do caminho, quando o papel está mais
+     levantado. Teto em 1 porque opacidade não passa disso. */
+  const creaseDepth = Math.min(
+    1,
+    view.openness *
+      (1 + CREASE_LIFT * Math.sin((turn?.progress ?? 0) * Math.PI)),
+  );
+
   /* Página única: o livro continua inteiro, com o dobro da largura da tela, e
      a janela mostra uma metade de cada vez. A alternativa seria remontar a
      geometria para uma página por spread — muito mais código para o mesmo
@@ -282,15 +337,30 @@ export function BookStage({
           openness={view.openness}
         />
 
-        {/* Páginas paradas */}
+        {/* Sombra do livro sobre a mesa, uma camada por metade, atrás do
+            papel (z-0). Ela não pode morar no wrapper da página estática: na
+            virada aquela página vira folha em movimento e o wrapper esvazia —
+            o papel continuava na tela e a sombra piscava. Quem manda é
+            `left/rightShadow`, que conta a folha também. */}
         <div
-          className="absolute left-0 top-0 z-10 h-full w-1/2"
+          aria-hidden
+          className="pointer-events-none absolute left-0 top-0 z-0 h-full w-1/2 rounded-[6px]"
           style={{
-            boxShadow: view.leftStatic
-              ? '0 30px 60px -25px rgba(0,0,0,0.85)'
-              : undefined,
+            boxShadow: '0 30px 60px -25px rgba(0,0,0,0.85)',
+            opacity: view.leftShadow,
           }}
-        >
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute right-0 top-0 z-0 h-full w-1/2 rounded-[6px]"
+          style={{
+            boxShadow: '0 30px 60px -25px rgba(0,0,0,0.85)',
+            opacity: view.rightShadow,
+          }}
+        />
+
+        {/* Páginas paradas */}
+        <div className="absolute left-0 top-0 z-10 h-full w-1/2">
           <BookPage
             {...pageProps}
             page={view.leftStatic}
@@ -299,14 +369,7 @@ export function BookStage({
             interactive={!turn && !readOnly}
           />
         </div>
-        <div
-          className="absolute right-0 top-0 z-10 h-full w-1/2"
-          style={{
-            boxShadow: view.rightStatic
-              ? '0 30px 60px -25px rgba(0,0,0,0.85)'
-              : undefined,
-          }}
-        >
+        <div className="absolute right-0 top-0 z-10 h-full w-1/2">
           <BookPage
             {...pageProps}
             page={view.rightStatic}
@@ -365,6 +428,7 @@ export function BookStage({
                   opacity: turn.progress,
                 }}
               />
+              <SpineCrease side={view.leaf.frontSide} depth={creaseDepth} />
             </div>
 
             <div
@@ -389,6 +453,7 @@ export function BookStage({
                   opacity: 1 - turn.progress,
                 }}
               />
+              <SpineCrease side={view.leaf.backSide} depth={creaseDepth} />
             </div>
           </div>
         )}
@@ -416,11 +481,18 @@ export function BookStage({
         )}
 
         {/* Vinco central. Fica abaixo da folha que gira (z-20): acima dela, a
-            sombra ficava parada cortando a página em movimento. */}
+            sombra ficava parada cortando a página em movimento. Quem cobre a
+            metade escondida pela folha é o `SpineCrease` que viaja com ela —
+            as duas peças usam as mesmas constantes justamente para que a troca
+            entre uma e outra não apareça. */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 left-1/2 z-[15] w-6 -translate-x-1/2 bg-gradient-to-r from-transparent via-black/35 to-transparent"
-            style={{ opacity: view.openness }}
+            className="pointer-events-none absolute inset-y-0 left-1/2 z-[15] -translate-x-1/2"
+            style={{
+              width: `${CREASE_HALF_PX * 2}px`,
+              background: `linear-gradient(to right, transparent, rgba(0,0,0,${CREASE_PEAK}), transparent)`,
+              opacity: view.openness,
+            }}
           />
         </div>
       </div>
