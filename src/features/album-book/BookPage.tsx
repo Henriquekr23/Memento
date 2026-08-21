@@ -20,6 +20,7 @@ import {
 } from '@/types/page';
 
 import type { PageSide } from './bookGeometry';
+import { DayNote } from './DayNote';
 import { PageControls } from './PageControls';
 import { PhotoSlot } from './PhotoSlot';
 import { StoryPage } from './StoryPage';
@@ -40,6 +41,8 @@ export interface BookPageProps {
   isTouch: boolean;
   selectedPhotoId: string | null;
   photoCaptions: Record<string, string>;
+  /** Diário de viagem, indexado pela chave do grupo de dia. */
+  dayNotes: Record<string, string>;
   /** Páginas embaixo da folha que está virando não recebem interação. */
   interactive: boolean;
   getAdjustment: (photoId: string) => PhotoAdjustment;
@@ -54,6 +57,7 @@ export interface BookPageProps {
   onChangeLayout: (pageKey: string, layoutId: PageLayoutId) => void;
   onChangeCaption: (pageKey: string, caption: string) => void;
   onChangePhotoCaption: (photoId: string, caption: string) => void;
+  onChangeDayNote: (groupKey: string, text: string) => void;
   onChangeStory: (
     id: string,
     patch: Partial<Pick<StoryInsertion, 'title' | 'body'>>,
@@ -405,6 +409,17 @@ export function BookPage(props: BookPageProps) {
         />
 
       </header>
+
+      {/* O diário só na página que abre o dia: é o texto do dia inteiro, não
+          desta folha. Nas outras páginas do mesmo dia ele nem é renderizado. */}
+      {page.opensGroup && page.groupKey && (
+        <DayNote
+          groupKey={page.groupKey}
+          value={props.dayNotes[page.groupKey] ?? ''}
+          interactive={interactive}
+          onChange={props.onChangeDayNote}
+        />
+      )}
 
       {/* Área útil: todo posicionamento de foto é em % dela. */}
       <PageDropArea

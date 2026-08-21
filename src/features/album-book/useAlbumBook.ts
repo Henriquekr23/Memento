@@ -50,6 +50,15 @@ export function useAlbumBook(
   const [photoCaptions, setPhotoCaptions] = useState<Record<string, string>>(
     () => initial?.photoCaptions ?? {},
   );
+  /**
+   * Diário de viagem: um texto por grupo de dia, na chave do grupo.
+   * Fica ao lado das legendas de propósito — é o mesmo tipo de coisa (texto do
+   * usuário indexado por chave derivada), só que a chave é o dia, que sobrevive
+   * a remontagens de página.
+   */
+  const [dayNotes, setDayNotes] = useState<Record<string, string>>(
+    () => initial?.dayNotes ?? {},
+  );
   const [stories, setStories] = useState<StoryInsertion[]>(
     () => initial?.stories ?? [],
   );
@@ -205,6 +214,11 @@ export function useAlbumBook(
     setPhotoCaptions((current) => ({ ...current, [photoId]: caption }));
   }, []);
 
+  /** Diário do dia. Chave é o grupo da página, não a página. */
+  const setDayNote = useCallback((groupKey: string, text: string) => {
+    setDayNotes((current) => ({ ...current, [groupKey]: text }));
+  }, []);
+
   // ── Páginas de história ─────────────────────────────────────────────────
   /**
    * Insere uma página de texto logo depois da página aberta à direita, e já
@@ -350,6 +364,8 @@ export function useAlbumBook(
     setPageCaption,
     photoCaptions,
     setPhotoCaption,
+    dayNotes,
+    setDayNote,
     stories,
     addStory,
     addStoryHere,

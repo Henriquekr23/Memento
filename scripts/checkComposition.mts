@@ -24,6 +24,7 @@ const full = {
   layoutOverrides: { 'page-1': 'quad' },
   captions: { 'page-1': 'Primeiro dia' },
   photoCaptions: { a: 'Chegada' },
+  dayNotes: { '2026-05-12': 'Choveu a manhã inteira e a gente foi assim mesmo.' },
   adjustments: { a: { focusX: 40, focusY: 60, zoom: 1.4, rotation: -3 } },
   placements: { a: { x: 10, y: 12, w: 50, h: 40, z: 7 } },
   composeModes: { 'page-1': 'free' },
@@ -48,6 +49,7 @@ const dirty = parseComposition({
   theme: { cover: 'ouro', paper: 'white' },
   adjustments: { a: { zoom: 'muito' } },
   stories: [{ semId: true }, { id: 'ok' }],
+  dayNotes: { '2026-05-12': 'vale', '2026-05-13': 42 },
   autoTilt: 'talvez',
 });
 
@@ -59,6 +61,16 @@ assert.equal(dirty.adjustments.a.zoom, 1, 'número inválido vira o padrão');
 assert.equal(dirty.stories.length, 1, 'história sem id é descartada');
 assert.equal(dirty.stories[0].title, '', 'campo ausente vira string vazia');
 assert.equal(dirty.autoTilt, true, 'booleano inválido cai no padrão');
+assert.deepEqual(
+  dirty.dayNotes,
+  { '2026-05-12': 'vale' },
+  'diário que não é texto é descartado, o resto sobrevive',
+);
+assert.deepEqual(
+  parseComposition({}).dayNotes,
+  {},
+  'álbum salvo antes do diário abre sem ele',
+);
 
 // ── Poda: o que aponta para foto que não foi salva ─────────────────────────
 const pruned = pruneComposition(parseComposition(full), ['b']);
@@ -74,6 +86,11 @@ assert.deepEqual(
   pruned.captions,
   { 'page-1': 'Primeiro dia' },
   'legenda de página não depende de foto e permanece',
+);
+assert.deepEqual(
+  pruned.dayNotes,
+  full.dayNotes,
+  'diário do dia sobrevive à poda — texto do usuário não se perde',
 );
 
 const kept = pruneComposition(parseComposition(full), ['a']);

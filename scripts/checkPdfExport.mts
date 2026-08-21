@@ -116,6 +116,17 @@ const context: PageRenderContext = {
   frame: theme.frame,
   pageCaptions: { [photoPages[0]?.key ?? '']: 'A chegada' },
   photoCaptions: { p0: 'primeira parada', p3: 'o mirante', p6: 'de volta' },
+  // As chaves são os dias que as datas acima produzem. O primeiro é longo de
+  // propósito: exercita a quebra de linha e o corte no teto de 5 linhas.
+  dayNotes: {
+    '2026-05-12':
+      'Acordamos com o barulho do mar batendo embaixo da janela e nenhum plano. ' +
+      'Descemos a pé até o porto, comemos pastel de camarão em pé e ficamos ' +
+      'olhando os barcos voltarem. À tarde subimos o morro achando que dava ' +
+      'tempo antes do sol cair — não dava, e ainda assim foi a melhor parte do ' +
+      'dia. Voltamos no escuro, guiados pela luz de um bar que nem estava aberto.',
+    '2026-05-13': 'Dia de estrada. Pouca foto, muito café.',
+  },
   composeModes: isFree
     ? Object.fromEntries(photoPages.map((page) => [page.key, 'free' as const]))
     : {},

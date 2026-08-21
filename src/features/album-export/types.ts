@@ -21,6 +21,8 @@ export interface AlbumComposition {
   theme: AlbumTheme;
   /** Legenda por página, indexada pela chave da página. */
   pageCaptions: Readonly<Record<string, string>>;
+  /** Diário de viagem, indexado pela chave do grupo de dia. */
+  dayNotes: Readonly<Record<string, string>>;
   composeModes: Readonly<Record<string, ComposeMode>>;
   adjustments: Readonly<Record<string, PhotoAdjustment>>;
   placements: Readonly<Record<string, PhotoPlacement>>;

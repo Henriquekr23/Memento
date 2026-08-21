@@ -31,6 +31,18 @@ export interface AlbumComposition {
   captions: Record<string, string>;
   /** Legenda por foto, indexada pelo id da foto. */
   photoCaptions: Record<string, string>;
+  /**
+   * Diário de viagem: um texto por **grupo de dia**, indexado pela mesma chave
+   * de grupo que a paginação usa (`YYYY-MM-DD`, ou `inserted:<id>` numa página
+   * criada à mão).
+   *
+   * A chave é o grupo, e não a chave da página, porque a chave da página muda
+   * quando o layout ou a ordem mudam — o dia, não. Texto escrito para o dia 12
+   * continua sendo do dia 12 depois de qualquer remontagem.
+   *
+   * Escrito inteiramente pelo usuário: nada aqui é gerado pelo app.
+   */
+  dayNotes: Record<string, string>;
   adjustments: Record<string, PhotoAdjustment>;
   placements: Record<string, PhotoPlacement>;
   composeModes: Record<string, ComposeMode>;
@@ -47,6 +59,7 @@ export const EMPTY_COMPOSITION: AlbumComposition = {
   layoutOverrides: {},
   captions: {},
   photoCaptions: {},
+  dayNotes: {},
   adjustments: {},
   placements: {},
   composeModes: {},
@@ -187,6 +200,9 @@ export function parseComposition(value: unknown): AlbumComposition {
     layoutOverrides: layoutMap(value.layoutOverrides),
     captions: stringMap(value.captions),
     photoCaptions: stringMap(value.photoCaptions),
+    // Álbum salvo antes do diário existir simplesmente não tem a chave: vira
+    // `{}` e abre igual, que é o contrato deste arquivo.
+    dayNotes: stringMap(value.dayNotes),
     adjustments: adjustmentMap(value.adjustments),
     placements: placementMap(value.placements),
     composeModes: composeModeMap(value.composeModes),
@@ -203,7 +219,10 @@ export function parseComposition(value: unknown): AlbumComposition {
  *
  * As fotos do depósito não entram no álbum salvo; sem esta limpeza, o JSON
  * cresceria com ajustes de fotos que não existem mais do outro lado.
- * (Não mexe nas chaves de *página*: aquelas são derivadas e se refazem.)
+ * (Não mexe nas chaves de *página* nem nas de *dia*: aquelas são derivadas e se
+ * refazem — e, no caso do diário, apagar seria jogar fora texto escrito pelo
+ * usuário só porque ele mandou as fotos daquele dia para o depósito por um
+ * minuto.)
  */
 export function pruneComposition(
   composition: AlbumComposition,

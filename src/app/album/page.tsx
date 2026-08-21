@@ -75,6 +75,7 @@ export default function AlbumPage() {
             pages: book.pages,
             theme: book.theme,
             pageCaptions: book.captions,
+            dayNotes: book.dayNotes,
             composeModes: book.pageComposeModes,
             adjustments: book.adjustments,
             placements: book.placements,

@@ -91,7 +91,7 @@ continua servindo as telas internas, e não aparece na landing.
 | `AlbumBook.tsx` | orquestra: estado, arraste de fotos, os pedaços abaixo |
 | `BookStage.tsx` | o livro: perspectiva, folha girando, gesto de folhear |
 | `BookToolbar.tsx` / `PageStrip.tsx` / `PhotoTray.tsx` | navegação, tira de páginas, depósito |
-| `BookPage.tsx` / `PhotoSlot.tsx` / `StoryPage.tsx` | conteúdo de uma página |
+| `BookPage.tsx` / `PhotoSlot.tsx` / `StoryPage.tsx` / `DayNote.tsx` | conteúdo de uma página |
 | `usePageTurn.ts` | **só** navegação (em que spread estamos, como a folha se move) |
 | `useAlbumBook.ts` | **só** conteúdo (layouts, posições, textos, tema) |
 | `bookGeometry.ts` | função pura: dado o spread e a virada, o que aparece onde |
@@ -143,7 +143,14 @@ usuário) — não voltar a juntá-los.
     largo e ainda precisa das alças visíveis.
 11. **Movimento de mouse não passa pelo React na landing** — variáveis CSS
     escritas via ref dentro de `requestAnimationFrame` (`usePointerVars`).
-12. **Sem persistência de conteúdo fora da Fase 2.** Recarregar `/album`
+12. **O diário de viagem é indexado pelo *grupo de dia*, não pela página**
+    (`dayNotes` na composição, `DayNote.tsx` na tela). Chave de página muda
+    quando o layout ou a ordem mudam; o dia, não — texto escrito para o dia 12
+    continua no dia 12 depois de qualquer remontagem. Ele aparece só na página
+    que abre o dia (`AlbumPage.opensGroup`), cede espaço às fotos em vez de
+    tomar (teto de 5 linhas, igual na tela e no PDF) e some por completo quando
+    está vazio e ninguém está editando. Nada aqui é gerado pelo app.
+13. **Sem persistência de conteúdo fora da Fase 2.** Recarregar `/album`
     (modo local) perde o álbum — intencional. Exceções que não são conteúdo:
     idioma (`localStorage`) e a ponte para `/obrigado` (`sessionStorage`,
     consumida na leitura).

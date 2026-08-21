@@ -15,6 +15,7 @@ export function snapshotComposition(book: AlbumBookState): AlbumComposition {
     layoutOverrides: book.layoutOverrides,
     captions: book.captions,
     photoCaptions: book.photoCaptions,
+    dayNotes: book.dayNotes,
     adjustments: book.adjustments,
     placements: book.placements,
     composeModes: book.pageComposeModes,

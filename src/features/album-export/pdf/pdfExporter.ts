@@ -121,6 +121,7 @@ function renderContextOf(album: AlbumSnapshot): PageRenderContext {
     frame: book?.theme.frame ?? 'polaroid',
     pageCaptions: book?.pageCaptions ?? {},
     photoCaptions: album.photoCaptions ?? {},
+    dayNotes: book?.dayNotes ?? {},
     composeModes: book?.composeModes ?? {},
     adjustments: book?.adjustments ?? {},
     placements: book?.placements ?? {},

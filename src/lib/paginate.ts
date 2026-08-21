@@ -98,6 +98,16 @@ export interface AlbumPage {
   /** Numeração visível — só o miolo é numerado. */
   number: number | null;
   story: StoryInsertion | null;
+  /**
+   * Primeira página do grupo no álbum — é nela que o diário daquele dia é
+   * escrito e lido (ver `dayNotes` na composição).
+   *
+   * "Primeira do grupo" e não "primeira da sequência": o mesmo dia pode voltar
+   * mais adiante, quando o usuário arrasta uma foto dele para outro ponto do
+   * álbum. Sem essa distinção, o mesmo texto apareceria repetido em cada
+   * reaparição do dia.
+   */
+  opensGroup: boolean;
   /** Preenchido nas páginas em branco criadas pelo usuário. */
   emptyPageId: string | null;
   /**
@@ -173,6 +183,7 @@ function emptyPage(key: string, kind: AlbumPageKind): AlbumPage {
     totalPagesOfDay: 0,
     number: null,
     story: null,
+    opensGroup: false,
     emptyPageId: null,
     anchorPhotoId: null,
   };
@@ -220,9 +231,13 @@ function buildPhotoPages(
   );
 
   const result: AlbumPage[] = [];
+  /** Grupos que já abriram uma vez — o diário pertence à primeira abertura. */
+  const opened = new Set<string>();
 
   runs.forEach((run, runIndex) => {
     const pagesOfRun: AlbumPage[] = [];
+    const opensGroup = !opened.has(run.groupKey);
+    opened.add(run.groupKey);
     let cursor = 0;
     let indexInRun = 0;
 
@@ -240,6 +255,7 @@ function buildPhotoPages(
         dayNumber: dayNumbers.get(run.groupKey) ?? null,
         date: run.photos[cursor].timestamp,
         pageOfDay: indexInRun + 1,
+        opensGroup: opensGroup && indexInRun === 0,
       });
 
       cursor += capacity;
