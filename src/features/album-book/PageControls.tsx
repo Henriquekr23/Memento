@@ -7,15 +7,16 @@ import {
   type PageLayoutId,
 } from '@/types/page';
 
-/** `'text'` é a variação sem fotos: a página inteira vira texto. */
-export type PageVariant = PageLayoutId | 'text';
-
 interface PageControlsProps {
-  variant: PageVariant;
-  onChangeVariant: (variant: PageVariant) => void;
-  /** Ausente nas páginas de texto, onde compor fotos não faz sentido. */
+  layoutId: PageLayoutId;
+  onChangeLayout: (layoutId: PageLayoutId) => void;
   composeMode?: ComposeMode;
   onToggleComposeMode?: () => void;
+  /**
+   * Diário do dia. Só chega preenchido na página que abre o dia — nas outras a
+   * pílula nem mostra o botão, porque não há diário para ligar ali.
+   */
+  dayNote?: { active: boolean; onToggle: () => void };
 }
 
 /** Miniatura do layout desenhada com divs — nada de ícone externo. */
@@ -42,18 +43,19 @@ function Divider() {
 }
 
 /**
- * Controles que aparecem no canto da página: qual layout, se é página de texto
- * e se as fotos ficam encaixadas ou soltas.
+ * Controles que aparecem no canto da página: qual layout, se as fotos ficam
+ * encaixadas ou soltas, e se o dia tem diário.
  *
  * Tudo mora na mesma pílula branca e usa o mesmo estado de "ativo". Antes o
  * botão de modo era um pill separado, com forma e tamanho próprios, e ligá-lo
  * dava a impressão de que a interface tinha pulado.
  */
 export function PageControls({
-  variant,
-  onChangeVariant,
+  layoutId: variant,
+  onChangeLayout,
   composeMode,
   onToggleComposeMode,
+  dayNote,
 }: PageControlsProps) {
   const itemClass = (isActive: boolean) =>
     [
@@ -77,25 +79,32 @@ export function PageControls({
               aria-label={PAGE_LAYOUTS[layoutId].label}
               aria-pressed={layoutId === variant}
               onPointerDown={(event) => event.stopPropagation()}
-              onClick={() => onChangeVariant(layoutId)}
+              onClick={() => onChangeLayout(layoutId)}
               className={`w-7 ${itemClass(layoutId === variant)}`}
             >
               <LayoutGlyph layoutId={layoutId} />
             </button>
           ))}
+        </>
+      )}
 
+      {dayNote && (
+        <>
+          {!isFree && <Divider />}
           <button
             type="button"
-            title="Página de texto — as fotos voltam para o depósito"
-            aria-label="Página de texto"
-            aria-pressed={variant === 'text'}
+            aria-pressed={dayNote.active}
+            aria-label="Diário do dia"
             onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => onChangeVariant('text')}
-            className={`w-7 text-[13px] font-semibold ${itemClass(
-              variant === 'text',
-            )}`}
+            onClick={dayNote.onToggle}
+            title={
+              dayNote.active
+                ? 'Diário do dia ligado — clique para tirar (o texto some)'
+                : 'Escrever um diário para este dia (até 5 linhas)'
+            }
+            className={`w-7 text-[12px] ${itemClass(dayNote.active)}`}
           >
-            T
+            ✎
           </button>
         </>
       )}

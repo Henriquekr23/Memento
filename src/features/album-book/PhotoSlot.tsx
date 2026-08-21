@@ -65,6 +65,35 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+/**
+ * Grade de terços sobre a foto, só enquanto o enquadramento está sendo
+ * arrastado. É a mesma régua que qualquer câmera desenha no visor: serve para
+ * alinhar o corte (horizonte, um rosto, a linha de uma parede) e some no
+ * instante em que o dedo/mouse solta — fora do gesto ela seria só sujeira em
+ * cima da foto.
+ */
+function CropGrid() {
+  const line = { position: 'absolute' as const, background: 'rgba(255,255,255,0.55)' };
+  const shadow = '0 0 2px rgba(0,0,0,0.55)';
+
+  return (
+    <span aria-hidden className="pointer-events-none absolute inset-0 z-10">
+      {[33.333, 66.667].map((at) => (
+        <span
+          key={`v${at}`}
+          style={{ ...line, left: `${at}%`, top: 0, bottom: 0, width: 1, boxShadow: shadow }}
+        />
+      ))}
+      {[33.333, 66.667].map((at) => (
+        <span
+          key={`h${at}`}
+          style={{ ...line, top: `${at}%`, left: 0, right: 0, height: 1, boxShadow: shadow }}
+        />
+      ))}
+    </span>
+  );
+}
+
 /** Cantoneiras de papel, como as de álbum antigo. */
 function PhotoCorners() {
   const shared = { position: 'absolute' as const, width: 0, height: 0, opacity: 0.55 };
@@ -140,6 +169,8 @@ export function PhotoSlot({
   const frameRef = useRef<HTMLDivElement | null>(null);
   const gestureRef = useRef<Gesture | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  /** Segurando a foto para reenquadrar — é o que acende a grade de corte. */
+  const [isFraming, setIsFraming] = useState(false);
 
   const isFree = mode === 'free';
 
@@ -200,6 +231,7 @@ export function PhotoSlot({
       event.currentTarget.setPointerCapture(event.pointerId);
       setIsBusy(true);
     }
+    if (kind === 'pan') setIsFraming(true);
     if (kind === 'move' || kind === 'resize') {
       onPlace(photo.id, rect, { bringToFront: true });
     }
@@ -266,6 +298,7 @@ export function PhotoSlot({
     const gesture = gestureRef.current;
     gestureRef.current = null;
     setIsBusy(false);
+    setIsFraming(false);
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -353,6 +386,7 @@ export function PhotoSlot({
             }}
             className="h-full w-full select-none object-cover"
           />
+          {isFraming && <CropGrid />}
           {frame === 'corners' && <PhotoCorners />}
         </div>
 

@@ -3,11 +3,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import {
-  STORY_ANCHOR_END,
-  STORY_ANCHOR_START,
+  ANCHOR_END,
   buildAlbumPages,
   type EmptyPageInsertion,
-  type StoryInsertion,
 } from '@/lib/paginate';
 import { DEFAULT_THEME, type AlbumTheme } from '@/features/album-style/theme';
 import type { AlbumComposition } from '@/features/album-save/composition';
@@ -22,7 +20,7 @@ import {
 } from '@/types/page';
 import type { Photo } from '@/types/photo';
 
-import { rightIndexOf, spreadCountOf } from './bookGeometry';
+import { spreadCountOf } from './bookGeometry';
 import { usePageTurn } from './usePageTurn';
 
 /**
@@ -50,8 +48,14 @@ export function useAlbumBook(
   const [photoCaptions, setPhotoCaptions] = useState<Record<string, string>>(
     () => initial?.photoCaptions ?? {},
   );
-  const [stories, setStories] = useState<StoryInsertion[]>(
-    () => initial?.stories ?? [],
+  /**
+   * Diário de viagem: um texto por grupo de dia, na chave do grupo.
+   * Fica ao lado das legendas de propósito — é o mesmo tipo de coisa (texto do
+   * usuário indexado por chave derivada), só que a chave é o dia, que sobrevive
+   * a remontagens de página.
+   */
+  const [dayNotes, setDayNotes] = useState<Record<string, string>>(
+    () => initial?.dayNotes ?? {},
   );
   const [emptyPages, setEmptyPages] = useState<EmptyPageInsertion[]>(
     () => initial?.emptyPages ?? [],
@@ -90,11 +94,10 @@ export function useAlbumBook(
     () =>
       buildAlbumPages(photos, {
         layoutOverrides,
-        stories,
         emptyPages,
         groupKeys,
       }),
-    [photos, layoutOverrides, stories, emptyPages, groupKeys],
+    [photos, layoutOverrides, emptyPages, groupKeys],
   );
 
   const spreadCount = spreadCountOf(pages.length);
@@ -108,7 +111,6 @@ export function useAlbumBook(
     updateDrag,
     endDrag,
     goToSpread,
-    jumpToSpread,
   } = usePageTurn(spreadCount);
 
   // ── Edição de página ────────────────────────────────────────────────────
@@ -205,31 +207,36 @@ export function useAlbumBook(
     setPhotoCaptions((current) => ({ ...current, [photoId]: caption }));
   }, []);
 
-  // ── Páginas de história ─────────────────────────────────────────────────
+  /** Diário do dia. Chave é o grupo da página, não a página. */
+  const setDayNote = useCallback((groupKey: string, text: string) => {
+    setDayNotes((current) => ({ ...current, [groupKey]: text }));
+  }, []);
+
   /**
-   * Insere uma página de texto logo depois da página aberta à direita, e já
-   * avança um spread — a página nova cai justamente na esquerda do seguinte,
-   * então o usuário vê onde ela foi parar em vez de ter que procurar.
+   * Liga/desliga o diário daquele dia.
+   *
+   * A **presença da chave** é o que diz se o diário existe — nada de um segundo
+   * registro de booleanos para sair de sincronia com o texto. Desligar apaga o
+   * texto daquele dia, e é a única forma de apagá-lo.
    */
+  const toggleDayNote = useCallback((groupKey: string) => {
+    setDayNotes((current) => {
+      if (groupKey in current) {
+        const next = { ...current };
+        delete next[groupKey];
+        return next;
+      }
+      return { ...current, [groupKey]: '' };
+    });
+  }, []);
+
+  // ── Inserções ───────────────────────────────────────────────────────────
   const newInsertionId = useCallback(
     (prefix: string) =>
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
         : `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     [],
-  );
-
-  /** Insere uma página de texto numa âncora escolhida por quem chama. */
-  const addStory = useCallback(
-    (anchorPhotoId: string) => {
-      const id = newInsertionId('story');
-      setStories((current) => [
-        ...current,
-        { id, anchorPhotoId, title: '', body: '' },
-      ]);
-      return id;
-    },
-    [newInsertionId],
   );
 
   /** Insere uma página de fotos em branco numa âncora escolhida. */
@@ -242,31 +249,6 @@ export function useAlbumBook(
     [newInsertionId],
   );
 
-  const addStoryHere = useCallback(() => {
-    const right = pages[rightIndexOf(spread)];
-    let anchorPhotoId = STORY_ANCHOR_START;
-    // Para onde navegar depois de inserir, quando dá para saber com certeza.
-    let targetSpread: number | null = null;
-
-    if (right?.kind === 'photos') {
-      anchorPhotoId = right.photos.at(-1)?.id ?? STORY_ANCHOR_START;
-      targetSpread = spread + 1;
-    } else if (right?.kind === 'story' && right.story) {
-      anchorPhotoId = right.story.anchorPhotoId;
-      targetSpread = spread + 1;
-    } else if (spread > 1) {
-      const lastPhotoPage = [...pages].reverse().find((p) => p.kind === 'photos');
-      anchorPhotoId = lastPhotoPage?.photos.at(-1)?.id ?? STORY_ANCHOR_START;
-    } else {
-      // Na capa ou na folha de rosto: o texto abre o álbum, no primeiro spread.
-      targetSpread = 1;
-    }
-
-    const id = addStory(anchorPhotoId);
-    if (targetSpread !== null) jumpToSpread(targetSpread);
-    return id;
-  }, [pages, spread, jumpToSpread, addStory]);
-
   /**
    * Cria uma página de fotos em branco no fim do álbum.
    * Nasce vazia, esperando o usuário trazer fotos do depósito. Antes ela era
@@ -275,7 +257,7 @@ export function useAlbumBook(
    * onde quiser na tira de páginas.
    */
   const addEmptyPageAtEnd = useCallback(
-    () => addEmptyPage(STORY_ANCHOR_END),
+    () => addEmptyPage(ANCHOR_END),
     [addEmptyPage],
   );
 
@@ -295,30 +277,6 @@ export function useAlbumBook(
     },
     [],
   );
-
-  /** Reancora as histórias depois de uma reordenação de páginas. */
-  const setStoryAnchors = useCallback((anchors: Record<string, string>) => {
-    setStories((current) =>
-      current.map((story) =>
-        anchors[story.id] !== undefined
-          ? { ...story, anchorPhotoId: anchors[story.id] }
-          : story,
-      ),
-    );
-  }, []);
-
-  const updateStory = useCallback(
-    (id: string, patch: Partial<Pick<StoryInsertion, 'title' | 'body'>>) => {
-      setStories((current) =>
-        current.map((story) => (story.id === id ? { ...story, ...patch } : story)),
-      );
-    },
-    [],
-  );
-
-  const removeStory = useCallback((id: string) => {
-    setStories((current) => current.filter((story) => story.id !== id));
-  }, []);
 
   const setTheme = useCallback((patch: Partial<AlbumTheme>) => {
     setThemeState((current) => ({ ...current, ...patch }));
@@ -350,16 +308,13 @@ export function useAlbumBook(
     setPageCaption,
     photoCaptions,
     setPhotoCaption,
-    stories,
-    addStory,
-    addStoryHere,
-    setStoryAnchors,
+    dayNotes,
+    setDayNote,
+    toggleDayNote,
     addEmptyPage,
     addEmptyPageAtEnd,
     removeEmptyPage,
     setEmptyPageAnchors,
-    updateStory,
-    removeStory,
     theme,
     setTheme,
     // Os registros crus, para quem precisa da composição inteira de uma vez —

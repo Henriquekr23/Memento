@@ -98,10 +98,7 @@ async function canvasToJpeg(canvas: HTMLCanvasElement): Promise<Uint8Array> {
  * partir das fotos — o mesmo resultado que o livro mostraria sem edições.
  */
 function pagesOf(album: AlbumSnapshot): readonly AlbumPage[] {
-  return (
-    album.book?.pages ??
-    buildAlbumPages(album.photos, { stories: album.stories ?? [] })
-  );
+  return album.book?.pages ?? buildAlbumPages(album.photos);
 }
 
 function renderContextOf(album: AlbumSnapshot): PageRenderContext {
@@ -121,6 +118,7 @@ function renderContextOf(album: AlbumSnapshot): PageRenderContext {
     frame: book?.theme.frame ?? 'polaroid',
     pageCaptions: book?.pageCaptions ?? {},
     photoCaptions: album.photoCaptions ?? {},
+    dayNotes: book?.dayNotes ?? {},
     composeModes: book?.composeModes ?? {},
     adjustments: book?.adjustments ?? {},
     placements: book?.placements ?? {},

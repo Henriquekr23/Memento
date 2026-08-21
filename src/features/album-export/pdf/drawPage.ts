@@ -36,6 +36,15 @@ import {
 /** Largura de referência da página no livro, em px de tela. */
 const REFERENCE_PAGE_WIDTH = 380;
 
+/**
+ * Diário do dia — os mesmos números do `DayNote.tsx` (`text-[12px]`, linha de
+ * 18px, teto de 5 linhas). Mexeu num, mexa no outro: o bloco só continua igual
+ * na tela e no papel enquanto as duas réguas forem a mesma.
+ */
+const DAY_NOTE_SIZE = 12;
+const DAY_NOTE_LINE_HEIGHT = 18;
+const DAY_NOTE_MAX_LINES = 5;
+
 export interface LoadedImage {
   source: CanvasImageSource;
   width: number;
@@ -56,6 +65,8 @@ export interface PageRenderContext {
   frame: FrameId;
   pageCaptions: Readonly<Record<string, string>>;
   photoCaptions: Readonly<Record<string, string>>;
+  /** Diário de viagem, indexado pela chave do grupo de dia. */
+  dayNotes: Readonly<Record<string, string>>;
   composeModes: Readonly<Record<string, ComposeMode>>;
   adjustments: Readonly<Record<string, PhotoAdjustment>>;
   placements: Readonly<Record<string, PhotoPlacement>>;
@@ -506,56 +517,6 @@ function drawTitlePage(
   ctx.fillText('Montado com Memento · Keep the Journey', x, y);
 }
 
-function drawStoryPage(
-  ctx: CanvasRenderingContext2D,
-  page: AlbumPage,
-  box: Box,
-  context: PageRenderContext,
-  unit: number,
-): void {
-  const { palette } = context;
-  const story = page.story;
-  if (!story) return;
-
-  const x = box.x + 36 * unit;
-  const maxWidth = box.width - 72 * unit;
-  let y = box.y + 40 * unit;
-
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-
-  const title = story.title.trim();
-  if (title) {
-    const size = 20 * unit;
-    ctx.fillStyle = palette.paperInk;
-    ctx.font = `600 ${size}px ${palette.fontStack}`;
-    for (const line of wrapText(ctx, title, maxWidth)) {
-      ctx.fillText(line, x, y);
-      y += size * 1.3;
-    }
-    y += 16 * unit;
-
-    ctx.fillStyle = withAlpha(palette.paperAccent, 0.6);
-    ctx.fillRect(x, y, 56 * unit, Math.max(1, unit));
-    y += unit + 16 * unit;
-  }
-
-  const body = story.body.trim();
-  if (!body) return;
-
-  const size = 14 * unit;
-  const lineHeight = size * 1.625;
-  ctx.fillStyle = palette.paperInk;
-  ctx.font = `${size}px ${palette.fontStack}`;
-
-  const bottom = box.y + box.height - 40 * unit;
-  for (const line of wrapText(ctx, body, maxWidth)) {
-    if (y + lineHeight > bottom) break;
-    ctx.fillText(line, x, y);
-    y += lineHeight;
-  }
-}
-
 function drawPhotosPage(
   ctx: CanvasRenderingContext2D,
   page: AlbumPage,
@@ -597,6 +558,43 @@ function drawPhotosPage(
     ctx.fillText(ellipsize(ctx, headerText, headerWidth), headerX, y + 3 * unit);
   }
   y += 24 * unit;
+
+  // ── Diário do dia (o `DayNote`: px-5 pt-1 pb-1, filete + texto com pl-3) ──
+  // Só na página que abre o dia, e só quando tem texto: sem diário, o papel
+  // continua exatamente como era antes desta feature existir.
+  const dayNote =
+    page.opensGroup && page.groupKey
+      ? (context.dayNotes[page.groupKey] ?? '').trim()
+      : '';
+
+  if (dayNote) {
+    const size = DAY_NOTE_SIZE * unit;
+    const lineHeight = DAY_NOTE_LINE_HEIGHT * unit;
+    const top = y + 4 * unit;
+
+    ctx.font = `italic ${size}px ${palette.fontStack}`;
+    // O mesmo teto da tela: passando disso o texto é cortado em vez de comer a
+    // área das fotos. O que aparece impresso é o que aparece no livro.
+    const lines = wrapText(ctx, dayNote, headerWidth - 12 * unit).slice(
+      0,
+      DAY_NOTE_MAX_LINES,
+    );
+    const blockHeight = lines.length * lineHeight;
+
+    ctx.fillStyle = withAlpha(palette.paperAccent, 0.45);
+    ctx.fillRect(headerX, top, Math.max(1, unit), blockHeight);
+
+    ctx.fillStyle = withAlpha(palette.paperInk, 0.8);
+    // A linha de 18px é mais alta que a letra de 12px; o texto fica no meio
+    // dela, como o navegador faz com `line-height`.
+    let lineY = top + (lineHeight - size) / 2;
+    for (const line of lines) {
+      ctx.fillText(line, headerX + 12 * unit, lineY);
+      lineY += lineHeight;
+    }
+
+    y += blockHeight + 8 * unit;
+  }
 
   // ── Área útil (inset-x-3 inset-y-1 dentro do que sobra) ──
   const footerHeight = 26 * unit;
@@ -704,7 +702,6 @@ export function drawAlbumPage(
   paintPaper(ctx, box, context.palette);
 
   if (page.kind === 'title') drawTitlePage(ctx, box, context, unit);
-  else if (page.kind === 'story') drawStoryPage(ctx, page, box, context, unit);
   else if (page.kind === 'photos') {
     drawPhotosPage(ctx, page, box, images, context, unit);
   }

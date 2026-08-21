@@ -62,11 +62,7 @@ function PageThumb({
         {...attributes}
         {...listeners}
         onClick={onSelect}
-        title={
-          page.kind === 'story'
-            ? `Página de texto — arraste para reordenar`
-            : `Página ${page.number} — arraste para reordenar`
-        }
+        title={`Página ${page.number} — arraste para reordenar`}
         className={[
           'group relative block h-20 w-16 cursor-grab overflow-hidden rounded-md border transition active:cursor-grabbing',
           isCurrent
@@ -75,22 +71,12 @@ function PageThumb({
         ].join(' ')}
         style={{ background: 'var(--paper-base)' }}
       >
-        {page.kind === 'photos' && page.photos.length === 0 ? (
+        {page.photos.length === 0 ? (
           <span
             className="flex h-full items-center justify-center text-[10px]"
             style={{ color: 'var(--paper-ink-soft)' }}
           >
             vazia
-          </span>
-        ) : page.kind === 'story' ? (
-          <span className="flex h-full flex-col justify-center gap-1 px-2">
-            {[85, 70, 90, 60].map((width, line) => (
-              <span
-                key={line}
-                className="block h-[2px] rounded-full"
-                style={{ width: `${width}%`, background: 'var(--paper-ink)', opacity: 0.35 }}
-              />
-            ))}
           </span>
         ) : (
           <span className="absolute inset-1">
@@ -130,11 +116,7 @@ function PageThumb({
         type="button"
         onPointerDown={(event) => event.stopPropagation()}
         onClick={onRemove}
-        title={
-          page.kind === 'story'
-            ? 'Remover esta página de texto'
-            : 'Remover a página — as fotos voltam para o depósito'
-        }
+        title="Remover a página — as fotos voltam para o depósito"
         aria-label="Remover página"
         className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-neutral-900)_88%,transparent)] text-[10px] leading-none text-[color-mix(in_srgb,var(--color-text)_80%,transparent)] opacity-0 shadow-md backdrop-blur transition hover:bg-red-500 hover:text-[var(--color-text)] group-hover/thumb:opacity-100 focus-visible:opacity-100"
       >

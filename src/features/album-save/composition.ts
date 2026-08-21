@@ -12,7 +12,7 @@
  */
 
 import { DEFAULT_THEME, type AlbumTheme } from '@/features/album-style/theme';
-import type { EmptyPageInsertion, StoryInsertion } from '@/lib/paginate';
+import type { EmptyPageInsertion } from '@/lib/paginate';
 import {
   PAGE_LAYOUTS,
   type ComposeMode,
@@ -31,12 +31,23 @@ export interface AlbumComposition {
   captions: Record<string, string>;
   /** Legenda por foto, indexada pelo id da foto. */
   photoCaptions: Record<string, string>;
+  /**
+   * Diário de viagem: um texto por **grupo de dia**, indexado pela mesma chave
+   * de grupo que a paginação usa (`YYYY-MM-DD`, ou `inserted:<id>` numa página
+   * criada à mão).
+   *
+   * A chave é o grupo, e não a chave da página, porque a chave da página muda
+   * quando o layout ou a ordem mudam — o dia, não. Texto escrito para o dia 12
+   * continua sendo do dia 12 depois de qualquer remontagem.
+   *
+   * Escrito inteiramente pelo usuário: nada aqui é gerado pelo app.
+   */
+  dayNotes: Record<string, string>;
   adjustments: Record<string, PhotoAdjustment>;
   placements: Record<string, PhotoPlacement>;
   composeModes: Record<string, ComposeMode>;
   /** Foto → grupo de página, quando o usuário a colocou numa página à mão. */
   groupKeys: Record<string, string>;
-  stories: StoryInsertion[];
   emptyPages: EmptyPageInsertion[];
   theme: AlbumTheme;
   autoTilt: boolean;
@@ -47,11 +58,11 @@ export const EMPTY_COMPOSITION: AlbumComposition = {
   layoutOverrides: {},
   captions: {},
   photoCaptions: {},
+  dayNotes: {},
   adjustments: {},
   placements: {},
   composeModes: {},
   groupKeys: {},
-  stories: [],
   emptyPages: [],
   theme: DEFAULT_THEME,
   autoTilt: true,
@@ -128,22 +139,6 @@ function placementMap(value: unknown): Record<string, PhotoPlacement> {
   return out;
 }
 
-function stories(value: unknown): StoryInsertion[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((item) => {
-    if (!isRecord(item) || typeof item.id !== 'string') return [];
-    return [
-      {
-        id: item.id,
-        anchorPhotoId:
-          typeof item.anchorPhotoId === 'string' ? item.anchorPhotoId : 'start',
-        title: typeof item.title === 'string' ? item.title : '',
-        body: typeof item.body === 'string' ? item.body : '',
-      },
-    ];
-  });
-}
-
 function emptyPages(value: unknown): EmptyPageInsertion[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
@@ -187,11 +182,15 @@ export function parseComposition(value: unknown): AlbumComposition {
     layoutOverrides: layoutMap(value.layoutOverrides),
     captions: stringMap(value.captions),
     photoCaptions: stringMap(value.photoCaptions),
+    // Álbum salvo antes do diário existir simplesmente não tem a chave: vira
+    // `{}` e abre igual, que é o contrato deste arquivo.
+    dayNotes: stringMap(value.dayNotes),
     adjustments: adjustmentMap(value.adjustments),
     placements: placementMap(value.placements),
     composeModes: composeModeMap(value.composeModes),
     groupKeys: stringMap(value.groupKeys),
-    stories: stories(value.stories),
+    // `value.stories` (páginas só de texto) existiu numa versão anterior e é
+    // simplesmente ignorado: o diário do dia tomou o lugar dele.
     emptyPages: emptyPages(value.emptyPages),
     theme: theme(value.theme),
     autoTilt: typeof value.autoTilt === 'boolean' ? value.autoTilt : true,
@@ -203,7 +202,10 @@ export function parseComposition(value: unknown): AlbumComposition {
  *
  * As fotos do depósito não entram no álbum salvo; sem esta limpeza, o JSON
  * cresceria com ajustes de fotos que não existem mais do outro lado.
- * (Não mexe nas chaves de *página*: aquelas são derivadas e se refazem.)
+ * (Não mexe nas chaves de *página* nem nas de *dia*: aquelas são derivadas e se
+ * refazem — e, no caso do diário, apagar seria jogar fora texto escrito pelo
+ * usuário só porque ele mandou as fotos daquele dia para o depósito por um
+ * minuto.)
  */
 export function pruneComposition(
   composition: AlbumComposition,
@@ -221,11 +223,6 @@ export function pruneComposition(
     groupKeys: only(composition.groupKeys),
     // Âncora perdida vira fim do álbum, e não sumiço: a mesma regra que a
     // paginação já usa quando a foto âncora sai de cena.
-    stories: composition.stories.map((story) =>
-      kept.has(story.anchorPhotoId) || story.anchorPhotoId === 'start'
-        ? story
-        : { ...story, anchorPhotoId: 'end' },
-    ),
     emptyPages: composition.emptyPages.map((page) =>
       kept.has(page.anchorPhotoId) || page.anchorPhotoId === 'start'
         ? page
