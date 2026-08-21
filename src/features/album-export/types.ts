@@ -1,5 +1,5 @@
 import type { AlbumTheme } from '@/features/album-style/theme';
-import type { AlbumPage, StoryInsertion } from '@/lib/paginate';
+import type { AlbumPage } from '@/lib/paginate';
 import type {
   ComposeMode,
   PhotoAdjustment,
@@ -36,8 +36,6 @@ export interface AlbumSnapshot {
   photos: Photo[];
   /** Legenda por foto, indexada pelo id. */
   photoCaptions?: Readonly<Record<string, string>>;
-  /** Páginas de texto escritas pelo usuário, na ordem em que foram criadas. */
-  stories?: readonly StoryInsertion[];
   /**
    * Opcional: sem ela o exportador refaz a paginação com o tema padrão. O PDF
    * precisa dela para sair igual ao que está na tela; um exportador futuro que

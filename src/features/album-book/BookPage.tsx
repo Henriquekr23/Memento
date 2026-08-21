@@ -4,11 +4,7 @@ import { useDroppable } from '@dnd-kit/core';
 
 import type { FrameId } from '@/features/album-style/theme';
 import { formatDate, formatDayLabel } from '@/lib/format';
-import {
-  MAX_PHOTOS_PER_PAGE,
-  type AlbumPage,
-  type StoryInsertion,
-} from '@/lib/paginate';
+import { MAX_PHOTOS_PER_PAGE, type AlbumPage } from '@/lib/paginate';
 import {
   PAGE_LAYOUTS,
   resolveRotation,
@@ -23,7 +19,6 @@ import type { PageSide } from './bookGeometry';
 import { DayNote } from './DayNote';
 import { PageControls } from './PageControls';
 import { PhotoSlot } from './PhotoSlot';
-import { StoryPage } from './StoryPage';
 
 export interface BookPageProps {
   page: AlbumPage | null;
@@ -58,12 +53,8 @@ export interface BookPageProps {
   onChangeCaption: (pageKey: string, caption: string) => void;
   onChangePhotoCaption: (photoId: string, caption: string) => void;
   onChangeDayNote: (groupKey: string, text: string) => void;
-  onChangeStory: (
-    id: string,
-    patch: Partial<Pick<StoryInsertion, 'title' | 'body'>>,
-  ) => void;
-  /** Troca o tipo da página entre fotos e texto. */
-  onConvertPage: (page: AlbumPage, to: 'story' | 'photos') => void;
+  /** Liga/desliga o diário daquele dia (botão ✎ da barra da página). */
+  onToggleDayNote: (groupKey: string) => void;
   onSendToTray: (photoId: string) => void;
 }
 
@@ -331,36 +322,6 @@ export function BookPage(props: BookPageProps) {
     );
   }
 
-  if (page.kind === 'story' && page.story) {
-    return (
-      <div
-        className={`group/page relative h-full w-full overflow-hidden ${rounded}`}
-        style={paperStyle}
-      >
-        {interactive && (
-          <div className={controlsClassOf(props.isTouch, false, false)}>
-            <PageControls
-              variant="text"
-              onChangeVariant={(variant) => {
-                if (variant !== 'text') props.onConvertPage(page, 'photos');
-              }}
-            />
-          </div>
-        )}
-
-        <StoryPage
-          story={page.story}
-          interactive={interactive}
-          onChange={props.onChangeStory}
-        />
-        <span className="pointer-events-none absolute bottom-3 left-0 right-0 text-center text-[10px] opacity-30">
-          {page.number}
-        </span>
-        <GutterShadow side={side} />
-      </div>
-    );
-  }
-
   const layout = PAGE_LAYOUTS[page.layoutId];
   const composeMode = props.getComposeMode(page.key);
   const isFree = composeMode === 'free';
@@ -373,6 +334,10 @@ export function BookPage(props: BookPageProps) {
     isPageSelected,
     page.photos.length > 0,
   );
+
+  /** Só a página que abre o dia pode ter diário — e só se ele foi ligado. */
+  const canHaveDayNote = page.opensGroup && page.groupKey !== null;
+  const hasDayNote = canHaveDayNote && page.groupKey! in props.dayNotes;
 
   return (
     <div
@@ -410,12 +375,12 @@ export function BookPage(props: BookPageProps) {
 
       </header>
 
-      {/* O diário só na página que abre o dia: é o texto do dia inteiro, não
-          desta folha. Nas outras páginas do mesmo dia ele nem é renderizado. */}
-      {page.opensGroup && page.groupKey && (
+      {/* O diário só na página que abre o dia, e só quando o usuário o ligou:
+          a presença da chave em `dayNotes` é o que diz que ele existe. */}
+      {hasDayNote && (
         <DayNote
-          groupKey={page.groupKey}
-          value={props.dayNotes[page.groupKey] ?? ''}
+          groupKey={page.groupKey!}
+          value={props.dayNotes[page.groupKey!] ?? ''}
           interactive={interactive}
           onChange={props.onChangeDayNote}
         />
@@ -493,14 +458,21 @@ export function BookPage(props: BookPageProps) {
       {interactive && (
         <div className={controlsClass}>
           <PageControls
-            variant={page.layoutId}
-            onChangeVariant={(variant) => {
-              if (variant === 'text') props.onConvertPage(page, 'story');
-              else props.onChangeLayout(page.key, variant);
-            }}
+            layoutId={page.layoutId}
+            onChangeLayout={(layoutId) =>
+              props.onChangeLayout(page.key, layoutId)
+            }
             composeMode={composeMode}
             onToggleComposeMode={() =>
               props.onChangeComposeMode(page.key, isFree ? 'aligned' : 'free')
+            }
+            dayNote={
+              canHaveDayNote
+                ? {
+                    active: hasDayNote,
+                    onToggle: () => props.onToggleDayNote(page.groupKey!),
+                  }
+                : undefined
             }
           />
         </div>

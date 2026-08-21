@@ -20,7 +20,6 @@ export function snapshotComposition(book: AlbumBookState): AlbumComposition {
     placements: book.placements,
     composeModes: book.pageComposeModes,
     groupKeys: book.groupKeys,
-    stories: [...book.stories],
     emptyPages: [...book.emptyPages],
     theme: book.theme,
     autoTilt: book.autoTiltEnabled,

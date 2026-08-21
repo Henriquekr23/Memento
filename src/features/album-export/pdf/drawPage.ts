@@ -517,56 +517,6 @@ function drawTitlePage(
   ctx.fillText('Montado com Memento · Keep the Journey', x, y);
 }
 
-function drawStoryPage(
-  ctx: CanvasRenderingContext2D,
-  page: AlbumPage,
-  box: Box,
-  context: PageRenderContext,
-  unit: number,
-): void {
-  const { palette } = context;
-  const story = page.story;
-  if (!story) return;
-
-  const x = box.x + 36 * unit;
-  const maxWidth = box.width - 72 * unit;
-  let y = box.y + 40 * unit;
-
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-
-  const title = story.title.trim();
-  if (title) {
-    const size = 20 * unit;
-    ctx.fillStyle = palette.paperInk;
-    ctx.font = `600 ${size}px ${palette.fontStack}`;
-    for (const line of wrapText(ctx, title, maxWidth)) {
-      ctx.fillText(line, x, y);
-      y += size * 1.3;
-    }
-    y += 16 * unit;
-
-    ctx.fillStyle = withAlpha(palette.paperAccent, 0.6);
-    ctx.fillRect(x, y, 56 * unit, Math.max(1, unit));
-    y += unit + 16 * unit;
-  }
-
-  const body = story.body.trim();
-  if (!body) return;
-
-  const size = 14 * unit;
-  const lineHeight = size * 1.625;
-  ctx.fillStyle = palette.paperInk;
-  ctx.font = `${size}px ${palette.fontStack}`;
-
-  const bottom = box.y + box.height - 40 * unit;
-  for (const line of wrapText(ctx, body, maxWidth)) {
-    if (y + lineHeight > bottom) break;
-    ctx.fillText(line, x, y);
-    y += lineHeight;
-  }
-}
-
 function drawPhotosPage(
   ctx: CanvasRenderingContext2D,
   page: AlbumPage,
@@ -752,7 +702,6 @@ export function drawAlbumPage(
   paintPaper(ctx, box, context.palette);
 
   if (page.kind === 'title') drawTitlePage(ctx, box, context, unit);
-  else if (page.kind === 'story') drawStoryPage(ctx, page, box, context, unit);
   else if (page.kind === 'photos') {
     drawPhotosPage(ctx, page, box, images, context, unit);
   }

@@ -16,8 +16,8 @@ import { createPortal } from 'react-dom';
 
 import { themeToStyle } from '@/features/album-style/theme';
 import {
+  ANCHOR_START,
   MAX_PHOTOS_PER_PAGE,
-  STORY_ANCHOR_START,
   contentPagesOf,
   findPageOfPhoto,
   findSlotRect,
@@ -188,7 +188,7 @@ export function AlbumBook({
       // com nenhuma foto, o que faz a foto ir para o fim da ordem — que é
       // exatamente onde essa página está.
       const anchor =
-        page.anchorPhotoId === STORY_ANCHOR_START ? null : page.anchorPhotoId;
+        page.anchorPhotoId === ANCHOR_START ? null : page.anchorPhotoId;
       onPlaceAfter(photoId, page.photos.at(-1)?.id ?? anchor ?? null);
 
       // Vale tanto para clique quanto para arraste: a próxima foto continua
@@ -209,29 +209,12 @@ export function AlbumBook({
     [book, onSendToTray],
   );
 
-  /** Foto que precede uma página — é a âncora de qualquer inserção ali. */
-  const anchorBefore = useCallback(
-    (page: AlbumPage): string => {
-      const index = pages.indexOf(page);
-      for (let i = index - 1; i >= 0; i -= 1) {
-        const previous = pages[i]?.photos.at(-1);
-        if (previous) return previous.id;
-      }
-      return STORY_ANCHOR_START;
-    },
-    [pages],
-  );
-
   /**
    * Remove uma página. Nenhuma foto é apagada: elas voltam para o depósito e
    * podem ser recolocadas onde o usuário quiser.
    */
   const removePage = useCallback(
     (page: AlbumPage) => {
-      if (page.story) {
-        book.removeStory(page.story.id);
-        return;
-      }
       if (page.emptyPageId) {
         book.removeEmptyPage(page.emptyPageId);
         return;
@@ -245,25 +228,6 @@ export function AlbumBook({
       onSendToTray(ids);
     },
     [book, onSendToTray],
-  );
-
-  /** Transforma a página aberta em página de texto (e vice-versa). */
-  const convertPage = useCallback(
-    (page: AlbumPage, to: 'story' | 'photos') => {
-      const anchor = anchorBefore(page);
-
-      if (to === 'story') {
-        if (page.story) return;
-        removePage(page);
-        book.addStory(anchor);
-        return;
-      }
-
-      if (!page.story) return;
-      book.removeStory(page.story.id);
-      book.addEmptyPage(anchor);
-    },
-    [anchorBefore, removePage, book],
   );
 
   function handleDragStart(event: DragStartEvent) {
@@ -413,17 +377,18 @@ export function AlbumBook({
   /** Reordenar páginas = reescrever a ordem das fotos e reancorar os textos. */
   const handleReorderPages = useCallback(
     (fromIndex: number, toIndex: number) => {
-      const { photoOrder, storyAnchors, emptyPageAnchors } =
-        reorderContentPages(pages, fromIndex, toIndex);
+      const { photoOrder, emptyPageAnchors } = reorderContentPages(
+        pages,
+        fromIndex,
+        toIndex,
+      );
       if (
         photoOrder.length === 0 &&
-        Object.keys(storyAnchors).length === 0 &&
         Object.keys(emptyPageAnchors).length === 0
       ) {
         return;
       }
       onReorderPhotos(photoOrder);
-      book.setStoryAnchors(storyAnchors);
       book.setEmptyPageAnchors(emptyPageAnchors);
     },
     [pages, onReorderPhotos, book],
@@ -455,11 +420,10 @@ export function AlbumBook({
       onChangeCaption: book.setPageCaption,
       onChangePhotoCaption: book.setPhotoCaption,
       onChangeDayNote: book.setDayNote,
-      onChangeStory: book.updateStory,
-      onConvertPage: convertPage,
+      onToggleDayNote: book.toggleDayNote,
       onSendToTray: sendPhotoToTray,
     }),
-    [albumName, albumMeta, book, isTouch, sendPhotoToTray, convertPage],
+    [albumName, albumMeta, book, isTouch, sendPhotoToTray],
   );
 
   return (

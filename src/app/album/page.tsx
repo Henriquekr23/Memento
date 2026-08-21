@@ -68,7 +68,6 @@ export default function AlbumPage() {
           name: album.name,
           photos: album.includedPhotos,
           photoCaptions: book.photoCaptions,
-          stories: book.stories,
           // O PDF precisa da composição para sair igual ao que está na tela; o
           // ZIP simplesmente ignora este campo.
           book: {
