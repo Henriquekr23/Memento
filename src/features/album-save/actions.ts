@@ -217,24 +217,35 @@ export async function deleteAlbum(albumId: string): Promise<ActionResult> {
   // Sempre relendo do começo: o que foi apagado some da listagem, então o
   // offset não avança. O teto de rodadas existe para o caso de o `remove`
   // falhar em silêncio — melhor deixar arquivo para trás do que girar sem fim.
-  const prefix = `${user.id}/${albumId}`;
+  //
+  // Duas pastas, não uma: desde a A2 o que chega por convite mora em
+  // `{usuário}/{álbum}/contrib/`, e `list` não é recursivo — varrer só a raiz
+  // deixaria a caixa de entrada inteira ocupando o bucket para sempre, sem
+  // álbum nenhum apontando para ela.
   const PAGE = 100;
   const MAX_ROUNDS = Math.ceil(MAX_PHOTOS_PER_ALBUM / PAGE) + 1;
+  const prefixes = [`${user.id}/${albumId}`, `${user.id}/${albumId}/contrib`];
 
-  for (let round = 0; round < MAX_ROUNDS; round += 1) {
-    const { data: files } = await supabase.storage
-      .from(PHOTOS_BUCKET)
-      .list(prefix, { limit: PAGE });
+  for (const prefix of prefixes) {
+    for (let round = 0; round < MAX_ROUNDS; round += 1) {
+      const { data: files } = await supabase.storage
+        .from(PHOTOS_BUCKET)
+        .list(prefix, { limit: PAGE });
 
-    if (!files || files.length === 0) break;
+      // `list` devolve a subpasta `contrib` como uma entrada sem `id`. Removê-la
+      // pelo nome não faz nada (não é objeto) e faria o laço girar até o teto
+      // achando que ainda há trabalho.
+      const objects = (files ?? []).filter((file) => file.id !== null);
+      if (objects.length === 0) break;
 
-    const { error: removeError } = await supabase.storage
-      .from(PHOTOS_BUCKET)
-      .remove(files.map((file) => `${prefix}/${file.name}`));
+      const { error: removeError } = await supabase.storage
+        .from(PHOTOS_BUCKET)
+        .remove(objects.map((file) => `${prefix}/${file.name}`));
 
-    if (removeError) {
-      console.error('[album-save] falha ao apagar as fotos do storage', removeError);
-      break;
+      if (removeError) {
+        console.error('[album-save] falha ao apagar as fotos do storage', removeError);
+        break;
+      }
     }
   }
 

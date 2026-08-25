@@ -33,6 +33,13 @@ export interface LoadedAlbum {
   authorName: string;
   isPublic: boolean;
   isOwner: boolean;
+  /**
+   * Token do convite (Fase 3 · A2), ou `null` — inclusive quando ele existe e
+   * quem pede não é o dono. O convite é um segredo do dono: devolvê-lo a um
+   * visitante do link público transformaria a página de leitura numa porta de
+   * escrita para qualquer um.
+   */
+  inviteToken: string | null;
   createdAt: string;
   composition: AlbumComposition;
   photos: Photo[];
@@ -100,7 +107,9 @@ export async function loadAlbum(albumId: string): Promise<LoadedAlbum | null> {
 
   const { data: album } = await supabase
     .from('albums')
-    .select('id, user_id, title, author_name, status, is_public, composition, created_at')
+    .select(
+      'id, user_id, title, author_name, status, is_public, invite_token, composition, created_at',
+    )
     .eq('id', albumId)
     .maybeSingle<
       Pick<
@@ -111,6 +120,7 @@ export async function loadAlbum(albumId: string): Promise<LoadedAlbum | null> {
         | 'author_name'
         | 'status'
         | 'is_public'
+        | 'invite_token'
         | 'composition'
         | 'created_at'
       >
@@ -129,12 +139,15 @@ export async function loadAlbum(albumId: string): Promise<LoadedAlbum | null> {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const isOwner = user?.id === album.user_id;
+
   return {
     id: album.id,
     title: album.title,
     authorName: album.author_name,
     isPublic: album.is_public,
-    isOwner: user?.id === album.user_id,
+    isOwner,
+    inviteToken: isOwner ? album.invite_token : null,
     createdAt: album.created_at,
     composition: parseComposition(album.composition),
     photos: await signPhotos(supabase, rows ?? []),

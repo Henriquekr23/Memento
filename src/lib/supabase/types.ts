@@ -1,7 +1,7 @@
 /**
  * Formato das linhas do banco.
  *
- * Escrito à mão em vez de gerado pelo CLI: são duas tabelas, e uma dependência
+ * Escrito à mão em vez de gerado pelo CLI: são três tabelas, e uma dependência
  * de ferramenta a mais custaria mais do que resolve. Se o esquema crescer,
  * `npx supabase gen types typescript` gera este arquivo e nada mais muda —
  * o resto do código só importa os tipos daqui.
@@ -19,6 +19,11 @@ export interface AlbumRow {
   author_name: string;
   status: AlbumStatus;
   is_public: boolean;
+  /**
+   * Link de convite (Fase 3 · A2). `null` = convite fechado — o estado padrão
+   * e o de todo álbum criado antes desta feature. Revogar é apagar o token.
+   */
+  invite_token: string | null;
   /** Composição editorial serializada — ver `features/album-save/composition`. */
   composition: unknown;
   photo_count: number;
@@ -36,5 +41,28 @@ export interface AlbumPhotoRow {
   height: number | null;
   taken_at: string | null;
   timestamp_source: 'exif' | 'file';
+  created_at: string;
+}
+
+/**
+ * Uma foto que chegou pelo link de convite e ainda não é do álbum.
+ *
+ * Vive na antessala: o arquivo já está no Storage, na pasta do dono, mas só
+ * vira `AlbumPhotoRow` quando o dono aprova. Descartar apaga a linha e o
+ * objeto — não existe estado `rejected` guardando foto recusada.
+ */
+export interface AlbumContributionRow {
+  id: string;
+  album_id: string;
+  contributor_id: string;
+  /** Nome de quem mandou, copiado do cadastro no envio. */
+  contributor_name: string;
+  storage_path: string;
+  file_name: string;
+  width: number | null;
+  height: number | null;
+  taken_at: string | null;
+  timestamp_source: 'exif' | 'file';
+  status: 'pending' | 'approved';
   created_at: string;
 }
