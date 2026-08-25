@@ -86,30 +86,44 @@ export function DayNote({
   if (!interactive && !value.trim()) return null;
 
   return (
-    <div className="relative shrink-0 px-5 pb-1 pt-1">
-      {/* Filete de acento à esquerda, como a marca de margem de um caderno. */}
-      <span
-        aria-hidden
-        className="absolute inset-y-1 left-5 w-px"
-        style={{ background: 'var(--paper-accent)', opacity: 0.45 }}
-      />
-      <textarea
-        ref={ref}
-        value={value}
-        onChange={handleChange}
-        // Sem isto, escrever no diário viraria arraste de folha no BookStage.
-        onPointerDown={(event) => event.stopPropagation()}
-        disabled={!interactive}
-        rows={1}
-        placeholder="Diário do dia — o que aconteceu?"
-        aria-label="Diário deste dia"
-        style={{
-          color: 'var(--paper-ink)',
-          lineHeight: `${DAY_NOTE_LINE_HEIGHT}px`,
-          maxHeight: `${MAX_HEIGHT}px`,
-        }}
-        className="w-full select-text resize-none overflow-hidden border-0 bg-transparent pl-3 text-[12px] italic opacity-80 outline-none placeholder:not-italic placeholder:text-current placeholder:opacity-30 disabled:opacity-80"
-      />
+    <div className="shrink-0 px-5 pb-1 pt-1">
+      {/*
+        Filete + texto no mesmo eixo horizontal: o filete é irmão do textarea
+        num flex, com `self-stretch`, então sua altura é *exatamente* a da
+        caixa — antes ele era absoluto e, quando o navegador desenhava o anel
+        de foco global (`:focus-visible` em globals.css), o filete e o anel se
+        sobrepunham e o traço parecia escapar da caixa de texto.
+      */}
+      <div className="group/note flex gap-[11px]">
+        {/* 1px + 11px de gap = os 12px que `pdf/drawPage.ts` usa no impresso.
+            No foco ele engrossa: é o único sinal de "estou escrevendo aqui",
+            no lugar da caixa laranja que o anel global desenhava. */}
+        <span
+          aria-hidden
+          className="w-px shrink-0 self-stretch transition-[width,opacity] group-focus-within/note:w-[2px] group-focus-within/note:opacity-80"
+          style={{ background: 'var(--paper-accent)', opacity: 0.45 }}
+        />
+        <textarea
+          ref={ref}
+          value={value}
+          onChange={handleChange}
+          // Sem isto, escrever no diário viraria arraste de folha no BookStage.
+          onPointerDown={(event) => event.stopPropagation()}
+          disabled={!interactive}
+          rows={1}
+          placeholder="Diário do dia — o que aconteceu?"
+          aria-label="Diário deste dia"
+          style={{
+            color: 'var(--paper-ink)',
+            lineHeight: `${DAY_NOTE_LINE_HEIGHT}px`,
+            maxHeight: `${MAX_HEIGHT}px`,
+            // Inline para vencer o `:focus-visible` global do globals.css, que
+            // desenharia uma caixa laranja de 2px em volta do diário inteiro.
+            outline: 'none',
+          }}
+          className="w-full select-text resize-none overflow-hidden border-0 bg-transparent text-[12px] italic opacity-80 placeholder:not-italic placeholder:text-current placeholder:opacity-30 disabled:opacity-80"
+        />
+      </div>
     </div>
   );
 }

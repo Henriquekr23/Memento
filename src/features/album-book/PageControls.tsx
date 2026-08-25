@@ -38,6 +38,34 @@ function LayoutGlyph({ layoutId }: { layoutId: PageLayoutId }) {
   );
 }
 
+/**
+ * Diário: um caderno aberto com uma caneta. Antes era o caractere `✎`, que
+ * dependia da fonte do sistema, saía fino e quase sumia ao lado das
+ * miniaturas de layout — desenhado em traço, ele fica do mesmo peso visual
+ * que o resto da pílula.
+ */
+function DayNoteGlyph() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {/* Folha */}
+      <path d="M3 2.75h7.5a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-9.5a1 1 0 0 1 1-1Z" />
+      {/* Linhas escritas */}
+      <path d="M4.4 6h5.2M4.4 8.4h5.2M4.4 10.8h3" />
+      {/* Caneta na margem */}
+      <path d="m13.2 4.4 1.5 1.5-4 4-2 .5.5-2 4-4Z" />
+    </svg>
+  );
+}
+
 function Divider() {
   return <span aria-hidden className="mx-0.5 h-4 w-px bg-[var(--color-surface)]" />;
 }
@@ -102,9 +130,9 @@ export function PageControls({
                 ? 'Diário do dia ligado — clique para tirar (o texto some)'
                 : 'Escrever um diário para este dia (até 5 linhas)'
             }
-            className={`w-7 text-[12px] ${itemClass(dayNote.active)}`}
+            className={`w-7 ${itemClass(dayNote.active)}`}
           >
-            ✎
+            <DayNoteGlyph />
           </button>
         </>
       )}

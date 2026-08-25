@@ -364,3 +364,211 @@ create policy "photos: álbum público é legível"
         and a.id::text = (storage.foldername(name))[2]
     )
   );
+
+-- ═════════════════════════════════════════════════════════════════════════
+-- Fase 3 · A2 — Álbuns colaborativos leves (caixa de entrada por convite)
+--
+-- O que muda no modelo, em uma frase: o álbum ganha um *segundo* link — o de
+-- convite — e uma antessala. Quem entra por ele manda fotos, mas essas fotos
+-- não viram álbum: viram linhas em `album_contributions`, esperando o dono
+-- aprovar. O álbum continua com um dono só e uma pessoa só editando a
+-- composição — nada aqui é edição simultânea.
+--
+-- Duas escolhas que economizam muito código depois:
+--
+-- 1. **O convidado grava direto na pasta do dono**, em
+--    `{dono}/{álbum}/contrib/{id}.jpg`. Aprovar é então só inserir a linha em
+--    `album_photos` apontando para o arquivo que já está lá — sem cópia entre
+--    pastas, sem gastar duas vezes o 1 GB do free tier, sem download e reupload
+--    pelo servidor. Descartar é apagar o objeto, que o dono já pode fazer.
+-- 2. **Contribuir exige conta.** Sem isso, a política de escrita no Storage
+--    teria de aceitar `anon` gravando na pasta de outra pessoa — uma porta que
+--    só o token de convite fecharia. Com login, cada envio tem um `auth.uid()`
+--    atrás, dá para limitar por pessoa e dá para mostrar ao dono quem mandou.
+-- ═════════════════════════════════════════════════════════════════════════
+
+-- Token do convite. `null` = convite fechado (o padrão, e o estado de todo
+-- álbum que já existe). Revogar é apagar o token: o link antigo morre na hora
+-- e um convite novo nasce com outro token.
+alter table public.albums
+  add column if not exists invite_token uuid;
+
+create unique index if not exists albums_invite_token_idx
+  on public.albums (invite_token)
+  where invite_token is not null;
+
+create table if not exists public.album_contributions (
+  -- Id gerado no navegador, como o de `album_photos` e pelo mesmo motivo: o
+  -- caminho do arquivo no Storage contém o id, e o arquivo sobe *antes* da
+  -- linha existir.
+  id                uuid primary key,
+  album_id          uuid not null references public.albums (id) on delete cascade,
+  contributor_id    uuid not null references auth.users (id) on delete cascade,
+  -- Copiado do cadastro no envio, não lido depois: o dono precisa ver "enviado
+  -- por Ana" sem ter permissão de ler `auth.users`. Mesma decisão de
+  -- `albums.author_name`.
+  contributor_name  text not null default '',
+  storage_path      text not null,
+  file_name         text not null,
+  width             integer,
+  height            integer,
+  taken_at          timestamptz,
+  timestamp_source  text not null default 'file'
+                    check (timestamp_source in ('exif', 'file')),
+  -- `rejected` não existe: descartar apaga a linha e o arquivo. Guardar o que
+  -- o dono recusou seria ocupar o free tier com foto que ninguém vai ver — e
+  -- guardar foto de terceiro que foi explicitamente recusada.
+  status            text not null default 'pending'
+                    check (status in ('pending', 'approved')),
+  created_at        timestamptz not null default now(),
+
+  constraint album_contributions_sizes check (
+    char_length(file_name) <= 255
+    and char_length(storage_path) <= 512
+    and char_length(contributor_name) <= 200
+  )
+);
+
+create index if not exists album_contributions_album_idx
+  on public.album_contributions (album_id, status, created_at desc);
+
+-- ── Tetos ────────────────────────────────────────────────────────────────
+-- O link de convite é público por natureza: quem o tiver, escreve. Sem teto,
+-- uma pessoa só enche o 1 GB do free tier do dono. Os dois limites são
+-- diferentes de propósito — um protege o álbum, o outro impede que uma única
+-- pessoa domine a caixa de entrada.
+create or replace function public.enforce_contribution_caps()
+returns trigger language plpgsql as $$
+declare
+  pending_in_album integer;
+  pending_from_person integer;
+begin
+  select count(*) into pending_in_album
+  from public.album_contributions
+  where album_id = new.album_id and status = 'pending';
+
+  if pending_in_album > 300 then
+    raise exception 'a caixa de entrada deste álbum está cheia';
+  end if;
+
+  select count(*) into pending_from_person
+  from public.album_contributions
+  where album_id = new.album_id
+    and contributor_id = new.contributor_id
+    and status = 'pending';
+
+  if pending_from_person > 100 then
+    raise exception 'você já enviou fotos demais para este álbum';
+  end if;
+
+  return null;
+end $$;
+
+drop trigger if exists album_contributions_caps on public.album_contributions;
+create trigger album_contributions_caps
+  after insert on public.album_contributions
+  for each row execute function public.enforce_contribution_caps();
+
+-- ── Funções de apoio ─────────────────────────────────────────────────────
+
+-- Cast que não derruba a transação. Dentro de uma política de RLS, um
+-- `'lixo'::uuid` levanta exceção e o `insert` inteiro morre com uma mensagem
+-- do Postgres em vez de um "não autorizado" limpo.
+create or replace function public.try_uuid(value text)
+returns uuid language plpgsql immutable as $$
+begin
+  return value::uuid;
+exception when others then
+  return null;
+end $$;
+
+-- O convite está aberto e o caminho aponta para a pasta do dono deste álbum?
+-- `security definer` porque quem pergunta é justamente quem **não** pode ler a
+-- linha do álbum: o convidado.
+create or replace function public.can_contribute(album_folder text, owner_folder text)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select auth.uid() is not null and exists (
+    select 1 from public.albums a
+    where a.id = public.try_uuid(album_folder)
+      and a.invite_token is not null
+      and a.status = 'ready'
+      and a.user_id::text = owner_folder
+  );
+$$;
+
+-- O álbum que um token de convite abre. Devolve o `user_id` de propósito: é
+-- ele que compõe o caminho do arquivo no Storage, e o convidado não tem como
+-- descobri-lo de outro jeito. Não devolve nada além disso — nem a composição,
+-- nem as fotos: o convite dá direito de *enviar*, não de *ver* o álbum.
+create or replace function public.album_by_invite(token uuid)
+returns table (id uuid, owner_id uuid, title text, author_name text)
+language sql stable security definer set search_path = public as $$
+  select a.id, a.user_id, a.title, a.author_name
+  from public.albums a
+  where a.invite_token = token and a.status = 'ready';
+$$;
+
+revoke execute on function public.album_by_invite(uuid) from public;
+grant execute on function public.album_by_invite(uuid) to anon, authenticated;
+
+-- ── RLS ──────────────────────────────────────────────────────────────────
+
+alter table public.album_contributions enable row level security;
+
+-- O dono vê a caixa de entrada inteira; o convidado vê só o que ele mesmo
+-- mandou (é o que sustenta a tela de "enviei, e agora?").
+drop policy if exists "contribuições: dono e autor leem" on public.album_contributions;
+create policy "contribuições: dono e autor leem"
+  on public.album_contributions for select to authenticated
+  using (public.owns_album(album_id) or contributor_id = auth.uid());
+
+-- As duas últimas condições são o mesmo cuidado de `album_photos`: sem elas a
+-- linha pode apontar para qualquer objeto do bucket, e aprovar a contribuição
+-- colocaria esse objeto dentro do álbum. A política de Storage impediria a
+-- *leitura*, mas o índice do álbum já estaria mentindo.
+drop policy if exists "contribuições: convidado envia" on public.album_contributions;
+create policy "contribuições: convidado envia"
+  on public.album_contributions for insert to authenticated
+  with check (
+    contributor_id = auth.uid()
+    and status = 'pending'
+    and public.can_contribute(album_id::text, split_part(storage_path, '/', 1))
+    and storage_path like
+      split_part(storage_path, '/', 1) || '/' || album_id::text || '/contrib/%'
+  );
+
+-- Só o dono muda o estado — é o ato de curadoria do álbum.
+drop policy if exists "contribuições: dono modera" on public.album_contributions;
+create policy "contribuições: dono modera"
+  on public.album_contributions for update to authenticated
+  using (public.owns_album(album_id))
+  with check (public.owns_album(album_id));
+
+-- Descartar é do dono; desistir do que mandou, do convidado — e só enquanto
+-- ainda está pendente. Depois de aprovada, a foto é do álbum.
+drop policy if exists "contribuições: dono descarta, autor desiste" on public.album_contributions;
+create policy "contribuições: dono descarta, autor desiste"
+  on public.album_contributions for delete to authenticated
+  using (
+    public.owns_album(album_id)
+    or (contributor_id = auth.uid() and status = 'pending')
+  );
+
+-- ── Storage ──────────────────────────────────────────────────────────────
+-- A única porta nova no bucket: o convidado grava na subpasta `contrib` do
+-- álbum de outra pessoa. Fora dela nada muda — as políticas da Fase 2
+-- continuam valendo palavra por palavra, e o dono já lê e apaga tudo que está
+-- na própria pasta, inclusive o que chegou por convite.
+drop policy if exists "photos: convidado envia para a caixa de entrada" on storage.objects;
+create policy "photos: convidado envia para a caixa de entrada"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'photos'
+    and array_length(storage.foldername(name), 1) = 3
+    and (storage.foldername(name))[3] = 'contrib'
+    and public.can_contribute(
+      (storage.foldername(name))[2],
+      (storage.foldername(name))[1]
+    )
+  );

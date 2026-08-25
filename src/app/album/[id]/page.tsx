@@ -4,6 +4,9 @@ import { notFound } from 'next/navigation';
 
 import { SiteFooter } from '@/components/SiteFooter';
 import { SiteNav } from '@/components/SiteNav';
+import { ContributionInbox } from '@/features/album-contrib/ContributionInbox';
+import { InviteControls } from '@/features/album-contrib/InviteControls';
+import { loadInbox } from '@/features/album-contrib/loadContributions';
 import { AlbumViewer } from '@/features/album-view/AlbumViewer';
 import { ShareControls } from '@/features/album-view/ShareControls';
 import { loadAlbum } from '@/features/album-view/loadAlbum';
@@ -33,6 +36,10 @@ export default async function AlbumPublicPage({
   // Privado, inexistente ou apagado dão a mesma resposta de propósito: assim a
   // página não conta a estranhos que aquele id existe.
   if (!album) notFound();
+
+  // Só o dono tem caixa de entrada — para qualquer outro visitante isto volta
+  // vazio sem tocar no banco.
+  const inbox = await loadInbox(album.id, album.isOwner);
 
   const created = new Date(album.createdAt).toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -67,6 +74,16 @@ export default async function AlbumPublicPage({
           </Link>
         )}
       </header>
+
+      {album.isOwner && (
+        <div className="mt-6 grid gap-4">
+          <InviteControls albumId={album.id} token={album.inviteToken} />
+          <ContributionInbox
+            pending={inbox.pending}
+            contributorCount={inbox.contributorCount}
+          />
+        </div>
+      )}
 
       {album.photos.length > 0 ? (
         <AlbumViewer

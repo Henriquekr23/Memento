@@ -227,3 +227,35 @@ O que estoura primeiro é o **egress**, não o storage: um álbum de 40 fotos
 (~12 MB) aguenta ~400 visitas por mês. Se passar disso, o caminho gratuito é
 pôr o Cloudflare na frente ou migrar o bucket para o R2 (10 GB, egress zero) —
 só o `storage_path` muda de significado, o resto do código fica igual.
+
+## Fase 3 · A2 — convite para contribuir
+
+Rode o `schema.sql` inteiro de novo (ele é idempotente): o bloco novo cria
+`album_contributions`, a coluna `albums.invite_token`, as funções
+`album_by_invite` / `can_contribute` / `try_uuid` e mais uma política de
+`storage.objects`. Nenhuma política da Fase 2 muda.
+
+Depois de rodar, confira no painel:
+
+- **Table editor → `album_contributions`** existe e está com RLS ligada.
+- **Database → Functions** lista `album_by_invite`. Ela é `security definer` de
+  propósito: quem a chama é o convidado, que não pode ler `albums`.
+- **Storage → Policies** tem `photos: convidado envia para a caixa de entrada`.
+
+### O que o convite é e o que não é
+
+O link público (`/album/{id}`) deixa **ver**. O link de convite
+(`/contribuir/{token}`) deixa **mandar** — e só isso: quem entra por ele não vê
+o álbum, não lê a composição e não sabe quantas fotos já existem. São dois
+segredos por obscuridade separados, e desligar um não desliga o outro.
+
+Encerrar o convite apaga o token: o link antigo morre na hora. O que já está na
+caixa de entrada **continua lá** — fechar a porta não joga fora o que entrou
+por ela.
+
+### Onde isso pesa no free tier
+
+Cada foto pendente ocupa storage como qualquer outra (~300 KB) **antes** de o
+dono decidir. Os tetos do banco são 300 pendentes por álbum e 100 por pessoa por
+álbum — no pior caso, uma caixa de entrada cheia são ~90 MB de um 1 GB. Descartar
+apaga o arquivo na hora, e apagar o álbum varre também a subpasta `contrib/`.
