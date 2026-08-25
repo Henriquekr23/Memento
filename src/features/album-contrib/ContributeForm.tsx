@@ -9,7 +9,7 @@ import { PhotoDropzone } from '@/features/photo-upload/PhotoDropzone';
 import { importPhotos } from '@/features/photo-upload/importPhotos';
 import type { Photo } from '@/types/photo';
 
-import { MAX_PHOTOS_PER_SUBMISSION, type InviteTarget } from './actions';
+import { MAX_PHOTOS_PER_SUBMISSION, type InviteTarget } from './contract';
 import { sendContributions } from './sendContributions';
 
 /**

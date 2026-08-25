@@ -6,11 +6,8 @@ import type { Photo } from '@/types/photo';
 
 import { prepareUpload, UPLOAD_MIME } from '@/features/album-save/prepareUpload';
 
-import {
-  recordContributions,
-  type ContributionInput,
-  type InviteTarget,
-} from './actions';
+import { recordContributions } from './actions';
+import type { ContributionInput, InviteTarget } from './contract';
 
 /**
  * O envio do convidado, do lado do navegador.

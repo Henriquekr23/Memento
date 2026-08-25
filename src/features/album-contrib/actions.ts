@@ -9,6 +9,12 @@ import type { AlbumContributionRow, AlbumPhotoRow } from '@/lib/supabase/types';
 import type { ActionResult } from '@/features/album-save/actions';
 import { nameOf } from '@/features/auth/name';
 
+import {
+  MAX_PHOTOS_PER_SUBMISSION,
+  type ContributionInput,
+  type InviteTarget,
+} from './contract';
+
 /**
  * O lado servidor da caixa de entrada por convite (Fase 3 · A2).
  *
@@ -31,27 +37,6 @@ const INVITE_GONE =
 
 /** O mesmo teto de `album-save`: um álbum guardado na nuvem cabe até isto. */
 const MAX_PHOTOS_PER_ALBUM = 500;
-
-/** Quantas fotos um convidado manda de uma vez. */
-export const MAX_PHOTOS_PER_SUBMISSION = 40;
-
-export interface InviteTarget {
-  albumId: string;
-  /** Dona da pasta no Storage — é ela que compõe o caminho do arquivo. */
-  ownerId: string;
-  title: string;
-  authorName: string;
-}
-
-export interface ContributionInput {
-  id: string;
-  storagePath: string;
-  fileName: string;
-  width: number;
-  height: number;
-  takenAt: string | null;
-  timestampSource: 'exif' | 'file';
-}
 
 function safeInt(value: unknown, max: number): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
