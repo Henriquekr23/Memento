@@ -149,6 +149,7 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
           <Row label={copy.fieldFont}>
             <select
               className="ae-input"
+              aria-label={copy.fieldFont}
               value={selected.font}
               style={{ fontFamily: fontById(selected.font).stack }}
               onChange={(event) =>
@@ -219,9 +220,10 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
             />
           </Row>
 
-          <Row label={copy.fieldAlign}>
+          <Row label={copy.fieldAlign} stack>
             <Seg<TextAlign>
               full
+              label={copy.fieldAlign}
               value={selected.align}
               onChange={(align) => updateElement(selected.id, { align })}
               options={[
@@ -232,9 +234,10 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
             />
           </Row>
 
-          <Row label={copy.fieldCase}>
+          <Row label={copy.fieldCase} stack>
             <Seg<boolean>
               full
+              label={copy.fieldCase}
               value={selected.uppercase}
               onChange={(uppercase) => updateElement(selected.id, { uppercase })}
               options={[
@@ -339,9 +342,10 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
           </button>
         }
       >
-        <Row label={copy.spineMeasure} hint="mm">
+        <Row label={copy.spineMeasure} hint="mm" stack>
           <Seg<string>
             full
+            label={copy.spineMeasure}
             value={album.spine.mm ? 'manual' : 'auto'}
             onChange={(mode) =>
               patch({ spine: { ...album.spine, mm: mode === 'auto' ? null : spine } })
@@ -357,6 +361,7 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
           <Row label={copy.spineThickness} hint={copy.spineThicknessHint}>
             <input
               className="ae-input"
+              aria-label={copy.spineThickness}
               type="number"
               step="0.1"
               min={SPEC.spineMin}
@@ -382,9 +387,10 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
           </p>
         )}
 
-        <Row label={copy.spineDirection}>
+        <Row label={copy.spineDirection} stack>
           <Seg<'ascending' | 'descending'>
             full
+            label={copy.spineDirection}
             value={album.spine.direction}
             onChange={(direction) => patch({ spine: { ...album.spine, direction } })}
             options={[
@@ -419,6 +425,7 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
         <Row label={copy.spineYear}>
           <input
             className="ae-input"
+            aria-label={copy.spineYear}
             value={album.spine.year}
             placeholder="2026"
             onChange={(event) =>
@@ -442,9 +449,10 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
       </Group>
 
       <Group title={copy.backGroup}>
-        <Row label={copy.backShow}>
+        <Row label={copy.backShow} stack>
           <Seg<boolean>
             full
+            label={copy.backShow}
             value={album.back.show}
             onChange={(show) => patch({ back: { ...album.back, show } })}
             options={[

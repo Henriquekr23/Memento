@@ -63,7 +63,7 @@ export function PageView({
 
       {!hideNumber && (
         <span
-          className="ae-page-number"
+          className={`ae-page-number${page.layout === 'full' ? ' is-on-photo' : ''}`}
           style={{
             [hand === 'right' ? 'right' : 'left']: (SPEC.bleed + 7) * ppm,
             bottom: (SPEC.bleed + 6) * ppm,

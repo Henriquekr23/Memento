@@ -8,6 +8,7 @@ import type { Lang } from '@/features/i18n/lang';
 export interface EditorCopy {
   /* topo */
   albumNameAria: string;
+  albumNamePlaceholder: string;
   tabCover: string;
   tabPages: string;
   tabBook: string;
@@ -122,12 +123,15 @@ export interface EditorCopy {
   pageHeadingPlaceholder: string;
   pageBodyPlaceholder: string;
   frameGroup: (i: number, total: number) => string;
+  framePick: string;
+  frameNumber: (i: number) => string;
   spreadPhotoGroup: string;
   fieldZoom: string;
   frameNote: string;
   clearFrame: string;
   trayGroup: string;
   trayUpload: string;
+  trayUsed: string;
   trayNote: string;
   trayEmpty: string;
   innerGroup: string;
@@ -152,6 +156,9 @@ export interface EditorCopy {
     hinge: number;
   }) => string;
 
+  /* miolo: gesto de folhear */
+  flipHint: string;
+
   /* livro 3d */
   orbitHint: string;
 
@@ -162,6 +169,7 @@ export interface EditorCopy {
 
 const PT: EditorCopy = {
   albumNameAria: 'Nome do álbum',
+  albumNamePlaceholder: 'Álbum sem nome',
   tabCover: 'Capa',
   tabPages: 'Páginas',
   tabBook: 'Livro',
@@ -271,10 +279,12 @@ const PT: EditorCopy = {
   layoutQuad: 'Quatro',
   layoutText: 'Só texto',
   layoutNote: (name) =>
-    `${name}. “Página inteira” é o padrão: a foto sangra até a borda.`,
+    `${name}. “Página inteira” é o padrão: a foto sangra até a borda do papel, e a dobra do livro entra por cima dela.`,
   pageHeadingPlaceholder: 'Título da página',
   pageBodyPlaceholder: 'Conte o que aconteceu aqui.',
   frameGroup: (i, total) => `Quadro ${i} de ${total}`,
+  framePick: 'Quadro',
+  frameNumber: (i) => `Quadro ${i}`,
   spreadPhotoGroup: 'Foto espelhada',
   fieldZoom: 'Zoom',
   frameNote:
@@ -282,6 +292,7 @@ const PT: EditorCopy = {
   clearFrame: 'Tirar foto do quadro',
   trayGroup: 'Bandeja',
   trayUpload: 'Enviar',
+  trayUsed: 'já está numa página',
   trayNote: 'Clique para colocar no quadro selecionado, ou arraste até a página.',
   trayEmpty: 'Nenhuma foto ainda. Envie as fotos da viagem para começar.',
   innerGroup: 'Miolo',
@@ -298,6 +309,7 @@ const PT: EditorCopy = {
     `Formato A5 retrato · área final ${v.trimW}×${v.trimH} mm · sangria ${v.bleed} mm em todos os lados (arquivo ${v.fileW}×${v.fileH} mm) · área segura ${v.safeOuter} mm nas bordas e ${v.safeSpine} mm no lado da lombada · área de cola ${v.glue} mm · vinco a ${v.hinge} mm. Conforme gabarito R1219, lombada quadrada.`,
 
   orbitHint: 'arraste para girar',
+  flipHint: 'arraste a borda da folha para virar a página',
 
   emptyTitle: 'Comece pelas fotos',
   emptyBody:
@@ -306,6 +318,7 @@ const PT: EditorCopy = {
 
 const EN: EditorCopy = {
   albumNameAria: 'Album name',
+  albumNamePlaceholder: 'Untitled album',
   tabCover: 'Cover',
   tabPages: 'Pages',
   tabBook: 'Book',
@@ -414,10 +427,13 @@ const EN: EditorCopy = {
   layoutTrio: 'One + two',
   layoutQuad: 'Four',
   layoutText: 'Text only',
-  layoutNote: (name) => `${name}. “Full page” is the default: the photo bleeds to the edge.`,
+  layoutNote: (name) =>
+    `${name}. “Full page” is the default: the photo bleeds to the paper edge, with the book fold drawn over it.`,
   pageHeadingPlaceholder: 'Page title',
   pageBodyPlaceholder: 'Tell what happened here.',
   frameGroup: (i, total) => `Frame ${i} of ${total}`,
+  framePick: 'Frame',
+  frameNumber: (i) => `Frame ${i}`,
   spreadPhotoGroup: 'Spread photo',
   fieldZoom: 'Zoom',
   frameNote:
@@ -425,6 +441,7 @@ const EN: EditorCopy = {
   clearFrame: 'Remove photo from frame',
   trayGroup: 'Tray',
   trayUpload: 'Upload',
+  trayUsed: 'already on a page',
   trayNote: 'Click to place in the selected frame, or drag onto the page.',
   trayEmpty: 'No photos yet. Upload the trip photos to start.',
   innerGroup: 'Inner pages',
@@ -441,6 +458,7 @@ const EN: EditorCopy = {
     `A5 portrait · trim ${v.trimW}×${v.trimH} mm · ${v.bleed} mm bleed on every side (file ${v.fileW}×${v.fileH} mm) · safe area ${v.safeOuter} mm at the edges and ${v.safeSpine} mm on the spine side · glue area ${v.glue} mm · hinge at ${v.hinge} mm. Per template R1219, square spine.`,
 
   orbitHint: 'drag to rotate',
+  flipHint: 'drag the edge of the sheet to turn the page',
 
   emptyTitle: 'Start with the photos',
   emptyBody:

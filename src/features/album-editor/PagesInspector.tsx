@@ -31,10 +31,19 @@ interface PagesInspectorProps {
   activeSide: 'left' | 'right';
   onActiveSide: (side: 'left' | 'right') => void;
   selectedSlot: number;
+  onSelectSlot: (slot: number) => void;
   onUpload: (files: File[]) => void;
 }
 
-/** Controles da folha aberta, dos quadros e da bandeja de fotos. */
+/**
+ * Controles da folha aberta, dos quadros e da bandeja de fotos.
+ *
+ * A ordem é a da decisão: primeiro *qual página* estou editando, depois *como
+ * ela é dividida*, depois *o que entra em cada quadro*. Os controles largos
+ * (segmentado, deslizante) ficam embaixo do rótulo — numa lateral de 264 px um
+ * segmentado de duas casas partilhando a linha com o rótulo fica estreito
+ * demais para virar alvo de arraste.
+ */
 export function PagesInspector({
   state,
   copy,
@@ -44,6 +53,7 @@ export function PagesInspector({
   activeSide,
   onActiveSide,
   selectedSlot,
+  onSelectSlot,
   onUpload,
 }: PagesInspectorProps) {
   const { album, updatePage, updateFrame, removeSheet, usedPhotoIds, minPages } = state;
@@ -63,27 +73,21 @@ export function PagesInspector({
 
   const paper = paperById(album.paper);
 
+  /** Onde a foto clicada na bandeja cai. */
+  const place = (photoId: string) =>
+    updateFrame(framePage, frameSlot, { photoId, zoom: 1, offsetX: 0, offsetY: 0 });
+
   return (
     <>
       <Group
         title={copy.sheetGroup}
         right={<span className="ae-meta">{copy.sheetRange(leftIndex + 1, rightIndex + 1)}</span>}
       >
-        <Row label={copy.sheetSpread} hint={copy.sheetSpreadHint}>
-          <Seg<boolean>
-            full
-            value={leftPage.spread}
-            onChange={(spread) => updatePage(leftIndex, { spread })}
-            options={[
-              { value: false, label: copy.no },
-              { value: true, label: copy.yes },
-            ]}
-          />
-        </Row>
         {!leftPage.spread && (
-          <Row label={copy.sheetEditing}>
+          <Row label={copy.sheetEditing} stack>
             <Seg<'left' | 'right'>
               full
+              label={copy.sheetEditing}
               value={activeSide}
               onChange={onActiveSide}
               options={[
@@ -93,6 +97,18 @@ export function PagesInspector({
             />
           </Row>
         )}
+        <Row label={copy.sheetSpread} hint={copy.sheetSpreadHint} stack>
+          <Seg<boolean>
+            full
+            label={copy.sheetSpread}
+            value={leftPage.spread}
+            onChange={(spread) => updatePage(leftIndex, { spread })}
+            options={[
+              { value: false, label: copy.no },
+              { value: true, label: copy.yes },
+            ]}
+          />
+        </Row>
       </Group>
 
       {!leftPage.spread && (
@@ -103,8 +119,12 @@ export function PagesInspector({
                 key={layout.id}
                 type="button"
                 className={activePage.layout === layout.id ? 'is-on' : ''}
-                onClick={() => updatePage(activeIndex, { layout: layout.id })}
+                onClick={() => {
+                  updatePage(activeIndex, { layout: layout.id });
+                  onSelectSlot(0);
+                }}
                 title={copy[LAYOUT_LABEL[layout.id]] as string}
+                aria-label={copy[LAYOUT_LABEL[layout.id]] as string}
                 aria-pressed={activePage.layout === layout.id}
               >
                 <LayoutIcon id={layout.id} />
@@ -140,12 +160,30 @@ export function PagesInspector({
       {(leftPage.spread || capacity > 0) && (
         <Group
           title={
-            leftPage.spread
-              ? copy.spreadPhotoGroup
-              : copy.frameGroup(slotIndex + 1, capacity)
+            leftPage.spread ? copy.spreadPhotoGroup : copy.frameGroup(slotIndex + 1, capacity)
           }
         >
-          <Row label={copy.fieldZoom}>
+          {/* Escolher o quadro sem precisar acertar o clique na página. */}
+          {!leftPage.spread && capacity > 1 && (
+            <Row label={copy.framePick} stack>
+              <div className="ae-frames" role="group" aria-label={copy.framePick}>
+                {Array.from({ length: capacity }, (_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={i === slotIndex ? 'is-on' : ''}
+                    aria-pressed={i === slotIndex}
+                    aria-label={copy.frameNumber(i + 1)}
+                    onClick={() => onSelectSlot(i)}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+            </Row>
+          )}
+
+          <Row label={copy.fieldZoom} stack>
             <Slider
               value={frame.zoom}
               min={1}
@@ -178,7 +216,7 @@ export function PagesInspector({
       <Group
         title={copy.trayGroup}
         right={
-          <label className="ae-chip" style={{ cursor: 'pointer' }}>
+          <label className="ae-chip is-file">
             <IconImage size={12} /> {copy.trayUpload}
             <input
               type="file"
@@ -198,31 +236,26 @@ export function PagesInspector({
         ) : (
           <>
             <div className="ae-tray">
-              {photos.map((photo) => (
-                <button
-                  key={photo.id}
-                  type="button"
-                  className={usedPhotoIds.has(photo.id) ? 'is-on' : ''}
-                  onClick={() =>
-                    updateFrame(framePage, frameSlot, {
-                      photoId: photo.id,
-                      zoom: 1,
-                      offsetX: 0,
-                      offsetY: 0,
-                    })
-                  }
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photo.previewUrl}
-                    alt={photo.fileName}
+              {photos.map((photo) => {
+                const used = usedPhotoIds.has(photo.id);
+                return (
+                  <button
+                    key={photo.id}
+                    type="button"
+                    className={used ? 'is-on' : ''}
+                    title={used ? `${photo.fileName} — ${copy.trayUsed}` : photo.fileName}
+                    onClick={() => place(photo.id)}
                     draggable
                     onDragStart={(event) =>
                       event.dataTransfer.setData(PHOTO_DND_TYPE, photo.id)
                     }
-                  />
-                </button>
-              ))}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photo.previewUrl} alt={photo.fileName} draggable={false} />
+                    {used && <span className="ae-tray-dot" aria-hidden />}
+                  </button>
+                );
+              })}
             </div>
             <p className="ae-note">{copy.trayNote}</p>
           </>

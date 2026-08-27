@@ -157,3 +157,10 @@ export const IconWarning = (p: IconProps) => (
     <path d="M12 4 2.5 20h19L12 4ZM12 10v4M12 17.2v.1" />
   </Svg>
 );
+
+export const IconCloud = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M7 18a4 4 0 0 1-.4-7.98A5.5 5.5 0 0 1 17.5 9.5 3.75 3.75 0 0 1 17 18H7Z" />
+    <path d="M12 15V9m0 0-2.2 2.2M12 9l2.2 2.2" />
+  </Svg>
+);

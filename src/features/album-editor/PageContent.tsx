@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import { SPEC } from '@/features/album-print/spec';
 import type { EditorPage, PhotoFrame } from '@/types/album-editor';
 
@@ -41,7 +43,7 @@ export function FramedPhoto({
   if (!src) {
     return (
       <div className="ae-empty">
-        <IconImage size={Math.max(14, ppm * 5)} />
+        <IconImage size={Math.max(13, Math.min(30, ppm * 6))} />
       </div>
     );
   }
@@ -114,6 +116,9 @@ export function PageContent({
   bleedMm = 0,
   spineSide = 'left',
 }: PageContentProps) {
+  /** Quadro sob o arrasto de uma foto da bandeja — realce de alvo, só isso. */
+  const [overSlot, setOverSlot] = useState(-1);
+
   const gap = 3 * ppm;
   const margin = (bleedMm + 10) * ppm;
   const spineMargin = (bleedMm + SPEC.safe.spine) * ppm;
@@ -126,13 +131,23 @@ export function PageContent({
   const slot = (index: number, style: React.CSSProperties) => (
     <div
       key={index}
-      className={`ae-slot${editable && selectedSlot === index ? ' is-selected' : ''}`}
+      className={[
+        'ae-slot',
+        editable && selectedSlot === index ? 'is-selected' : '',
+        overSlot === index ? 'is-over' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={style}
       onPointerDown={() => editable && onSelectSlot?.(index)}
       onDragOver={(event) => {
-        if (editable) event.preventDefault();
+        if (!editable) return;
+        event.preventDefault();
+        if (overSlot !== index) setOverSlot(index);
       }}
+      onDragLeave={() => setOverSlot((current) => (current === index ? -1 : current))}
       onDrop={(event) => {
+        setOverSlot(-1);
         if (!editable) return;
         event.preventDefault();
         const photoId = event.dataTransfer.getData(PHOTO_DND_TYPE);
@@ -196,7 +211,24 @@ export function PageContent({
 
   const box: React.CSSProperties = { position: 'absolute', overflow: 'hidden' };
 
-  if (page.layout === 'full') return slot(0, { ...box, inset: 0 });
+  if (page.layout === 'full') {
+    /**
+     * Foto sangrada de borda a borda — o padrão do álbum. Por cima dela vai o
+     * **efeito de página**: a sombra da dobra do lado da lombada, o
+     * escurecimento leve das bordas de corte e o brilho de papel na quina de
+     * cima. Sem isso a foto vira um retângulo solto na tela; com isso ela se lê
+     * como página impressa, que era a única coisa que a margem branca resolvia.
+     * Nas miniaturas (ppm baixo) o efeito não entra: ali ele só sujaria.
+     */
+    return (
+      <>
+        {slot(0, { ...box, inset: 0 })}
+        {ppm > 0.6 && !page.spread && (
+          <span className={`ae-fold is-${spineSide}`} aria-hidden />
+        )}
+      </>
+    );
+  }
 
   if (page.layout === 'inset') return slot(0, { ...box, inset: `${margin}px` });
 

@@ -10,6 +10,7 @@ import { FaqWidget } from '@/features/faq/FaqWidget';
 import { buildShareCard } from '@/features/share/shareCard';
 import { saveThankYouHandoff } from '@/features/thank-you/handoff';
 import { AlbumEditor } from '@/features/album-editor/AlbumEditor';
+import { IconCloud, IconTrash } from '@/features/album-editor/icons';
 import { EditorStart } from '@/features/album-editor/EditorStart';
 import { useAlbumSave } from '@/features/album-save/useAlbumSave';
 import { InlineAuthDialog } from '@/features/auth/InlineAuthDialog';
@@ -87,7 +88,10 @@ export default function AlbumPage() {
   );
 
   return (
-    <main className="page-shell page-body">
+    // Com o editor aberto a régua da página abre: uma bancada de 1054 px no
+    // meio de uma tela de 1440 é o que empurrava a barra e o inspetor para
+    // fora. A marca, a linha e o rodapé acompanham — continua uma régua só.
+    <main className={`page-shell page-body${hasPhotos ? ' is-wide' : ''}`}>
       <SiteNav variant="inner" tagline="Guarde a memória" />
       <hr className={`hr ${hasPhotos ? '' : 'mb-6'}`} />
 
@@ -164,7 +168,7 @@ export default function AlbumPage() {
         {hasPhotos && (
           // O editor ocupa a tela inteira abaixo da barra: é uma bancada, não um
           // bloco de conteúdo no meio da página.
-          <div className="h-[calc(100vh-140px)] min-h-[560px] overflow-hidden rounded-[16px] border border-[var(--color-divider)]">
+          <div className="h-[calc(100dvh-140px)] min-h-[560px] overflow-hidden rounded-[16px] border border-[var(--color-divider)]">
             <AlbumEditor
               photos={album.photos}
               name={album.name}
@@ -178,6 +182,8 @@ export default function AlbumPage() {
                     <button
                       type="button"
                       className="ae-btn"
+                      aria-label="Salvar na nuvem"
+                      title="Salvar na nuvem"
                       disabled={cloud.isSaving}
                       onClick={() =>
                         cloud.save({
@@ -187,15 +193,21 @@ export default function AlbumPage() {
                         })
                       }
                     >
-                      {cloud.isSaving ? 'Guardando…' : 'Salvar na nuvem'}
+                      <IconCloud size={13} />
+                      <span className="ae-btn-text">
+                        {cloud.isSaving ? 'Guardando…' : 'Salvar na nuvem'}
+                      </span>
                     </button>
                   )}
                   <button
                     type="button"
                     className="ae-btn"
+                    aria-label="Descartar"
+                    title="Descartar"
                     onClick={() => setIsClearConfirmOpen(true)}
                   >
-                    Descartar
+                    <IconTrash size={13} />
+                    <span className="ae-btn-text">Descartar</span>
                   </button>
                 </>
               }
@@ -205,7 +217,10 @@ export default function AlbumPage() {
       </div>
 
       <SiteFooter />
-      <FaqWidget />
+      {/* A bolha de ajuda é fixa no canto inferior direito — exatamente onde
+          fica o inspetor com o editor aberto. Some enquanto a bancada está em
+          uso; na tela de partida ela continua ali. */}
+      {!hasPhotos && <FaqWidget />}
     </main>
   );
 }

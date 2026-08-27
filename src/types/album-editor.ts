@@ -175,6 +175,10 @@ export function emptyFrame(): PhotoFrame {
 export function makePage(over: Partial<EditorPage> = {}): EditorPage {
   return {
     id: newId(),
+    // `full`: a foto sangra até a borda, como num fotolivro impresso. O que a
+    // margem branca resolvia — distinguir a foto da página — passou a ser
+    // trabalho do efeito de dobra e das bordas de corte desenhados por cima
+    // dela (ver `ae-fold`). Quem quiser a moldura tem o layout `inset`.
     layout: 'full',
     spread: false,
     heading: '',

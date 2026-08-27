@@ -25,9 +25,11 @@ import {
   IconRuler,
   IconType,
 } from './icons';
-import { PageView, SheetPreview } from './PageView';
+import { SheetPreview } from './PageView';
 import { PagesInspector } from './PagesInspector';
-import { PHOTO_DND_TYPE, type PhotoResolver } from './PageContent';
+import type { PhotoResolver } from './PageContent';
+import { SheetStage } from './SheetStage';
+import { useSheetTurn } from './useSheetTurn';
 import { accentFor, colorById } from './palette';
 import { clamp } from './useDrag';
 import { useEditorAlbum } from './useEditorAlbum';
@@ -117,8 +119,8 @@ export function AlbumEditor({
     const fit = () => {
       const node = stageRef.current;
       if (!node) return;
-      const availableW = node.clientWidth - 72;
-      const availableH = node.clientHeight - 72;
+      const availableW = node.clientWidth - 56;
+      const availableH = node.clientHeight - 56;
       const bleed = SPEC.bleed * 2;
 
       let needW: number;
@@ -131,7 +133,9 @@ export function AlbumEditor({
         needH = SPEC.trim.h * 1.35;
       } else return;
 
-      setPpm(clamp(Math.min(availableW / needW, availableH / needH), 0.5, 4));
+      // Teto e piso da escala: sem eles o álbum vira um selo numa tela larga
+      // ou estoura o palco numa estreita.
+      setPpm(clamp(Math.min(availableW / needW, availableH / needH), 0.45, 3));
     };
 
     fit();
@@ -203,15 +207,15 @@ export function AlbumEditor({
   const leftPage = album.pages[leftIndex];
   const rightPage = album.pages[rightIndex];
 
-  const onFrame = (pageIndex: number) => (slot: number, changes: Partial<PhotoFrame>) =>
+  const turn = useSheetTurn(sheets.length, safeSheet, setSheetIndex);
+
+  const onFrame = (pageIndex: number, slot: number, changes: Partial<PhotoFrame>) =>
     updateFrame(pageIndex, slot, changes);
 
-  const onDropPhoto = (pageIndex: number, hand: 'left' | 'right') =>
-    (slot: number, photoId: string) => {
-      setActiveSide(hand);
-      setSelectedSlot(slot);
-      updateFrame(pageIndex, slot, { photoId, zoom: 1, offsetX: 0, offsetY: 0 });
-    };
+  const onDropPhoto = (pageIndex: number, slot: number, photoId: string) => {
+    setSelectedSlot(slot);
+    updateFrame(pageIndex, slot, { photoId, zoom: 1, offsetX: 0, offsetY: 0 });
+  };
 
   const tabs: { id: View; label: string; icon: React.ReactNode }[] = [
     { id: 'cover', label: copy.tabCover, icon: <IconType size={13} /> },
@@ -235,9 +239,16 @@ export function AlbumEditor({
             className="ae-name"
             value={name}
             aria-label={copy.albumNameAria}
+            placeholder={copy.albumNamePlaceholder}
             onChange={(event) => onName(event.target.value)}
           />
         </div>
+
+        {/* Uma folga de cada lado das abas: elas ficam no meio da barra
+            independente do que a marca à esquerda e as ações à direita
+            carregam. Com folga só de um lado, elas colavam na marca e a barra
+            ficava pesada à esquerda. */}
+        <span className="ae-spacer" />
 
         <div className="ae-tabs">
           {tabs.map((tab) => (
@@ -246,34 +257,49 @@ export function AlbumEditor({
               type="button"
               className={view === tab.id ? 'is-on' : ''}
               aria-pressed={view === tab.id}
+              /* Numa bancada estreita o rótulo some e sobra o ícone — sem isto
+                 o botão fica sem nome para o leitor de tela e sem dica para o
+                 ponteiro. */
+              aria-label={tab.label}
+              title={tab.label}
               onClick={() => setView(tab.id)}
             >
               {tab.icon}
-              {tab.label}
+              <span className="ae-tab-text">{tab.label}</span>
             </button>
           ))}
         </div>
 
         <span className="ae-spacer" />
-        <span className="ae-meta">{copy.meta(formatMm(spine, 2), album.pages.length)}</span>
+        <span className="ae-meta ae-meta-top">
+          {copy.meta(formatMm(spine, 2), album.pages.length)}
+        </span>
 
-        <button
-          type="button"
-          className={`ae-btn${guides ? ' is-on' : ''}`}
-          aria-pressed={guides}
-          title={copy.guidesTip}
-          onClick={() => setGuides((value) => !value)}
-        >
-          <IconRuler size={13} /> {copy.guides}
-        </button>
-
-        {actions}
-
-        {onExport && (
-          <button type="button" className="ae-btn is-primary" onClick={() => onExport(album)}>
-            <IconDownload size={13} /> {copy.export}
+        <div className="ae-actions">
+          <button
+            type="button"
+            className={`ae-btn${guides ? ' is-on' : ''}`}
+            aria-pressed={guides}
+            title={copy.guidesTip}
+            onClick={() => setGuides((value) => !value)}
+          >
+            <IconRuler size={13} /> <span className="ae-btn-text">{copy.guides}</span>
           </button>
-        )}
+
+          {actions}
+
+          {onExport && (
+            <button
+              type="button"
+              className="ae-btn is-primary"
+              aria-label={copy.export}
+              title={copy.export}
+              onClick={() => onExport(album)}
+            >
+              <IconDownload size={13} /> <span className="ae-btn-text">{copy.export}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="ae-body">
@@ -298,84 +324,23 @@ export function AlbumEditor({
             )}
 
             {view === 'pages' && leftPage && rightPage && (
-              <div className="ae-sheet">
-                {leftPage.spread ? (
-                  <div
-                    style={{
-                      position: 'relative',
-                      width: (SPEC.trim.w + SPEC.bleed * 2) * 2 * ppm,
-                      height: (SPEC.trim.h + SPEC.bleed * 2) * ppm,
-                      overflow: 'hidden',
-                      background: '#fff',
-                    }}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => {
-                      const photoId = event.dataTransfer.getData(PHOTO_DND_TYPE);
-                      if (photoId) {
-                        updateFrame(leftIndex, 0, {
-                          photoId,
-                          zoom: 1,
-                          offsetX: 0,
-                          offsetY: 0,
-                        });
-                      }
-                    }}
-                  >
-                    <PageView
-                      page={leftPage}
-                      index={leftIndex}
-                      ppm={ppm}
-                      hand="left"
-                      guides={false}
-                      ink={color.ink}
-                      resolve={resolve}
-                      editable
-                      selectedSlot={0}
-                      onFrame={onFrame(leftIndex)}
-                      hideNumber
-                    />
-                    <div className="ae-gutter" />
-                  </div>
-                ) : (
-                  <>
-                    {([['left', leftIndex, leftPage], ['right', rightIndex, rightPage]] as const).map(
-                      ([hand, index, page]) => (
-                        <span
-                          key={page.id}
-                          style={{
-                            display: 'block',
-                            position: 'relative',
-                            // Sem guias, as duas áreas finais se encostam como
-                            // no livro pronto; com guias, a sangria aparece.
-                            marginLeft:
-                              hand === 'right' && !guides ? -SPEC.bleed * 2 * ppm : 0,
-                          }}
-                          onPointerDownCapture={() => setActiveSide(hand)}
-                        >
-                          <PageView
-                            page={page}
-                            index={index}
-                            ppm={ppm}
-                            hand={hand}
-                            guides={guides}
-                            ink={color.ink}
-                            resolve={resolve}
-                            editable
-                            selectedSlot={activeSide === hand ? selectedSlot : -1}
-                            onSelectSlot={(slot) => {
-                              setActiveSide(hand);
-                              setSelectedSlot(slot);
-                            }}
-                            onFrame={onFrame(index)}
-                            onDropPhoto={onDropPhoto(index, hand)}
-                          />
-                        </span>
-                      ),
-                    )}
-                    <div className="ae-gutter" />
-                  </>
-                )}
-              </div>
+              <SheetStage
+                album={album}
+                sheets={sheets}
+                sheetIndex={safeSheet}
+                turn={turn}
+                ppm={ppm}
+                guides={guides}
+                ink={color.ink}
+                resolve={resolve}
+                activeSide={activeSide}
+                onActiveSide={setActiveSide}
+                selectedSlot={selectedSlot}
+                onSelectSlot={setSelectedSlot}
+                onFrame={onFrame}
+                onDropPhoto={onDropPhoto}
+                hint={copy.flipHint}
+              />
             )}
 
             {view === 'grid' && (
@@ -428,10 +393,10 @@ export function AlbumEditor({
             <div className="ae-strip">
               <button
                 type="button"
-                className="ae-btn"
-                style={{ padding: 7 }}
+                className="ae-btn is-icon"
                 aria-label={copy.prevSheet}
-                onClick={() => setSheetIndex((i) => clamp(i - 1, 0, sheets.length - 1))}
+                disabled={safeSheet === 0}
+                onClick={() => turn.go('prev')}
               >
                 <IconChevronLeft size={14} />
               </button>
@@ -441,7 +406,6 @@ export function AlbumEditor({
                   key={album.pages[a].id}
                   type="button"
                   className={`ae-thumb${safeSheet === index ? ' is-on' : ''}`}
-                  style={{ width: 74, height: 54 }}
                   onClick={() => setSheetIndex(index)}
                 >
                   <span
@@ -469,8 +433,7 @@ export function AlbumEditor({
 
               <button
                 type="button"
-                className="ae-btn"
-                style={{ padding: 7 }}
+                className="ae-btn is-icon"
                 aria-label={copy.newSheet}
                 onClick={addSheet}
               >
@@ -478,10 +441,10 @@ export function AlbumEditor({
               </button>
               <button
                 type="button"
-                className="ae-btn"
-                style={{ padding: 7 }}
+                className="ae-btn is-icon"
                 aria-label={copy.nextSheet}
-                onClick={() => setSheetIndex((i) => clamp(i + 1, 0, sheets.length - 1))}
+                disabled={safeSheet >= sheets.length - 1}
+                onClick={() => turn.go('next')}
               >
                 <IconChevronRight size={14} />
               </button>
@@ -509,6 +472,7 @@ export function AlbumEditor({
               activeSide={activeSide}
               onActiveSide={setActiveSide}
               selectedSlot={selectedSlot}
+              onSelectSlot={setSelectedSlot}
               onUpload={onUpload}
             />
           )}
@@ -517,6 +481,7 @@ export function AlbumEditor({
             <Row label={copy.fieldPaper}>
               <select
                 className="ae-input"
+                aria-label={copy.fieldPaper}
                 value={album.paper}
                 onChange={(event) => patch({ paper: event.target.value as PaperId })}
               >
