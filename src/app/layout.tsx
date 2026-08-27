@@ -35,6 +35,70 @@ const body = localFont({
   display: 'swap',
 });
 
+/**
+ * Fontes de display do álbum.
+ *
+ * O usuário escolhe qual delas leva o título da capa (e, por tabela, o texto
+ * da lombada). São arquivos estáticos de peso único do subset `latin`, tirados
+ * dos pacotes `@fontsource` — mesma origem do Google Fonts, só que baixada uma
+ * vez e versionada aqui, pelo motivo descrito acima. Cada uma vira uma CSS
+ * custom property que `album-editor` lê pelo id da fonte; nenhum componente
+ * escreve o nome da família à mão.
+ */
+const albumAnton = localFont({
+  src: './fonts/anton-latin.woff2',
+  variable: '--font-album-anton',
+  weight: '400',
+  display: 'swap',
+});
+
+const albumArchivo = localFont({
+  src: './fonts/archivo-black-latin.woff2',
+  variable: '--font-album-archivo',
+  weight: '400',
+  display: 'swap',
+});
+
+const albumBebas = localFont({
+  src: './fonts/bebas-neue-latin.woff2',
+  variable: '--font-album-bebas',
+  weight: '400',
+  display: 'swap',
+});
+
+const albumSerif = localFont({
+  src: './fonts/instrument-serif-latin.woff2',
+  variable: '--font-album-serif',
+  weight: '400',
+  display: 'swap',
+});
+
+const albumGrotesk = localFont({
+  src: './fonts/space-grotesk-latin.woff2',
+  variable: '--font-album-grotesk',
+  weight: '700',
+  display: 'swap',
+});
+
+const albumDm = localFont({
+  src: './fonts/dm-sans-latin.woff2',
+  variable: '--font-album-dm',
+  weight: '800',
+  display: 'swap',
+});
+
+/** Todas as variáveis de fonte numa string só, para a tag <html>. */
+const fontVars = [
+  heading.variable,
+  body.variable,
+  albumAnton.variable,
+  albumArchivo.variable,
+  albumBebas.variable,
+  albumSerif.variable,
+  albumGrotesk.variable,
+  albumDm.variable,
+].join(' ');
+
 export const metadata: Metadata = {
   title: 'Memento — Guarde a memória',
   description:
@@ -45,7 +109,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" className={`${heading.variable} ${body.variable}`}>
+    <html lang="pt-BR" className={fontVars}>
       {/* O idioma escolhido vale para todas as telas (barra, rodapé, "Sobre"),
           então o provider fica na raiz — e não dentro de uma página. */}
       <body className="antialiased">

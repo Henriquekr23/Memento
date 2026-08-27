@@ -57,3 +57,14 @@ export function slugify(value: string, fallback = 'album'): string {
   return slug.length > 0 ? slug : fallback;
 }
 
+/**
+ * Medida em milímetros, com vírgula decimal e sem zero à toa: 4,6 · 12 · 8,35.
+ * A gráfica trabalha em mm — toda medida que aparece na tela passa por aqui.
+ */
+export function formatMm(value: number, digits = 1): string {
+  const fixed = value.toFixed(digits);
+  const trimmed = fixed.includes('.')
+    ? fixed.replace(/0+$/, '').replace(/\.$/, '')
+    : fixed;
+  return trimmed.replace('.', ',');
+}

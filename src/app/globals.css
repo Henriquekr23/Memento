@@ -1795,4 +1795,754 @@ html {
   grid-template-rows: 1fr;
   opacity: 1;
 }
+
+/* ── Editor de álbum ────────────────────────────────────────────────────
+   A tela do editor é deliberadamente sóbria: a única cor saturada nela é a do
+   próprio álbum, que entra por `--ae-accent` (escrita em linha pelo React a
+   partir da cor de capa escolhida, por contraste medido — ver `accentFor`).
+   Todo o resto sai dos tokens do Organic, como o resto do site.
+
+   As classes `.ae-*` acompanham `features/album-editor/`. Elas vivem nesta
+   camada pelo mesmo motivo das outras: utilitário do Tailwind precisa poder
+   vencer a base. */
+
+.ae {
+  --ae-canvas: var(--color-surface);
+  --ae-panel: var(--color-surface-2);
+  --ae-panel-2: var(--color-neutral-100);
+  --ae-line: var(--color-divider);
+  --ae-line-soft: color-mix(in srgb, var(--color-text) 7%, transparent);
+  --ae-ink: var(--color-text);
+  --ae-ink-2: color-mix(in srgb, var(--color-text) 66%, transparent);
+  --ae-ink-3: color-mix(in srgb, var(--color-text) 45%, transparent);
+
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  height: 100%;
+  background: var(--ae-canvas);
+  color: var(--ae-ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 13px;
+  overflow: hidden;
+}
+.ae ::selection {
+  background: var(--ae-accent);
+  color: var(--color-on-cta);
+}
+.ae :focus-visible {
+  outline: 2px solid var(--ae-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ── barra superior ── */
+.ae-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px;
+  height: 52px;
+  background: var(--ae-panel);
+  border-bottom: 1px solid var(--ae-line);
+  position: relative;
+  z-index: 20;
+}
+.ae-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-right: 14px;
+  border-right: 1px solid var(--ae-line-soft);
+}
+/* Miniatura do próprio álbum: a lombada é a sombra interna à esquerda. */
+.ae-dot {
+  width: 16px;
+  height: 20px;
+  border-radius: 1px 3px 3px 1px;
+  flex: none;
+}
+.ae-name {
+  border: 0;
+  background: transparent;
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  width: 170px;
+  padding: 4px 0;
+  border-bottom: 1px solid transparent;
+}
+.ae-name:hover {
+  border-bottom-color: var(--ae-line);
+}
+.ae-name:focus {
+  outline: none;
+  border-bottom-color: var(--ae-accent);
+}
+.ae-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--ae-panel-2);
+  padding: 3px;
+  border-radius: 8px;
+}
+.ae-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ae-ink-2);
+  transition: background 0.15s, color 0.15s;
+}
+.ae-tabs button:hover {
+  color: var(--ae-ink);
+}
+.ae-tabs button.is-on {
+  background: var(--ae-panel);
+  color: var(--ae-ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.07), 0 0 0 1px rgb(0 0 0 / 0.04);
+}
+.ae-spacer {
+  flex: 1;
+}
+.ae-meta {
+  font-size: 11.5px;
+  color: var(--ae-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.ae-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid var(--ae-line);
+  background: var(--ae-panel);
+  transition: border-color 0.15s, background 0.15s;
+}
+.ae-btn:hover {
+  background: var(--ae-panel-2);
+}
+.ae-btn.is-on {
+  background: var(--ae-accent);
+  color: var(--color-on-cta);
+  border-color: transparent;
+}
+.ae-btn.is-primary {
+  background: var(--color-cta);
+  color: var(--color-on-cta);
+  border-color: transparent;
+}
+.ae-btn.is-primary:hover {
+  background: var(--color-cta-hover);
+}
+.ae-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── corpo ── */
+.ae-body {
+  display: grid;
+  grid-template-columns: 1fr 296px;
+  min-height: 0;
+}
+.ae-main {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-width: 0;
+  min-height: 0;
+}
+.ae-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 36px;
+  min-height: 0;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--color-text) 7%, transparent) 1px,
+    transparent 0
+  );
+  background-size: 22px 22px;
+}
+
+/* ── páginas ── */
+.ae-page {
+  position: relative;
+  overflow: hidden;
+  flex: none;
+  background: #ffffff;
+}
+.ae-slot {
+  background: var(--color-neutral-200);
+  overflow: hidden;
+}
+.ae-slot.is-selected {
+  box-shadow: inset 0 0 0 2px var(--ae-accent);
+}
+.ae-empty {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--color-neutral-400);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--color-neutral-200) 0 8px,
+    var(--color-neutral-300) 8px 16px
+  );
+}
+.ae-page-number {
+  position: absolute;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+}
+
+/* ── guias de impressão ──
+   Vermelho é corte, azul é área segura, laranja é vinco: são as cores que a
+   própria gráfica usa no gabarito. Aqui elas não seguem o tema de propósito —
+   uma guia recolorida deixa de ser reconhecível para quem confere o arquivo. */
+.ae-guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ae-g-trim {
+  position: absolute;
+  outline: 1px dashed rgb(226 58 58 / 0.75);
+}
+.ae-g-safe {
+  position: absolute;
+  outline: 1px solid rgb(0 153 255 / 0.65);
+}
+.ae-g-hinge {
+  position: absolute;
+  background: repeating-linear-gradient(
+    180deg,
+    rgb(240 120 20 / 0.9) 0 5px,
+    transparent 5px 10px
+  );
+}
+
+/* ── capa desdobrada ── */
+.ae-wrap {
+  display: flex;
+  align-items: stretch;
+  flex: none;
+  box-shadow: 0 26px 60px -22px rgb(0 0 0 / 0.5), 0 2px 8px rgb(0 0 0 / 0.12);
+}
+.ae-face {
+  position: relative;
+  overflow: hidden;
+  flex: none;
+}
+.ae-spine {
+  position: relative;
+  overflow: hidden;
+  flex: none;
+  box-shadow: inset 3px 0 8px -4px rgb(0 0 0 / 0.35), inset -3px 0 8px -4px rgb(0 0 0 / 0.35);
+}
+.ae-spine-text {
+  position: absolute;
+  left: 50%;
+  white-space: nowrap;
+  transform-origin: center;
+  line-height: 1;
+}
+.ae-live {
+  touch-action: none;
+}
+.ae-snap {
+  position: absolute;
+  background: var(--ae-accent);
+  opacity: 0.9;
+  pointer-events: none;
+}
+.ae-snap-v {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+.ae-snap-h {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+/* ── elementos da capa ── */
+.ae-el {
+  position: absolute;
+  touch-action: none;
+}
+.ae-el.is-selected {
+  outline: 1px solid var(--ae-accent);
+  outline-offset: 5px;
+}
+.ae-h {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  background: var(--ae-panel);
+  border: 1.5px solid var(--ae-accent);
+  border-radius: 2px;
+  z-index: 5;
+  touch-action: none;
+}
+.ae-h-corner {
+  cursor: nwse-resize;
+}
+.ae-h-width {
+  top: 50%;
+  margin-top: -5.5px;
+  cursor: ew-resize;
+  border-radius: 999px;
+  width: 8px;
+}
+.ae-h-rot {
+  left: 50%;
+  top: -30px;
+  margin-left: -9px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--ae-accent);
+  cursor: grab;
+}
+
+/* ── livro 3d ── */
+.ae-3d-stage {
+  position: relative;
+  perspective: 2200px;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+.ae-3d-stage:active {
+  cursor: grabbing;
+}
+.ae-3d-box {
+  position: relative;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 40px 44px rgb(0 0 0 / 0.34));
+}
+.ae-3d-hint {
+  position: absolute;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--ae-ink-3);
+}
+
+/* ── folha aberta ── */
+.ae-sheet {
+  display: flex;
+  flex: none;
+  position: relative;
+  box-shadow: 0 24px 54px -24px rgb(0 0 0 / 0.45);
+}
+.ae-gutter {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 26px;
+  margin-left: -13px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(0 0 0 / 0.16) 42%,
+    rgb(0 0 0 / 0.2) 50%,
+    rgb(0 0 0 / 0.16) 58%,
+    transparent
+  );
+}
+.ae-preview-spread,
+.ae-preview-half {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+  display: block;
+}
+.ae-preview-spread {
+  left: 0;
+  right: 0;
+}
+.ae-preview-half {
+  width: 50%;
+}
+
+/* ── tira de folhas ── */
+.ae-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--ae-panel);
+  border-top: 1px solid var(--ae-line);
+  overflow-x: auto;
+}
+.ae-thumb {
+  flex: none;
+  position: relative;
+  border: 1px solid var(--ae-line);
+  border-radius: 3px;
+  overflow: hidden;
+  background: #ffffff;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.ae-thumb:hover {
+  transform: translateY(-2px);
+}
+.ae-thumb.is-on {
+  border-color: var(--ae-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ae-accent) 26%, transparent);
+}
+.ae-thumb-label {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 9px;
+  color: var(--ae-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── grade de folhas ── */
+.ae-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 20px;
+  width: 100%;
+  align-self: start;
+}
+.ae-grid-cell {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 6px 18px -8px rgb(0 0 0 / 0.5);
+  outline: 1px solid var(--ae-line);
+  outline-offset: 1px;
+}
+.ae-grid-cell.is-on {
+  outline: 2px solid var(--ae-accent);
+}
+.ae-grid-add {
+  border: 1.5px dashed var(--color-neutral-400);
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  color: var(--ae-ink-3);
+}
+
+/* ── inspetor ── */
+.ae-inspector {
+  background: var(--ae-panel);
+  border-left: 1px solid var(--ae-line);
+  overflow-y: auto;
+  min-height: 0;
+}
+.ae-group {
+  border-bottom: 1px solid var(--ae-line-soft);
+}
+.ae-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px 8px;
+}
+.ae-group-head h3 {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ae-ink-3);
+}
+.ae-group-body {
+  padding: 0 16px 16px;
+  display: grid;
+  gap: 9px;
+}
+.ae-row {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+}
+.ae-row-label {
+  font-size: 12px;
+  color: var(--ae-ink-2);
+  display: flex;
+  flex-direction: column;
+}
+.ae-row-label em {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--ae-ink-3);
+}
+.ae-row-control {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ae-input {
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid var(--ae-line);
+  border-radius: 6px;
+  background: var(--ae-panel-2);
+  font: inherit;
+  font-size: 12.5px;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ae-input:focus {
+  outline: none;
+  border-color: var(--ae-accent);
+  background: var(--ae-panel);
+}
+textarea.ae-input {
+  resize: vertical;
+  min-height: 60px;
+  line-height: 1.45;
+}
+.ae-seg {
+  display: flex;
+  gap: 2px;
+  background: var(--ae-panel-2);
+  padding: 2px;
+  border-radius: 7px;
+  border: 1px solid var(--ae-line);
+}
+.ae-seg.is-full {
+  width: 100%;
+}
+.ae-seg button {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 5px 7px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  color: var(--ae-ink-2);
+  white-space: nowrap;
+  transition: background 0.13s, color 0.13s;
+}
+.ae-seg button:hover {
+  color: var(--ae-ink);
+}
+.ae-seg button.is-on {
+  background: var(--ae-panel);
+  color: var(--ae-ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+.ae-slider {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+}
+.ae-slider input {
+  flex: 1;
+  appearance: none;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-neutral-300);
+  cursor: pointer;
+}
+.ae-slider input::-webkit-slider-thumb {
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: var(--ae-panel);
+  border: 1.5px solid var(--ae-accent);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+}
+.ae-slider input::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: var(--ae-panel);
+  border: 1.5px solid var(--ae-accent);
+}
+.ae-slider output {
+  font-size: 11px;
+  color: var(--ae-ink-3);
+  font-variant-numeric: tabular-nums;
+  width: 44px;
+  text-align: right;
+}
+.ae-swatches {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
+}
+.ae-swatches button {
+  aspect-ratio: 1;
+  border-radius: 5px;
+  border: 1px solid rgb(0 0 0 / 0.1);
+  position: relative;
+  transition: transform 0.13s;
+}
+.ae-swatches button:hover {
+  transform: scale(1.09);
+}
+.ae-swatches button.is-on {
+  box-shadow: 0 0 0 2px var(--ae-panel), 0 0 0 3.5px var(--ae-accent);
+}
+.ae-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.ae-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border: 1px solid var(--ae-line);
+  border-radius: 999px;
+  font-size: 11.5px;
+  color: var(--ae-ink-2);
+  transition: border-color 0.13s, color 0.13s;
+}
+.ae-chip:hover {
+  color: var(--ae-ink);
+}
+.ae-chip.is-on {
+  background: var(--ae-ink);
+  color: var(--color-bg);
+  border-color: transparent;
+}
+.ae-layouts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+.ae-layouts button {
+  aspect-ratio: 3 / 4;
+  border: 1px solid var(--ae-line);
+  border-radius: 5px;
+  background: var(--ae-panel-2);
+  padding: 4px;
+  display: grid;
+  gap: 2px;
+  transition: border-color 0.13s;
+}
+.ae-layouts button.is-on {
+  border-color: var(--ae-accent);
+  background: var(--ae-panel);
+}
+.ae-layouts i {
+  background: var(--color-neutral-300);
+  border-radius: 1px;
+  display: block;
+}
+.ae-layouts button.is-on i {
+  background: var(--ae-accent);
+}
+.ae-tray {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.ae-tray img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 4px;
+  cursor: grab;
+  border: 1px solid var(--ae-line);
+  transition: transform 0.13s;
+}
+.ae-tray img:hover {
+  transform: scale(1.05);
+}
+.ae-tray button.is-on img {
+  outline: 2px solid var(--ae-accent);
+  outline-offset: 1px;
+}
+.ae-note {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ae-ink-3);
+}
+.ae-warn {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: var(--color-accent-200);
+  color: var(--color-accent-800);
+}
+.ae-danger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #b0342f;
+  padding: 6px 0;
+}
+.ae-danger:hover {
+  text-decoration: underline;
+}
+
+/* ── estado vazio ── */
+.ae-blank {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  text-align: center;
+  max-width: 42ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ae *,
+  .ae *::before,
+  .ae *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Abaixo disto o inspetor não cabe ao lado do palco. Some por enquanto —
+   virar folha inferior (bottom sheet) é a próxima parada, não um `display:none`
+   definitivo. */
+@media (max-width: 939px) {
+  .ae-body {
+    grid-template-columns: 1fr;
+  }
+  .ae-inspector {
+    display: none;
+  }
+}
+
 }

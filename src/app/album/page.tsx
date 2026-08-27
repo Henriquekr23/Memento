@@ -9,44 +9,39 @@ import { SiteNav } from '@/components/SiteNav';
 import { FaqWidget } from '@/features/faq/FaqWidget';
 import { buildShareCard } from '@/features/share/shareCard';
 import { saveThankYouHandoff } from '@/features/thank-you/handoff';
-import { AlbumBook } from '@/features/album-book/AlbumBook';
-import { useAlbumBook } from '@/features/album-book/useAlbumBook';
-import { AlbumGrid } from '@/features/album-builder/AlbumGrid';
-import { AlbumStart, type StartMode } from '@/features/album-builder/AlbumStart';
-import { AlbumToolbar, type AlbumView } from '@/features/album-builder/AlbumToolbar';
-import { StyleDrawer } from '@/features/album-style/StyleDrawer';
+import { AlbumEditor } from '@/features/album-editor/AlbumEditor';
+import { EditorStart } from '@/features/album-editor/EditorStart';
 import { useAlbumSave } from '@/features/album-save/useAlbumSave';
 import { InlineAuthDialog } from '@/features/auth/InlineAuthDialog';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { useAlbum } from '@/features/album-builder/useAlbum';
-import {
-  useAlbumExport,
-  type ExportKind,
-} from '@/features/album-export/useAlbumExport';
+import { useAlbumExport } from '@/features/album-export/useAlbumExport';
 import { useLang } from '@/features/i18n/LangProvider';
+import type { EditorAlbum } from '@/types/album-editor';
 
 export default function AlbumPage() {
   const router = useRouter();
   const { lang } = useLang();
   const album = useAlbum();
-  const book = useAlbumBook(album.includedPhotos);
-  const { exportAlbum, running, isExporting, progress, error } = useAlbumExport();
+  const { exportAlbum, isExporting, progress, error } = useAlbumExport();
   const cloud = useAlbumSave();
-  const [view, setView] = useState<AlbumView>('grid');
+
+  /**
+   * A composição corrente, espelhada aqui.
+   *
+   * O estado mora dentro do editor; esta cópia existe porque salvar na nuvem e
+   * exportar são ações da *página* (elas navegam, mexem em rota e em sessão) e
+   * precisam do álbum inteiro no momento do clique.
+   */
+  const [composition, setComposition] = useState<EditorAlbum | null>(null);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
-  // A gaveta de estilo vive aqui, e não dentro do AlbumBook, porque quem a abre
-  // é o botão da barra — e a barra é filha desta página.
-  const [isStyleOpen, setIsStyleOpen] = useState(false);
 
   const hasPhotos = album.photos.length > 0;
-  const isBookView = view === 'book' && hasPhotos;
 
-  // Depois de importar, o lugar interessante é o álbum — não a grade.
   const { addFiles } = album;
   const handleStart = useCallback(
-    async (files: File[], mode: StartMode) => {
-      await addFiles(files, mode);
-      setView('book');
+    async (files: File[]) => {
+      await addFiles(files, 'album');
     },
     [addFiles],
   );
@@ -58,96 +53,43 @@ export default function AlbumPage() {
    * as fotos por object URL — e object URL morre com o documento que o criou.
    * O que atravessa é o cartão já rasterizado, guardado em `sessionStorage`.
    *
-   * Um cartão que falha não cancela nada: a página de agradecimento funciona sem
-   * ele, e o arquivo do álbum já está no disco da pessoa a essa altura.
+   * Um cartão que falha não cancela nada: a página de agradecimento funciona
+   * sem ele, e o arquivo do álbum já está no disco da pessoa a essa altura.
    */
   const handleExport = useCallback(
-    async (kind: ExportKind) => {
-      const succeeded = await exportAlbum(
-        {
-          name: album.name,
-          photos: album.includedPhotos,
-          photoCaptions: book.photoCaptions,
-          // O PDF precisa da composição para sair igual ao que está na tela; o
-          // ZIP simplesmente ignora este campo.
-          book: {
-            pages: book.pages,
-            theme: book.theme,
-            pageCaptions: book.captions,
-            dayNotes: book.dayNotes,
-            composeModes: book.pageComposeModes,
-            adjustments: book.adjustments,
-            placements: book.placements,
-            autoTilt: book.autoTiltEnabled,
-          },
-        },
-        kind,
-      );
+    async (current: EditorAlbum) => {
+      const succeeded = await exportAlbum({
+        name: album.name,
+        photos: album.photos,
+        album: current,
+      });
 
       if (!succeeded) return;
 
       const cardDataUrl = await buildShareCard({
         albumName: album.name,
-        photoCount: album.includedPhotos.length,
-        pageCount: book.pages.length,
-        previewUrls: album.includedPhotos.slice(0, 3).map((photo) => photo.previewUrl),
+        photoCount: album.photos.length,
+        pageCount: current.pages.length,
+        previewUrls: album.photos.slice(0, 3).map((photo) => photo.previewUrl),
         lang,
       }).catch(() => null);
 
       saveThankYouHandoff({
         albumName: album.name,
-        photoCount: album.includedPhotos.length,
-        pageCount: book.pages.length,
+        photoCount: album.photos.length,
+        pageCount: current.pages.length,
         cardDataUrl,
       });
 
       router.push('/obrigado');
     },
-    [album.name, album.includedPhotos, book, exportAlbum, lang, router],
+    [album.name, album.photos, exportAlbum, lang, router],
   );
 
   return (
     <main className="page-shell page-body">
-      {/* A mesma barra das outras telas. Antes esta página tinha um cabeçalho
-          próprio, e por isso era a única sem idioma, tema e conta — justamente
-          a tela onde a pessoa passa mais tempo. */}
       <SiteNav variant="inner" tagline="Guarde a memória" />
-
-      {/* Uma régua só, do mesmo comprimento em todo o sistema (`.hr` para no
-          conteúdo). Sem margem quando a barra grudenta vem logo abaixo: o
-          respiro ali é o `py` da própria barra, dos dois lados, e a faixa fica
-          centrada entre as duas réguas. Com margem, a de cima ficava a 40px
-          dos botões contra 16px da de baixo e a barra parecia pendurada. */}
       <hr className={`hr ${hasPhotos ? '' : 'mb-6'}`} />
-
-      {hasPhotos && (
-        <AlbumToolbar
-          name={album.name}
-          onNameChange={album.setName}
-          view={view}
-          onViewChange={setView}
-          totalCount={album.photos.length}
-          includedCount={album.includedPhotos.length}
-          withoutExifDateCount={album.withoutExifDateCount}
-          sortDirection={album.sortDirection}
-          isManuallyOrdered={album.isManuallyOrdered}
-          exporting={running}
-          isStyleOpen={isStyleOpen}
-          onToggleStyle={() => setIsStyleOpen((open) => !open)}
-          onSortByDate={album.sortByDate}
-          onExport={handleExport}
-          onClear={() => setIsClearConfirmOpen(true)}
-          canSaveToCloud={isSupabaseConfigured}
-          isSaving={cloud.isSaving}
-          onSaveToCloud={() =>
-            cloud.save({
-              title: album.name,
-              photos: album.includedPhotos,
-              book,
-            })
-          }
-        />
-      )}
 
       {/* Entrar sem sair da página: navegar destruiria o álbum, que só existe
           na memória desta aba. Ver `InlineAuthDialog`. */}
@@ -157,43 +99,27 @@ export default function AlbumPage() {
         onSignedIn={cloud.resume}
       />
 
-      <StyleDrawer
-        open={isStyleOpen && isBookView}
-        onOpenChange={setIsStyleOpen}
-        theme={book.theme}
-        onChange={book.setTheme}
-        autoTiltEnabled={book.autoTiltEnabled}
-        onAutoTiltChange={book.setAutoTiltEnabled}
-        onResetPages={book.resetPages}
-      />
-
       <ConfirmDialog
         open={isClearConfirmOpen}
         title="Descartar este álbum?"
-        description={`As ${album.photos.length} foto(s) importadas, a ordem das páginas e os textos escritos serão perdidos. Os arquivos no seu computador continuam intactos.`}
+        description={`As ${album.photos.length} foto(s) importadas, a composição das páginas e os textos escritos serão perdidos. Os arquivos no seu computador continuam intactos.`}
         confirmLabel="Descartar"
         destructive
         onConfirm={() => {
           album.clear();
+          setComposition(null);
           setIsClearConfirmOpen(false);
-          setView('grid');
         }}
         onCancel={() => setIsClearConfirmOpen(false)}
       />
 
       <div className="space-y-6">
-        {/* A tela de partida só existe no começo. Depois disso, o nome fica na
-            barra e o "+ Fotos" do depósito dá conta — a tela respira. */}
         {!hasPhotos && (
-          <AlbumStart
+          <EditorStart
             name={album.name}
             onNameChange={album.setName}
             isImporting={album.status.isImporting}
             onStart={handleStart}
-            // O mesmo estado do livro: o que for escolhido aqui já vale para a
-            // primeira página desenhada, e continua editável pela gaveta.
-            theme={book.theme}
-            onThemeChange={book.setTheme}
           />
         )}
 
@@ -235,33 +161,50 @@ export default function AlbumPage() {
         {error && <p className="text-sm text-red-400">{error}</p>}
         {cloud.error && <p className="text-sm text-red-400">{cloud.error}</p>}
 
-
-        {hasPhotos &&
-          (isBookView ? (
-            <AlbumBook
-              book={book}
-              albumName={album.name}
-              photos={album.includedPhotos}
-              trayPhotos={album.trayPhotos}
-              isImporting={album.status.isImporting}
-              onSwapPhotos={album.swapPhotos}
-              onPlaceAfter={album.placeAfter}
-              onSendToTray={album.sendToTray}
-              onReorderPhotos={album.reorderIncluded}
-              onAddFiles={(files) => album.addFiles(files, 'tray')}
-            />
-          ) : (
-            <AlbumGrid
+        {hasPhotos && (
+          // O editor ocupa a tela inteira abaixo da barra: é uma bancada, não um
+          // bloco de conteúdo no meio da página.
+          <div className="h-[calc(100vh-140px)] min-h-[560px] overflow-hidden rounded-[16px] border border-[var(--color-divider)]">
+            <AlbumEditor
               photos={album.photos}
-              onReorder={album.movePhoto}
-              onRemove={album.removePhoto}
-              onToggleIncluded={album.toggleIncluded}
+              name={album.name}
+              onName={album.setName}
+              onUpload={(files) => album.addFiles(files, 'tray')}
+              onChange={setComposition}
+              onExport={handleExport}
+              actions={
+                <>
+                  {isSupabaseConfigured && composition && (
+                    <button
+                      type="button"
+                      className="ae-btn"
+                      disabled={cloud.isSaving}
+                      onClick={() =>
+                        cloud.save({
+                          title: album.name,
+                          photos: album.photos,
+                          album: composition,
+                        })
+                      }
+                    >
+                      {cloud.isSaving ? 'Guardando…' : 'Salvar na nuvem'}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="ae-btn"
+                    onClick={() => setIsClearConfirmOpen(true)}
+                  >
+                    Descartar
+                  </button>
+                </>
+              }
             />
-          ))}
+          </div>
+        )}
       </div>
 
       <SiteFooter />
-
       <FaqWidget />
     </main>
   );

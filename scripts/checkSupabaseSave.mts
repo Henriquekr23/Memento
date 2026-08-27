@@ -185,7 +185,7 @@ try {
     .update({
       title: 'Diagnóstico — pode apagar',
       author_name: 'Diagnóstico',
-      composition: { version: 1 },
+      composition: { version: 2, album: null },
       photo_count: 1,
       status: 'ready',
     })

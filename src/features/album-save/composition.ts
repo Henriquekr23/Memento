@@ -4,68 +4,54 @@
  *
  * Funções puras, sem React e sem Supabase: dá para testar com `tsx` como as
  * outras de `lib/`, e é o único ponto que precisa mudar quando a UI ganhar um
- * campo novo (é aqui que se acrescenta a migração de versão).
+ * campo novo. É aqui que mora a migração de versão.
  *
- * Por que um JSON e não colunas: estas chaves são ids de foto e chaves de
- * página — a interface é a única que sabe interpretá-las, nenhuma consulta
- * filtra ou ordena por elas, e cada ajuste de layout viraria uma migração.
+ * Por que um JSON e não colunas: são ids de foto, posições em milímetros e
+ * elementos de capa — a interface é a única que sabe interpretá-los, nenhuma
+ * consulta filtra ou ordena por eles, e cada ajuste de layout viraria uma
+ * migração de banco.
  */
 
-import { DEFAULT_THEME, type AlbumTheme } from '@/features/album-style/theme';
-import type { EmptyPageInsertion } from '@/lib/paginate';
 import {
-  PAGE_LAYOUTS,
-  type ComposeMode,
-  type PageLayoutId,
-  type PhotoAdjustment,
-  type PhotoPlacement,
-} from '@/types/page';
+  DEFAULT_PAPER,
+  PAPERS,
+  type Orientation,
+  type PaperId,
+} from '@/features/album-print/spec';
+import { ALBUM_COLORS, COVER_FONTS, DEFAULT_COLOR } from '@/features/album-editor/palette';
+import { emptyAlbum } from '@/features/album-editor/useEditorAlbum';
+import { MOTIF_SHAPES } from '@/features/album-editor/motifPaths';
+import {
+  EDITOR_LAYOUTS,
+  MAX_SLOTS,
+  emptyFrame,
+  makePage,
+  newId,
+  type CoverElement,
+  type CoverFontId,
+  type EditorAlbum,
+  type EditorLayoutId,
+  type EditorPage,
+  type MotifShape,
+  type PhotoFrame,
+  type TextAlign,
+} from '@/types/album-editor';
 
-/** Sobe de 1 quando o formato mudar de um jeito que exija conversão. */
-export const COMPOSITION_VERSION = 1;
+/**
+ * Versão 2: a composição passou a guardar o álbum inteiro (capa, lombada e
+ * páginas explícitas) em vez de ajustes sobre páginas derivadas da ordem das
+ * fotos. Sobe de novo quando o formato mudar de um jeito que exija conversão.
+ */
+export const COMPOSITION_VERSION = 2;
 
 export interface AlbumComposition {
   version: number;
-  layoutOverrides: Record<string, PageLayoutId>;
-  /** Legenda por página, indexada pela chave da página. */
-  captions: Record<string, string>;
-  /** Legenda por foto, indexada pelo id da foto. */
-  photoCaptions: Record<string, string>;
-  /**
-   * Diário de viagem: um texto por **grupo de dia**, indexado pela mesma chave
-   * de grupo que a paginação usa (`YYYY-MM-DD`, ou `inserted:<id>` numa página
-   * criada à mão).
-   *
-   * A chave é o grupo, e não a chave da página, porque a chave da página muda
-   * quando o layout ou a ordem mudam — o dia, não. Texto escrito para o dia 12
-   * continua sendo do dia 12 depois de qualquer remontagem.
-   *
-   * Escrito inteiramente pelo usuário: nada aqui é gerado pelo app.
-   */
-  dayNotes: Record<string, string>;
-  adjustments: Record<string, PhotoAdjustment>;
-  placements: Record<string, PhotoPlacement>;
-  composeModes: Record<string, ComposeMode>;
-  /** Foto → grupo de página, quando o usuário a colocou numa página à mão. */
-  groupKeys: Record<string, string>;
-  emptyPages: EmptyPageInsertion[];
-  theme: AlbumTheme;
-  autoTilt: boolean;
+  album: EditorAlbum;
 }
 
 export const EMPTY_COMPOSITION: AlbumComposition = {
   version: COMPOSITION_VERSION,
-  layoutOverrides: {},
-  captions: {},
-  photoCaptions: {},
-  dayNotes: {},
-  adjustments: {},
-  placements: {},
-  composeModes: {},
-  groupKeys: {},
-  emptyPages: [],
-  theme: DEFAULT_THEME,
-  autoTilt: true,
+  album: emptyAlbum(),
 };
 
 // ── Leitura defensiva ──────────────────────────────────────────────────────
@@ -77,156 +63,185 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function num(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+function num(value: unknown, fallback: number, min?: number, max?: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  if (min !== undefined && value < min) return min;
+  if (max !== undefined && value > max) return max;
+  return value;
 }
 
-function stringMap(value: unknown): Record<string, string> {
-  if (!isRecord(value)) return {};
-  const out: Record<string, string> = {};
-  for (const [key, item] of Object.entries(value)) {
-    if (typeof item === 'string') out[key] = item;
-  }
-  return out;
+function str(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
 }
 
-const LAYOUT_IDS = new Set(Object.keys(PAGE_LAYOUTS));
-
-function layoutMap(value: unknown): Record<string, PageLayoutId> {
-  const out: Record<string, PageLayoutId> = {};
-  for (const [key, item] of Object.entries(stringMap(value))) {
-    if (LAYOUT_IDS.has(item)) out[key] = item as PageLayoutId;
-  }
-  return out;
+function bool(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
 }
 
-function composeModeMap(value: unknown): Record<string, ComposeMode> {
-  const out: Record<string, ComposeMode> = {};
-  for (const [key, item] of Object.entries(stringMap(value))) {
-    if (item === 'aligned' || item === 'free') out[key] = item;
-  }
-  return out;
+function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : fallback;
 }
 
-function adjustmentMap(value: unknown): Record<string, PhotoAdjustment> {
-  if (!isRecord(value)) return {};
-  const out: Record<string, PhotoAdjustment> = {};
-  for (const [key, item] of Object.entries(value)) {
-    if (!isRecord(item)) continue;
-    out[key] = {
-      focusX: num(item.focusX, 50),
-      focusY: num(item.focusY, 50),
-      zoom: num(item.zoom, 1),
-      rotation: typeof item.rotation === 'number' ? item.rotation : null,
+const COLOR_IDS = ALBUM_COLORS.map((color) => color.id);
+const PAPER_IDS = PAPERS.map((paper) => paper.id) as PaperId[];
+const FONT_IDS = COVER_FONTS.map((font) => font.id) as CoverFontId[];
+const LAYOUT_IDS = EDITOR_LAYOUTS.map((layout) => layout.id) as EditorLayoutId[];
+const ALIGNS: TextAlign[] = ['left', 'center', 'right'];
+
+function coverElement(value: unknown): CoverElement | null {
+  if (!isRecord(value)) return null;
+
+  const base = {
+    id: str(value.id) || newId(),
+    x: num(value.x, 50, -50, 150),
+    y: num(value.y, 50, -50, 150),
+    rotation: num(value.rotation, 0, -360, 360),
+    color: typeof value.color === 'string' ? value.color : null,
+  };
+
+  if (value.kind === 'motif') {
+    return {
+      ...base,
+      kind: 'motif',
+      shape: oneOf<MotifShape>(value.shape, MOTIF_SHAPES, 'eye'),
+      size: num(value.size, 46, 1, 200),
     };
   }
-  return out;
-}
 
-function placementMap(value: unknown): Record<string, PhotoPlacement> {
-  if (!isRecord(value)) return {};
-  const out: Record<string, PhotoPlacement> = {};
-  for (const [key, item] of Object.entries(value)) {
-    if (!isRecord(item)) continue;
-    out[key] = {
-      x: num(item.x, 0),
-      y: num(item.y, 0),
-      w: num(item.w, 100),
-      h: num(item.h, 100),
-      z: num(item.z, 1),
-    };
-  }
-  return out;
-}
-
-function emptyPages(value: unknown): EmptyPageInsertion[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((item) => {
-    if (!isRecord(item) || typeof item.id !== 'string') return [];
-    return [
-      {
-        id: item.id,
-        anchorPhotoId:
-          typeof item.anchorPhotoId === 'string' ? item.anchorPhotoId : 'end',
-      },
-    ];
-  });
-}
-
-const THEME_VALUES: Record<keyof AlbumTheme, readonly string[]> = {
-  cover: ['leather', 'navy', 'linen', 'kraft', 'charcoal', 'burgundy'],
-  paper: ['cream', 'white', 'kraft', 'charcoal'],
-  frame: ['polaroid', 'corners', 'bleed'],
-  font: ['serif', 'sans', 'typewriter', 'handwriting'],
-};
-
-function theme(value: unknown): AlbumTheme {
-  if (!isRecord(value)) return DEFAULT_THEME;
-  const next = { ...DEFAULT_THEME };
-  for (const key of Object.keys(THEME_VALUES) as (keyof AlbumTheme)[]) {
-    const item = value[key];
-    if (typeof item === 'string' && THEME_VALUES[key].includes(item)) {
-      // O `as never` é a forma honesta de dizer "já validei contra a lista
-      // deste campo" sem um cast por campo.
-      next[key] = item as never;
-    }
-  }
-  return next;
-}
-
-/** Nunca lança. JSON inválido vira composição vazia. */
-export function parseComposition(value: unknown): AlbumComposition {
-  if (!isRecord(value)) return EMPTY_COMPOSITION;
   return {
-    version: num(value.version, COMPOSITION_VERSION),
-    layoutOverrides: layoutMap(value.layoutOverrides),
-    captions: stringMap(value.captions),
-    photoCaptions: stringMap(value.photoCaptions),
-    // Álbum salvo antes do diário existir simplesmente não tem a chave: vira
-    // `{}` e abre igual, que é o contrato deste arquivo.
-    dayNotes: stringMap(value.dayNotes),
-    adjustments: adjustmentMap(value.adjustments),
-    placements: placementMap(value.placements),
-    composeModes: composeModeMap(value.composeModes),
-    groupKeys: stringMap(value.groupKeys),
-    // `value.stories` (páginas só de texto) existiu numa versão anterior e é
-    // simplesmente ignorado: o diário do dia tomou o lugar dele.
-    emptyPages: emptyPages(value.emptyPages),
-    theme: theme(value.theme),
-    autoTilt: typeof value.autoTilt === 'boolean' ? value.autoTilt : true,
+    ...base,
+    kind: 'text',
+    role: value.role === 'title' ? 'title' : 'free',
+    text: str(value.text),
+    width: num(value.width, 76, 5, 100),
+    size: num(value.size, 18, 1, 200),
+    font: oneOf<CoverFontId>(value.font, FONT_IDS, 'anton'),
+    align: oneOf<TextAlign>(value.align, ALIGNS, 'center'),
+    uppercase: bool(value.uppercase, true),
+    tracking: num(value.tracking, 0, -50, 100),
+    leading: num(value.leading, 1, 0.5, 3),
+  };
+}
+
+function frame(value: unknown): PhotoFrame {
+  if (!isRecord(value)) return emptyFrame();
+  return {
+    photoId: typeof value.photoId === 'string' ? value.photoId : null,
+    zoom: num(value.zoom, 1, 1, 4),
+    offsetX: num(value.offsetX, 0, -100, 100),
+    offsetY: num(value.offsetY, 0, -100, 100),
+  };
+}
+
+function page(value: unknown): EditorPage {
+  if (!isRecord(value)) return makePage();
+  const slots = Array.isArray(value.slots) ? value.slots : [];
+  return {
+    id: str(value.id) || newId(),
+    layout: oneOf<EditorLayoutId>(value.layout, LAYOUT_IDS, 'full'),
+    spread: bool(value.spread, false),
+    heading: str(value.heading),
+    body: str(value.body),
+    // Sempre `MAX_SLOTS` quadros: trocar de layout não pode perder a foto que
+    // estava no quadro 4 só porque o layout novo tem três.
+    slots: Array.from({ length: MAX_SLOTS }, (_, i) => frame(slots[i])),
+  };
+}
+
+function editorAlbum(value: unknown): EditorAlbum {
+  const fallback = emptyAlbum();
+  if (!isRecord(value)) return fallback;
+
+  const elements = Array.isArray(value.elements)
+    ? value.elements.map(coverElement).filter((el): el is CoverElement => el !== null)
+    : [];
+
+  // Sem título não há o que refletir na lombada: o padrão entra de volta.
+  const hasTitle = elements.some((el) => el.kind === 'text' && el.role === 'title');
+  if (!hasTitle) elements.unshift(...fallback.elements);
+
+  const pages = Array.isArray(value.pages) && value.pages.length > 0
+    ? value.pages.map(page)
+    : fallback.pages;
+
+  const back = isRecord(value.back) ? value.back : {};
+  const spine = isRecord(value.spine) ? value.spine : {};
+
+  return {
+    name: str(value.name),
+    orientation: oneOf<Orientation>(value.orientation, ['portrait', 'landscape'], 'portrait'),
+    paper: oneOf<PaperId>(value.paper, PAPER_IDS, DEFAULT_PAPER),
+    color: oneOf(value.color, COLOR_IDS, DEFAULT_COLOR),
+    elements,
+    back: { show: bool(back.show, false), text: str(back.text) },
+    spine: {
+      show: bool(spine.show, true),
+      direction: spine.direction === 'descending' ? 'descending' : 'ascending',
+      size: typeof spine.size === 'number' ? num(spine.size, 4, 1, 40) : null,
+      offset: num(spine.offset, 50, 0, 100),
+      showYear: bool(spine.showYear, false),
+      year: str(spine.year),
+      mm: typeof spine.mm === 'number' ? num(spine.mm, 4, 1, 100) : null,
+    },
+    pages,
   };
 }
 
 /**
- * Remove das chaves tudo que aponta para foto que não vai ser salva.
+ * Nunca lança. JSON inválido vira composição vazia.
  *
- * As fotos do depósito não entram no álbum salvo; sem esta limpeza, o JSON
- * cresceria com ajustes de fotos que não existem mais do outro lado.
- * (Não mexe nas chaves de *página* nem nas de *dia*: aquelas são derivadas e se
- * refazem — e, no caso do diário, apagar seria jogar fora texto escrito pelo
- * usuário só porque ele mandou as fotos daquele dia para o depósito por um
- * minuto.)
+ * Álbum salvo na versão 1 (páginas derivadas da ordem das fotos, tema de capa
+ * de couro/linho, ajustes por foto) não tem equivalente no modelo novo: as
+ * fotos continuam lá, na ordem em que foram salvas, e o editor as recoloca
+ * cronologicamente ao abrir. O que se perde são os ajustes finos daquele
+ * formato — é o preço de trocar o modelo, e perder o álbum inteiro seria pior.
+ */
+export function parseComposition(value: unknown): AlbumComposition {
+  if (!isRecord(value)) return EMPTY_COMPOSITION;
+
+  const version = num(value.version, COMPOSITION_VERSION);
+  if (version < 2 || !isRecord(value.album)) {
+    return { version: COMPOSITION_VERSION, album: emptyAlbum() };
+  }
+
+  return { version: COMPOSITION_VERSION, album: editorAlbum(value.album) };
+}
+
+/**
+ * Remove dos quadros toda foto que não vai ser salva.
+ *
+ * As fotos que ficaram de fora não sobem para o Storage; sem esta limpeza, o
+ * JSON apontaria para imagens que não existem do outro lado e os quadros
+ * abririam vazios sem explicação.
  */
 export function pruneComposition(
   composition: AlbumComposition,
   keptPhotoIds: readonly string[],
 ): AlbumComposition {
   const kept = new Set(keptPhotoIds);
-  const only = <T>(map: Record<string, T>): Record<string, T> =>
-    Object.fromEntries(Object.entries(map).filter(([id]) => kept.has(id)));
-
   return {
     ...composition,
-    photoCaptions: only(composition.photoCaptions),
-    adjustments: only(composition.adjustments),
-    placements: only(composition.placements),
-    groupKeys: only(composition.groupKeys),
-    // Âncora perdida vira fim do álbum, e não sumiço: a mesma regra que a
-    // paginação já usa quando a foto âncora sai de cena.
-    emptyPages: composition.emptyPages.map((page) =>
-      kept.has(page.anchorPhotoId) || page.anchorPhotoId === 'start'
-        ? page
-        : { ...page, anchorPhotoId: 'end' },
-    ),
+    album: {
+      ...composition.album,
+      pages: composition.album.pages.map((item) => ({
+        ...item,
+        slots: item.slots.map((slot) =>
+          slot.photoId && !kept.has(slot.photoId) ? { ...slot, photoId: null } : slot,
+        ),
+      })),
+    },
   };
+}
+
+/** Ids das fotos usadas em alguma página — quem precisa subir para o Storage. */
+export function photoIdsInComposition(composition: AlbumComposition): string[] {
+  const ids = new Set<string>();
+  for (const item of composition.album.pages) {
+    for (const slot of item.slots) {
+      if (slot.photoId) ids.add(slot.photoId);
+    }
+  }
+  return [...ids];
 }
