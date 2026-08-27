@@ -19,7 +19,7 @@ import {
   type PaperId,
 } from '@/features/album-print/spec';
 import { ALBUM_COLORS, COVER_FONTS, DEFAULT_COLOR } from '@/features/album-editor/palette';
-import { emptyAlbum } from '@/features/album-editor/useEditorAlbum';
+import { emptyAlbum } from '@/features/album-editor/emptyAlbum';
 import { MOTIF_SHAPES } from '@/features/album-editor/motifPaths';
 import {
   EDITOR_LAYOUTS,

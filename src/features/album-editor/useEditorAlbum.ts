@@ -2,12 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-import {
-  DEFAULT_PAPER,
-  paperById,
-  spineWidth,
-  type Orientation,
-} from '@/features/album-print/spec';
+import { paperById, spineWidth } from '@/features/album-print/spec';
 import type {
   CoverElement,
   EditorAlbum,
@@ -23,7 +18,7 @@ import {
 } from '@/types/album-editor';
 import type { Photo } from '@/types/photo';
 
-import { DEFAULT_COLOR } from './palette';
+import { emptyAlbum } from './emptyAlbum';
 
 /** Número mínimo de páginas: um álbum precisa de pelo menos uma folha aberta. */
 const MIN_PAGES = 4;
@@ -33,29 +28,6 @@ const MIN_PAGES = 4;
  * Páginas entram e saem sempre de duas em duas — é como a folha é impressa.
  */
 const PAGES_PER_SHEET = 2;
-
-export function emptyAlbum(orientation: Orientation = 'portrait'): EditorAlbum {
-  return {
-    name: '',
-    orientation,
-    paper: DEFAULT_PAPER,
-    color: DEFAULT_COLOR,
-    elements: [
-      makeText({ role: 'title', text: '', size: 30, y: 62, width: 84, tracking: -3 }),
-    ],
-    back: { show: false, text: '' },
-    spine: {
-      show: true,
-      direction: 'ascending',
-      size: null,
-      offset: 50,
-      showYear: false,
-      year: '',
-      mm: null,
-    },
-    pages: Array.from({ length: 8 }, () => makePage()),
-  };
-}
 
 /**
  * Estado do editor.
