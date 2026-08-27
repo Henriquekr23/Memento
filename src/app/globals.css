@@ -282,6 +282,21 @@ html {
   padding-inline: clamp(20px, 5vw, 72px);
 }
 
+/* Régua larga: só a tela do editor usa. Uma bancada é uma ferramenta, não um
+   bloco de leitura — a medida de 1200 px existe para linha de texto, e aqui
+   ela só espremia o palco e o inspetor. Marca, linha divisória e rodapé
+   acompanham, então continua uma régua só dentro da tela. */
+.page-shell.is-wide {
+  max-width: 1640px;
+  padding-inline: clamp(16px, 3vw, 44px);
+  /* Com a régua encostando na borda da janela, a bolha de dica do último
+     controle da navegação (centrada no botão) passava da tela e abria uma
+     barra de rolagem horizontal de 9 px na página inteira. A dica é
+     decoração: ela não alarga a página. `clip` e não `hidden` — não cria
+     contêiner de rolagem. */
+  overflow-x: clip;
+}
+
 /* Cabeçalho de tela: título à esquerda, ações à direita, mesma altura em
    todas. `items-end` alinha o título grande com os botões pela base. */
 .page-head {
@@ -1795,4 +1810,1141 @@ html {
   grid-template-rows: 1fr;
   opacity: 1;
 }
+
+/* ── Editor de álbum ────────────────────────────────────────────────────
+   A tela do editor é deliberadamente sóbria: a única cor saturada nela é a do
+   próprio álbum, que entra por `--ae-accent` (escrita em linha pelo React a
+   partir da cor de capa escolhida, por contraste medido — ver `accentFor`).
+   Todo o resto sai dos tokens do Organic, como o resto do site.
+
+   As classes `.ae-*` acompanham `features/album-editor/`. Elas vivem nesta
+   camada pelo mesmo motivo das outras: utilitário do Tailwind precisa poder
+   vencer a base. */
+
+.ae {
+  --ae-canvas: var(--color-surface);
+  --ae-panel: var(--color-surface-2);
+  /* Fundo de "poço": trilho de segmentado, campo, miniatura de layout. Ele é
+     mais **fundo** que o painel nos dois temas, senão o cursor do segmentado
+     (que é `--ae-panel`) deixa de ler como peça levantada. */
+  --ae-panel-2: var(--color-neutral-100);
+  /* Trilho de deslizante e barras dos ícones de layout. */
+  --ae-track: var(--color-neutral-300);
+  --ae-line: var(--color-divider);
+  --ae-line-soft: color-mix(in srgb, var(--color-text) 7%, transparent);
+  --ae-ink: var(--color-text);
+  --ae-ink-2: color-mix(in srgb, var(--color-text) 66%, transparent);
+  --ae-ink-3: color-mix(in srgb, var(--color-text) 45%, transparent);
+
+  display: grid;
+  /* A coluna precisa ser `minmax(0, 1fr)`, e não `auto`: com `auto` a coluna
+     cresce até o min-content da barra do topo (que não quebra linha), a barra
+     e o corpo ficam mais largos que o editor e o `overflow: hidden` daqui
+     **corta** o inspetor pela metade. Era esse o bug do painel cortado. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  height: 100%;
+  background: var(--ae-canvas);
+  color: var(--ae-ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 13px;
+  overflow: hidden;
+  /* O editor mede a si mesmo. As adaptações da barra e do inspetor são
+     `@container`, não `@media`: a bancada nunca tem a largura da janela (vive
+     dentro da régua da página), então media query de viewport escondia coisa
+     tarde demais ou cedo demais. */
+  container: ae / inline-size;
+}
+/* No escuro a rampa neutra do Organic não vira — `--color-neutral-100` e
+   `--color-neutral-300` continuam creme. Usados como fundo de poço, eles
+   faziam a faixa das abas e os segmentados do inspetor virarem chapas claras
+   com texto claro por cima: ilegíveis. Aqui o poço é o papel-noite escurecido,
+   e o trilho é a própria tinta diluída. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .ae {
+    --ae-panel-2: color-mix(in srgb, #000000 30%, var(--color-surface-2));
+    --ae-track: color-mix(in srgb, var(--color-text) 22%, transparent);
+  }
+}
+:root[data-theme='dark'] .ae {
+  --ae-panel-2: color-mix(in srgb, #000000 30%, var(--color-surface-2));
+  --ae-track: color-mix(in srgb, var(--color-text) 22%, transparent);
+}
+
+.ae ::selection {
+  background: var(--ae-accent);
+  color: var(--color-on-cta);
+}
+.ae :focus-visible {
+  outline: 2px solid var(--ae-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ── barra superior ──
+   Uma linha só, que nunca quebra: cada grupo é `flex: none` e só a folga do
+   meio encolhe. Era a falta disso que fazia "Salvar na nuvem" virar três
+   linhas dentro de um botão de 32 px. */
+.ae-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: clamp(6px, 1cqi, 12px);
+  padding: 0 clamp(10px, 1.2cqi, 16px);
+  height: 56px;
+  background: var(--ae-panel);
+  border-bottom: 1px solid var(--ae-line);
+  position: relative;
+  z-index: 20;
+}
+.ae-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+  padding-right: 12px;
+  border-right: 1px solid var(--ae-line-soft);
+}
+/* Grupo das ações do produto: guias, salvar, descartar, exportar. */
+.ae-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+/* Miniatura do próprio álbum: a lombada é a sombra interna à esquerda. */
+.ae-dot {
+  width: 16px;
+  height: 20px;
+  border-radius: 1px 3px 3px 1px;
+  flex: none;
+}
+.ae-name {
+  border: 0;
+  background: transparent;
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  /* Teto e piso: o nome não pode empurrar as abas nem sumir numa tela estreita.
+     Medida em `cqi` — a régua é a bancada, não a janela. */
+  width: clamp(104px, 14cqi, 190px);
+  padding: 4px 0;
+  border-bottom: 1px solid transparent;
+}
+.ae-name::placeholder {
+  color: var(--ae-ink-3);
+  font-weight: 500;
+}
+.ae-name:hover {
+  border-bottom-color: var(--ae-line);
+}
+.ae-name:focus {
+  outline: none;
+  border-bottom-color: var(--ae-accent);
+}
+.ae-tabs {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  background: var(--ae-panel-2);
+  padding: 3px;
+  border-radius: 8px;
+}
+.ae-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 11px;
+  white-space: nowrap;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ae-ink-2);
+  transition: background 0.15s, color 0.15s;
+}
+.ae-tabs button:hover {
+  color: var(--ae-ink);
+}
+.ae-tabs button.is-on {
+  background: var(--ae-panel);
+  color: var(--ae-ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.07), 0 0 0 1px rgb(0 0 0 / 0.04);
+}
+.ae-spacer {
+  flex: 1;
+}
+.ae-meta {
+  font-size: 11.5px;
+  color: var(--ae-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+/* Na barra a ficha técnica é a única coisa que pode encolher — e sumir. */
+.ae-meta-top {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 230px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ae-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: none;
+  height: 34px;
+  padding: 0 14px;
+  white-space: nowrap;
+  border-radius: 999px;
+  font-size: 12.5px;
+  line-height: 1;
+  font-weight: 500;
+  border: 1px solid var(--ae-line);
+  background: var(--ae-panel);
+  transition: border-color 0.15s, background 0.15s;
+}
+.ae-btn:hover {
+  background: var(--ae-panel-2);
+}
+.ae-btn.is-on {
+  background: var(--ae-accent);
+  color: var(--color-on-cta);
+  border-color: transparent;
+}
+.ae-btn.is-primary {
+  background: var(--color-cta);
+  color: var(--color-on-cta);
+  border-color: transparent;
+}
+.ae-btn.is-primary:hover {
+  background: var(--color-cta-hover);
+}
+.ae-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── corpo ── */
+.ae-body {
+  display: grid;
+  /* A lateral acompanha a janela, mas dentro de um intervalo: abaixo de 264 px
+     os controles se espremem, acima de 340 px ela come o palco. */
+  grid-template-columns: minmax(0, 1fr) clamp(264px, 23vw, 340px);
+  min-height: 0;
+}
+.ae-main {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-width: 0;
+  min-height: 0;
+}
+.ae-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: clamp(16px, 3vw, 40px);
+  /* Folga extra embaixo: é onde mora a dica de folhear. */
+  padding-bottom: clamp(34px, 3vw, 44px);
+  min-height: 0;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--color-text) 7%, transparent) 1px,
+    transparent 0
+  );
+  background-size: 22px 22px;
+}
+
+/* ── páginas ── */
+.ae-page {
+  position: relative;
+  overflow: hidden;
+  flex: none;
+  background: #ffffff;
+}
+/* Papel, e não fundo branco: a folha tem grão e escurece para as bordas, o que
+   devolve a página por baixo da foto sangrada. */
+.ae-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(120% 100% at 50% 0%, #ffffff, #f3f0ea 78%, #e9e4da 100%);
+}
+.ae-slot {
+  background: transparent;
+  overflow: hidden;
+}
+.ae-slot.is-selected {
+  box-shadow: inset 0 0 0 2px var(--ae-accent);
+}
+/* Alvo de soltura: a foto arrastada da bandeja acende o quadro de baixo. */
+.ae-slot.is-over {
+  box-shadow: inset 0 0 0 3px var(--ae-accent);
+}
+/* Quadro sem foto: papel do próprio álbum com uma moldura pontilhada e o
+   ícone no meio. A zebra diagonal que estava aqui gritava mais alto que a
+   página inteira ao lado — um vazio não é um erro. */
+.ae-empty {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: color-mix(in srgb, #6b6257 60%, transparent);
+  background: rgb(0 0 0 / 0.028);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.07);
+}
+.ae-slot.is-over .ae-empty {
+  background: color-mix(in srgb, var(--ae-accent) 12%, transparent);
+}
+/* Efeito de página, desenhado por cima da foto que sangra até a borda: a
+   sombra da dobra do lado da lombada, o filete de corte nas quatro bordas e um
+   escurecimento leve na borda externa, onde o papel curva. É o que devolve a
+   leitura de "página impressa" sem precisar da margem branca — a margem branca
+   resolvia o mesmo problema apagando a foto. */
+.ae-fold {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      var(--ae-fold-in),
+      rgb(0 0 0 / 0.3),
+      rgb(0 0 0 / 0.12) 2.5%,
+      rgb(0 0 0 / 0.04) 7%,
+      transparent 15%
+    ),
+    linear-gradient(var(--ae-fold-out), rgb(0 0 0 / 0.13), transparent 6%),
+    linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.1),
+      transparent 3%,
+      transparent 95%,
+      rgb(0 0 0 / 0.12)
+    );
+}
+.ae-fold.is-left {
+  --ae-fold-in: to right;
+  --ae-fold-out: to left;
+}
+.ae-fold.is-right {
+  --ae-fold-in: to left;
+  --ae-fold-out: to right;
+}
+.ae-page-number {
+  position: absolute;
+  z-index: 2;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+}
+/* Sobre foto o número precisa de um respiro escuro atrás; sobre papel, não. */
+.ae-page-number.is-on-photo {
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.55);
+}
+
+/* ── guias de impressão ──
+   Vermelho é corte, azul é área segura, laranja é vinco: são as cores que a
+   própria gráfica usa no gabarito. Aqui elas não seguem o tema de propósito —
+   uma guia recolorida deixa de ser reconhecível para quem confere o arquivo. */
+.ae-guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ae-g-trim {
+  position: absolute;
+  outline: 1px dashed rgb(226 58 58 / 0.75);
+}
+.ae-g-safe {
+  position: absolute;
+  outline: 1px solid rgb(0 153 255 / 0.65);
+}
+.ae-g-hinge {
+  position: absolute;
+  background: repeating-linear-gradient(
+    180deg,
+    rgb(240 120 20 / 0.9) 0 5px,
+    transparent 5px 10px
+  );
+}
+
+/* ── capa desdobrada ── */
+.ae-wrap {
+  display: flex;
+  align-items: stretch;
+  flex: none;
+  box-shadow: 0 26px 60px -22px rgb(0 0 0 / 0.5), 0 2px 8px rgb(0 0 0 / 0.12);
+}
+.ae-face {
+  position: relative;
+  overflow: hidden;
+  flex: none;
+}
+.ae-spine {
+  position: relative;
+  overflow: hidden;
+  flex: none;
+  box-shadow: inset 3px 0 8px -4px rgb(0 0 0 / 0.35), inset -3px 0 8px -4px rgb(0 0 0 / 0.35);
+}
+.ae-spine-text {
+  position: absolute;
+  left: 50%;
+  white-space: nowrap;
+  transform-origin: center;
+  line-height: 1;
+}
+.ae-live {
+  touch-action: none;
+}
+.ae-snap {
+  position: absolute;
+  background: var(--ae-accent);
+  opacity: 0.9;
+  pointer-events: none;
+}
+.ae-snap-v {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+.ae-snap-h {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+/* ── elementos da capa ── */
+.ae-el {
+  position: absolute;
+  touch-action: none;
+}
+.ae-el.is-selected {
+  outline: 1px solid var(--ae-accent);
+  outline-offset: 5px;
+}
+.ae-h {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  background: var(--ae-panel);
+  border: 1.5px solid var(--ae-accent);
+  border-radius: 2px;
+  z-index: 5;
+  touch-action: none;
+}
+.ae-h-corner {
+  cursor: nwse-resize;
+}
+.ae-h-width {
+  top: 50%;
+  margin-top: -5.5px;
+  cursor: ew-resize;
+  border-radius: 999px;
+  width: 8px;
+}
+.ae-h-rot {
+  left: 50%;
+  top: -30px;
+  margin-left: -9px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--ae-accent);
+  cursor: grab;
+}
+
+/* ── livro 3d ── */
+.ae-3d-stage {
+  position: relative;
+  perspective: 2200px;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+.ae-3d-stage:active {
+  cursor: grabbing;
+}
+.ae-3d-box {
+  position: relative;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 40px 44px rgb(0 0 0 / 0.34));
+}
+.ae-3d-hint {
+  position: absolute;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--ae-ink-3);
+}
+
+/* ── folha aberta ── */
+/* Palco da folha: a perspectiva mora aqui, senão a folha que gira achata. */
+.ae-flip {
+  position: relative;
+  flex: none;
+  perspective: 2400px;
+  perspective-origin: 50% 46%;
+}
+.ae-sheet {
+  position: relative;
+  flex: none;
+  transform-style: preserve-3d;
+  box-shadow:
+    0 34px 70px -30px rgb(0 0 0 / 0.55),
+    0 4px 12px rgb(0 0 0 / 0.16);
+}
+/* Metade da folha: a unidade que gira. As duas têm exatamente a mesma
+   largura — é isso que faz a folha em movimento pousar em cima da de baixo. */
+.ae-half {
+  position: absolute;
+  top: 0;
+  display: block;
+  overflow: hidden;
+  background: #ffffff;
+}
+.ae-half-inner {
+  position: absolute;
+  top: 0;
+  display: block;
+}
+.ae-leaf {
+  position: absolute;
+  top: 0;
+  display: block;
+  transform-style: preserve-3d;
+  z-index: 4;
+  will-change: transform;
+}
+.ae-leaf-face {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  background: #ffffff;
+  backface-visibility: hidden;
+  box-shadow: 0 8px 26px -10px rgb(0 0 0 / 0.45);
+}
+.ae-leaf-shade {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+/* Faixa de folhear: só a borda externa, para não roubar o arraste de
+   enquadramento, que vive no meio da página. */
+.ae-flip-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 6;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.ae-flip-edge:active {
+  cursor: grabbing;
+}
+.ae-flip-edge.is-prev {
+  left: 0;
+}
+.ae-flip-edge.is-next {
+  right: 0;
+}
+.ae-flip-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -20px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--ae-ink-3);
+  pointer-events: none;
+}
+/* Encadernação: filete de corte e a leve concavidade do papel montado. */
+.ae-sheet-paper {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.12),
+    inset 0 0 34px -20px rgb(0 0 0 / 0.6);
+}
+/* A dobra do miolo: duas sombras que se encontram e um fio de luz no vinco.
+   É ela que faz duas fotos sangradas lado a lado lerem como uma folha aberta,
+   e não como dois retângulos encostados. */
+.ae-gutter {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 44px;
+  margin-left: -22px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(0 0 0 / 0.1) 30%,
+    rgb(0 0 0 / 0.26) 46%,
+    rgb(255 255 255 / 0.14) 50%,
+    rgb(0 0 0 / 0.26) 54%,
+    rgb(0 0 0 / 0.1) 70%,
+    transparent
+  );
+}
+.ae-preview-spread,
+.ae-preview-half {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+  display: block;
+}
+.ae-preview-spread {
+  left: 0;
+  right: 0;
+}
+.ae-preview-half {
+  width: 50%;
+}
+
+/* ── tira de folhas ── */
+.ae-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--ae-panel);
+  border-top: 1px solid var(--ae-line);
+  overflow-x: auto;
+}
+.ae-thumb {
+  flex: none;
+  position: relative;
+  width: clamp(58px, 6vw, 82px);
+  aspect-ratio: 3 / 2;
+  border: 1px solid var(--ae-line);
+  border-radius: 3px;
+  overflow: hidden;
+  background: #ffffff;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.ae-thumb:hover {
+  transform: translateY(-2px);
+}
+.ae-thumb.is-on {
+  border-color: var(--ae-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ae-accent) 26%, transparent);
+}
+.ae-thumb-label {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 9px;
+  color: var(--ae-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── grade de folhas ── */
+.ae-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 20px;
+  width: 100%;
+  align-self: start;
+}
+.ae-grid-cell {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 6px 18px -8px rgb(0 0 0 / 0.5);
+  outline: 1px solid var(--ae-line);
+  outline-offset: 1px;
+}
+.ae-grid-cell.is-on {
+  outline: 2px solid var(--ae-accent);
+}
+.ae-grid-add {
+  border: 1.5px dashed var(--color-neutral-400);
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  color: var(--ae-ink-3);
+}
+
+/* ── inspetor ── */
+.ae-inspector {
+  background: var(--ae-panel);
+  border-left: 1px solid var(--ae-line);
+  overflow-y: auto;
+  /* A lateral nunca rola de lado: controle que não cabe encolhe ou empilha. */
+  overflow-x: hidden;
+  min-height: 0;
+  min-width: 0;
+  scrollbar-gutter: stable;
+}
+.ae-group {
+  border-bottom: 1px solid var(--ae-line-soft);
+}
+/* O último bloco não fecha com linha: uma divisória precisa ter algo do outro
+   lado. E o painel termina com folga, senão o último controle encosta na
+   borda de baixo. */
+.ae-group:last-child {
+  border-bottom: 0;
+  padding-bottom: 24px;
+}
+.ae-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 16px 10px;
+}
+.ae-group-head h3 {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ae-ink-3);
+}
+.ae-group-body {
+  padding: 0 16px 18px;
+  display: grid;
+  gap: 12px;
+}
+/* Uma nota explica o controle logo acima dela — ela não é irmã dele, é rodapé
+   dele. Encostada, a leitura é "isto pertence àquilo"; a 12 px de distância,
+   igual à distância entre dois controles, ela flutuava sozinha. */
+.ae-group-body > .ae-note,
+.ae-group-body > .ae-warn {
+  margin-top: -5px;
+}
+.ae-row {
+  display: grid;
+  grid-template-columns: clamp(64px, 34%, 96px) 1fr;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+}
+.ae-row-label {
+  font-size: 12px;
+  color: var(--ae-ink-2);
+  display: flex;
+  flex-direction: column;
+}
+.ae-row-label em {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--ae-ink-3);
+}
+.ae-row-control {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Controle embaixo do rótulo: é o que dá largura inteira a um segmentado ou a
+   um deslizante numa lateral de 264 px. Um interruptor estreito não convida ao
+   arraste — vira alvo de mira. */
+.ae-row.is-stack {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 7px;
+  align-items: stretch;
+}
+.ae-row.is-stack .ae-row-label {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ae-input {
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid var(--ae-line);
+  border-radius: 6px;
+  background: var(--ae-panel-2);
+  font: inherit;
+  font-size: 12.5px;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ae-input:focus {
+  outline: none;
+  border-color: var(--ae-accent);
+  background: var(--ae-panel);
+}
+textarea.ae-input {
+  resize: vertical;
+  min-height: 60px;
+  line-height: 1.45;
+}
+/* Segmentado com cursor deslizante: é um interruptor de verdade — o cursor
+   gruda no ponteiro e anda em pixels, e só assenta na casa mais próxima quando
+   o botão é solto. Enquanto arrasta, a transição sai do caminho: uma animação
+   de 180 ms atrás do dedo é exatamente a sensação de controle que não obedece. */
+.ae-seg {
+  position: relative;
+  display: flex;
+  gap: 0;
+  background: var(--ae-panel-2);
+  padding: 3px;
+  border-radius: 9px;
+  border: 1px solid var(--ae-line);
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+.ae-seg.is-dragging {
+  cursor: grabbing;
+}
+.ae-seg-knob {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  border-radius: 6px;
+  background: var(--ae-panel);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.16), 0 0 0 1px rgb(0 0 0 / 0.05);
+  transition: transform 0.18s cubic-bezier(0.22, 0.61, 0.36, 1);
+  pointer-events: none;
+}
+.ae-seg.is-dragging .ae-seg-knob {
+  transition: none;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2), 0 0 0 1px rgb(0 0 0 / 0.06);
+}
+.ae-seg.is-full {
+  width: 100%;
+}
+.ae-seg button {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  /* Altura de alvo de arraste, não de clique de precisão. */
+  min-height: 26px;
+  padding: 6px 7px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  color: var(--ae-ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: inherit;
+  transition: background 0.13s, color 0.13s;
+}
+.ae-seg button:hover {
+  color: var(--ae-ink);
+}
+.ae-seg button.is-on {
+  color: var(--ae-ink);
+  font-weight: 500;
+}
+.ae-slider {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+}
+.ae-slider input {
+  flex: 1;
+  min-width: 0;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--ae-accent) 0 var(--ae-fill, 0%),
+    var(--ae-track) var(--ae-fill, 0%) 100%
+  );
+  cursor: pointer;
+}
+.ae-slider input::-webkit-slider-thumb {
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: var(--ae-panel);
+  border: 1.5px solid var(--ae-accent);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+}
+.ae-slider input::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: var(--ae-panel);
+  border: 1.5px solid var(--ae-accent);
+}
+.ae-slider output {
+  font-size: 11px;
+  color: var(--ae-ink-3);
+  font-variant-numeric: tabular-nums;
+  width: 44px;
+  text-align: right;
+}
+.ae-swatches {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
+}
+.ae-swatches button {
+  aspect-ratio: 1;
+  border-radius: 5px;
+  border: 1px solid rgb(0 0 0 / 0.1);
+  position: relative;
+  transition: transform 0.13s;
+}
+.ae-swatches button:hover {
+  transform: scale(1.09);
+}
+.ae-swatches button.is-on {
+  box-shadow: 0 0 0 2px var(--ae-panel), 0 0 0 3.5px var(--ae-accent);
+}
+.ae-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.ae-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border: 1px solid var(--ae-line);
+  border-radius: 999px;
+  font-size: 11.5px;
+  color: var(--ae-ink-2);
+  transition: border-color 0.13s, color 0.13s;
+}
+.ae-chip:hover {
+  color: var(--ae-ink);
+}
+.ae-chip.is-on {
+  background: var(--ae-ink);
+  color: var(--color-bg);
+  border-color: transparent;
+}
+.ae-layouts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.ae-layouts button {
+  aspect-ratio: 3 / 4;
+  border: 1px solid var(--ae-line);
+  border-radius: 6px;
+  background: var(--ae-panel-2);
+  padding: 5px;
+  display: grid;
+  gap: 2px;
+  transition: border-color 0.13s, background 0.13s, transform 0.13s;
+}
+.ae-layouts button:hover {
+  border-color: color-mix(in srgb, var(--ae-accent) 50%, var(--ae-line));
+  transform: translateY(-1px);
+}
+.ae-layouts button.is-on {
+  border-color: var(--ae-accent);
+  background: var(--ae-panel);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ae-accent) 22%, transparent);
+}
+/* Escolha de quadro sem precisar acertar o clique na página. */
+.ae-frames {
+  display: flex;
+  gap: 5px;
+  width: 100%;
+}
+.ae-frames button {
+  flex: 1;
+  min-height: 28px;
+  border: 1px solid var(--ae-line);
+  border-radius: 7px;
+  background: var(--ae-panel-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ae-ink-2);
+  transition: border-color 0.13s, background 0.13s, color 0.13s;
+}
+.ae-frames button.is-on {
+  border-color: var(--ae-accent);
+  background: var(--ae-panel);
+  color: var(--ae-ink);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ae-accent) 22%, transparent);
+}
+.ae-layouts i {
+  background: var(--ae-track);
+  border-radius: 1px;
+  display: block;
+}
+.ae-layouts button.is-on i {
+  background: var(--ae-accent);
+}
+.ae-tray {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+.ae-tray button {
+  position: relative;
+  display: block;
+  border-radius: 6px;
+  cursor: grab;
+}
+.ae-tray button:active {
+  cursor: grabbing;
+}
+.ae-tray img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+  border: 1px solid var(--ae-line);
+  transition: transform 0.13s, box-shadow 0.13s;
+}
+.ae-tray button:hover img {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px -6px rgb(0 0 0 / 0.5);
+}
+/* Foto já colocada: um ponto, e não a foto inteira acesa. O realce forte é do
+   quadro selecionado — dois realces fortes competindo não informam nada. */
+.ae-tray button.is-on img {
+  opacity: 0.55;
+}
+.ae-tray-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--ae-accent);
+  box-shadow: 0 0 0 2px var(--ae-panel);
+}
+.ae-chip.is-file {
+  cursor: pointer;
+}
+.ae-note {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ae-ink-3);
+}
+.ae-warn {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: var(--color-accent-200);
+  color: var(--color-accent-800);
+}
+.ae-danger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #b0342f;
+  padding: 6px 0;
+}
+.ae-danger:hover {
+  text-decoration: underline;
+}
+
+/* ── estado vazio ── */
+.ae-blank {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  text-align: center;
+  max-width: 42ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ae *,
+  .ae *::before,
+  .ae *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Abaixo disto o inspetor não cabe ao lado do palco. Some por enquanto —
+   virar folha inferior (bottom sheet) é a próxima parada, não um `display:none`
+   definitivo. A medida é a da bancada (`@container`), não a da janela: o editor
+   vive dentro da régua da página e é sempre mais estreito que ela. */
+@container ae (max-width: 860px) {
+  .ae-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ae-inspector {
+    display: none;
+  }
+}
+
+/* ── barra do editor em bancada estreita ──
+   A ordem em que as coisas somem: a ficha técnica, depois o rótulo das abas,
+   depois o rótulo dos botões. O ícone e a ação continuam ali. Os limiares saem
+   da soma real dos grupos: marca 225 + abas 311 + ficha 222 + ações ~300. */
+.ae-btn.is-icon {
+  width: 34px;
+  padding: 0;
+}
+@container ae (max-width: 1140px) {
+  .ae-meta-top {
+    display: none;
+  }
+}
+@container ae (max-width: 900px) {
+  .ae-tab-text {
+    display: none;
+  }
+  .ae-tabs button {
+    width: 34px;
+    padding: 0;
+  }
+}
+@container ae (max-width: 720px) {
+  .ae-btn-text {
+    display: none;
+  }
+  .ae-btn {
+    padding: 0 11px;
+  }
+}
+@container ae (max-width: 560px) {
+  .ae-brand {
+    padding-right: 0;
+    border-right: 0;
+  }
+  .ae-name {
+    display: none;
+  }
+}
+
+/* Fecha `@layer components`, aberto lá em cima. */
 }

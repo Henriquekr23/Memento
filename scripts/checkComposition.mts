@@ -1,7 +1,7 @@
 /**
  * Asserts da serialização da composição (Fase 2).
  *
- * Fora do `tsconfig` do app, como o `checkPdfExport`. Roda com:
+ * Fora do `tsconfig` do app, como o `checkPrintExport`. Roda com:
  *   npx tsx scripts/checkComposition.mts
  *
  * O que está sendo protegido: um álbum salvo hoje precisa abrir amanhã, mesmo
@@ -13,87 +13,166 @@ import assert from 'node:assert/strict';
 
 import {
   COMPOSITION_VERSION,
-  EMPTY_COMPOSITION,
   parseComposition,
+  photoIdsInComposition,
   pruneComposition,
 } from '../src/features/album-save/composition.ts';
 
-// ── Ida e volta ────────────────────────────────────────────────────────────
-const full = {
-  version: COMPOSITION_VERSION,
-  layoutOverrides: { 'page-1': 'quad' },
-  captions: { 'page-1': 'Primeiro dia' },
-  photoCaptions: { a: 'Chegada' },
-  dayNotes: { '2026-05-12': 'Choveu a manhã inteira e a gente foi assim mesmo.' },
-  adjustments: { a: { focusX: 40, focusY: 60, zoom: 1.4, rotation: -3 } },
-  placements: { a: { x: 10, y: 12, w: 50, h: 40, z: 7 } },
-  composeModes: { 'page-1': 'free' },
-  groupKeys: { a: 'inserted:x1' },
-  stories: [{ id: 's1', anchorPhotoId: 'a', title: 'Dia 1', body: 'Chovia.' }],
-  emptyPages: [{ id: 'e1', anchorPhotoId: 'end' }],
-  theme: { cover: 'navy', paper: 'kraft', frame: 'corners', font: 'sans' },
-  autoTilt: false,
+const album = {
+  name: 'Grécia',
+  orientation: 'portrait',
+  paper: 'c250',
+  color: 'cobalt',
+  elements: [
+    {
+      id: 't1',
+      kind: 'text',
+      role: 'title',
+      text: 'GRÉCIA',
+      x: 50,
+      y: 62,
+      width: 84,
+      size: 30,
+      font: 'anton',
+      align: 'center',
+      uppercase: true,
+      tracking: -3,
+      leading: 0.9,
+      rotation: 0,
+      color: null,
+    },
+    {
+      id: 'm1',
+      kind: 'motif',
+      shape: 'eye',
+      x: 50,
+      y: 30,
+      size: 58,
+      rotation: 0,
+      color: null,
+    },
+  ],
+  back: { show: true, text: 'Onze dias.' },
+  spine: {
+    show: true,
+    direction: 'ascending',
+    size: null,
+    offset: 50,
+    showYear: true,
+    year: '2026',
+    mm: null,
+  },
+  pages: [
+    {
+      id: 'p1',
+      layout: 'full',
+      spread: false,
+      heading: '',
+      body: '',
+      slots: [
+        { photoId: 'a', zoom: 1.4, offsetX: 5, offsetY: -3 },
+        { photoId: null, zoom: 1, offsetX: 0, offsetY: 0 },
+        { photoId: null, zoom: 1, offsetX: 0, offsetY: 0 },
+        { photoId: null, zoom: 1, offsetX: 0, offsetY: 0 },
+      ],
+    },
+    {
+      id: 'p2',
+      layout: 'duoH',
+      spread: false,
+      heading: 'Oia',
+      body: 'Subimos antes do sol.',
+      slots: [
+        { photoId: 'b', zoom: 1, offsetX: 0, offsetY: 0 },
+        { photoId: 'c', zoom: 1, offsetX: 0, offsetY: 0 },
+        { photoId: null, zoom: 1, offsetX: 0, offsetY: 0 },
+        { photoId: null, zoom: 1, offsetX: 0, offsetY: 0 },
+      ],
+    },
+  ],
 };
 
+const full = { version: COMPOSITION_VERSION, album };
+
+// ── Ida e volta ────────────────────────────────────────────────────────────
 const roundTrip = parseComposition(JSON.parse(JSON.stringify(full)));
 assert.deepEqual(roundTrip, full, 'ida e volta pelo JSON deve preservar tudo');
 
 // ── Entradas quebradas não derrubam o álbum ────────────────────────────────
-assert.deepEqual(parseComposition(null), EMPTY_COMPOSITION);
-assert.deepEqual(parseComposition('nada disso'), EMPTY_COMPOSITION);
-assert.deepEqual(parseComposition([1, 2, 3]), EMPTY_COMPOSITION);
+for (const broken of [null, 'nada disso', [1, 2, 3], undefined, 42]) {
+  const parsed = parseComposition(broken);
+  assert.equal(parsed.version, COMPOSITION_VERSION);
+  assert.ok(parsed.album.pages.length > 0, 'sempre sobra álbum para abrir');
+}
 
 const dirty = parseComposition({
-  layoutOverrides: { p: 'inexistente' },
-  composeModes: { p: 'diagonal' },
-  theme: { cover: 'ouro', paper: 'white' },
-  adjustments: { a: { zoom: 'muito' } },
-  stories: [{ semId: true }, { id: 'ok' }],
-  dayNotes: { '2026-05-12': 'vale', '2026-05-13': 42 },
-  autoTilt: 'talvez',
+  version: 2,
+  album: {
+    color: 'ouro',
+    paper: 'papel-de-seda',
+    orientation: 'diagonal',
+    elements: [
+      { kind: 'text', role: 'free', text: 'ok', font: 'comic', align: 'justify', zoom: 9 },
+      { kind: 'motif', shape: 'triângulo', size: 'grande' },
+      'isto não é um elemento',
+    ],
+    spine: { direction: 'para-tras', offset: 900, mm: 'grossa' },
+    pages: [{ layout: 'inexistente', slots: [{ photoId: 42 }] }],
+  },
 });
 
-assert.deepEqual(dirty.layoutOverrides, {}, 'layout desconhecido é descartado');
-assert.deepEqual(dirty.composeModes, {}, 'modo desconhecido é descartado');
-assert.equal(dirty.theme.cover, 'leather', 'valor de tema inválido cai no padrão');
-assert.equal(dirty.theme.paper, 'white', 'valor de tema válido sobrevive');
-assert.equal(dirty.adjustments.a.zoom, 1, 'número inválido vira o padrão');
-assert.equal(dirty.stories.length, 1, 'história sem id é descartada');
-assert.equal(dirty.stories[0].title, '', 'campo ausente vira string vazia');
-assert.equal(dirty.autoTilt, true, 'booleano inválido cai no padrão');
-assert.deepEqual(
-  dirty.dayNotes,
-  { '2026-05-12': 'vale' },
-  'diário que não é texto é descartado, o resto sobrevive',
+assert.equal(dirty.album.color, 'sky', 'cor desconhecida cai no padrão');
+assert.equal(dirty.album.paper, 'c170', 'papel desconhecido cai no padrão');
+assert.equal(dirty.album.orientation, 'portrait', 'orientação desconhecida cai no padrão');
+assert.equal(dirty.album.pages[0].layout, 'full', 'layout desconhecido cai no padrão');
+assert.equal(dirty.album.pages[0].slots.length, 4, 'a página sempre tem quatro quadros');
+assert.equal(dirty.album.pages[0].slots[0].photoId, null, 'id que não é texto vira vazio');
+assert.equal(dirty.album.spine.direction, 'ascending', 'direção desconhecida cai no padrão');
+assert.equal(dirty.album.spine.offset, 100, 'porcentagem fora da faixa é grampeada');
+assert.equal(dirty.album.spine.mm, null, 'espessura que não é número vira calculada');
+
+const textElement = dirty.album.elements.find((el) => el.kind === 'text' && el.text === 'ok');
+assert.ok(textElement, 'elemento de texto válido sobrevive');
+assert.equal(textElement.font, 'anton', 'fonte desconhecida cai no padrão');
+assert.equal(textElement.align, 'center', 'alinhamento desconhecido cai no padrão');
+
+assert.ok(
+  dirty.album.elements.some((el) => el.kind === 'text' && el.role === 'title'),
+  'álbum sem título ganha um: é ele que a lombada reflete',
 );
-assert.deepEqual(
-  parseComposition({}).dayNotes,
-  {},
-  'álbum salvo antes do diário abre sem ele',
+assert.ok(
+  dirty.album.elements.every((el) => typeof el === 'object'),
+  'entrada que não é objeto é descartada',
 );
 
-// ── Poda: o que aponta para foto que não foi salva ─────────────────────────
-const pruned = pruneComposition(parseComposition(full), ['b']);
-assert.deepEqual(pruned.photoCaptions, {}, 'legenda de foto ausente sai');
-assert.deepEqual(pruned.adjustments, {}, 'ajuste de foto ausente sai');
-assert.deepEqual(pruned.groupKeys, {}, 'grupo de foto ausente sai');
+// ── Álbum da versão 1 abre, ainda que sem a composição antiga ──────────────
+const legacy = parseComposition({
+  version: 1,
+  layoutOverrides: { 'page-1': 'quad' },
+  theme: { cover: 'navy' },
+});
+assert.equal(legacy.version, COMPOSITION_VERSION, 'a versão é atualizada na leitura');
+assert.ok(legacy.album.pages.length > 0, 'álbum antigo abre com páginas vazias, não em branco');
+
+// ── Poda: quadro que aponta para foto não salva fica vazio ─────────────────
+assert.deepEqual(
+  photoIdsInComposition(full).sort(),
+  ['a', 'b', 'c'],
+  'as fotos usadas são exatamente as dos quadros',
+);
+
+const pruned = pruneComposition(parseComposition(full), ['a']);
+assert.equal(pruned.album.pages[0].slots[0].photoId, 'a', 'foto salva permanece no quadro');
+assert.equal(pruned.album.pages[1].slots[0].photoId, null, 'foto ausente sai do quadro');
 assert.equal(
-  pruned.stories[0].anchorPhotoId,
-  'end',
-  'âncora perdida vai para o fim em vez de sumir',
+  pruned.album.pages[0].slots[0].zoom,
+  1.4,
+  'o enquadramento do quadro que ficou não é mexido',
 );
-assert.deepEqual(
-  pruned.captions,
-  { 'page-1': 'Primeiro dia' },
-  'legenda de página não depende de foto e permanece',
+assert.equal(
+  pruned.album.pages[1].heading,
+  'Oia',
+  'texto da página sobrevive à poda — nada escrito pelo usuário se perde',
 );
-assert.deepEqual(
-  pruned.dayNotes,
-  full.dayNotes,
-  'diário do dia sobrevive à poda — texto do usuário não se perde',
-);
-
-const kept = pruneComposition(parseComposition(full), ['a']);
-assert.equal(kept.stories[0].anchorPhotoId, 'a', 'âncora existente é preservada');
 
 console.log('composition: todos os asserts passaram');

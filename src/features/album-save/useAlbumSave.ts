@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useRef, useState } from 'react';
 
-import type { AlbumBookState } from '@/features/album-book/useAlbumBook';
+import type { EditorAlbum } from '@/types/album-editor';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import type { Photo } from '@/types/photo';
@@ -14,7 +14,7 @@ import { snapshotComposition } from './snapshot';
 export interface SaveInput {
   title: string;
   photos: readonly Photo[];
-  book: AlbumBookState;
+  album: EditorAlbum;
 }
 
 /**
@@ -48,7 +48,7 @@ export function useAlbumSave() {
         const result = await saveAlbumToCloud({
           title: input.title,
           photos: input.photos,
-          composition: snapshotComposition(input.book),
+          composition: snapshotComposition(input.album),
           onProgress: setProgress,
         });
 

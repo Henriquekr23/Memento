@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 
-import { pdfAlbumExporter } from './pdf/pdfExporter';
+import { printAlbumExporter } from './pdf/printExporter';
 import type { AlbumExporter, AlbumSnapshot, ExportProgress } from './types';
 
 /**
@@ -14,7 +14,7 @@ import type { AlbumExporter, AlbumSnapshot, ExportProgress } from './types';
  * público vira mais uma entrada aqui, e nada mais muda.
  */
 export const EXPORTERS = {
-  pdf: pdfAlbumExporter,
+  pdf: printAlbumExporter,
 } as const satisfies Record<string, AlbumExporter>;
 
 export type ExportKind = keyof typeof EXPORTERS;

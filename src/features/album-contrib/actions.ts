@@ -256,10 +256,11 @@ async function ownedContribution(
  * para ele. É essa decisão de caminho, lá no schema, que faz aprovar custar uma
  * consulta em vez de um download e um reupload.
  *
- * A foto entra no fim da fila (`position`), mas **não** aparece no fim do
- * álbum: a paginação agrupa por `taken_at`, então uma foto do dia 2 cai no dia
- * 2 sozinha. A `composition` não é tocada — ela guarda ajustes por foto, e uma
- * foto recém-chegada ainda não tem nenhum.
+ * A foto entra no fim da fila (`position`) e a `composition` não é tocada: no
+ * modelo do editor, quadro vazio é quadro vazio, e uma foto que ninguém
+ * colocou em página nenhuma ainda não tem lugar. Ela chega na bandeja, com a
+ * data lida do arquivo, e o dono decide onde vai. Escrever a foto numa página
+ * por conta própria seria mexer na composição de alguém sem pedir.
  */
 export async function approveContribution(
   contributionId: string,

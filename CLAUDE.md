@@ -33,27 +33,24 @@ Não há framework de teste instalado. Verificação de funções puras é feita
 scripts avulsos rodados via `tsx` (não fazem parte do `tsconfig`/build):
 
 ```bash
-npx tsx scripts/checkComposition.mts     # ida/volta da composição por JSON, entradas corrompidas, poda de chaves órfãs
+npx tsx scripts/checkComposition.mts     # ida/volta da composição por JSON, entradas corrompidas, migração da v1, poda de quadros órfãos
+npx tsx scripts/checkPrintSpec.mts       # geometria de impressão: formato, sangria, lombada, corpo do texto
 
 # Supabase (exige conta de verdade; apaga o álbum de teste no fim):
 MEMENTO_EMAIL=... MEMENTO_PASSWORD=... npx tsx scripts/checkSupabaseSave.mts
-
-# PDF (exige dependência nativa não versionada, instalar sob demanda):
-npm i --no-save @napi-rs/canvas tsx
-npx tsx scripts/checkPdfExport.mts ./fotos album.pdf          # modo alinhado
-npx tsx scripts/checkPdfExport.mts ./fotos livre.pdf livre    # papel escuro, cantoneiras, fotos soltas
 ```
 
 O checklist de verificação antes de considerar algo pronto: `npx tsc --noEmit`
 → `npm run lint` → `npm run build` → os scripts acima quando a mudança tocar
-paginação, geometria do livro, composição ou PDF.
+geometria de impressão, composição ou PDF.
 
 ## Arquitetura
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 · `exifr` (EXIF)
-· `@dnd-kit` (arrastar) · `@supabase/ssr` + `@supabase/supabase-js` (Fase 2).
-Sete dependências de produção — é para continuar assim; PDF é gerado à mão,
-sem biblioteca.
+· `@dnd-kit` (arrastar na grade) · `@supabase/ssr` + `@supabase/supabase-js`
+(Fase 2). Sete dependências de produção — é para continuar assim; PDF é gerado
+à mão, sem biblioteca, e o editor não trouxe nenhuma (ícones, arraste e o livro
+3D são código local).
 
 ```
 src/
@@ -61,99 +58,109 @@ src/
 │                            # /albums, /entrar, /conta, /album/[id]
 ├── features/                # um módulo por funcionalidade, ver abaixo
 ├── components/              # ConfirmDialog, Logo, SiteNav, SiteFooter, Tooltip
-├── lib/                     # funções puras (paginate, sortPhotos, format, safeNext) + lib/supabase/
+├── lib/                     # funções puras (sortPhotos, format, safeNext) + lib/supabase/
 ├── proxy.ts                 # o antigo middleware.ts — renomeado no Next 16, não recriar middleware.ts
-└── types/                   # Photo, PhotoExif, Album, PageLayout
+└── types/                   # Photo, PhotoExif, EditorAlbum e o resto do modelo do editor
 ```
 
 Features relevantes: `exif-reader` (parseExif, nunca lança), `album-builder`
-(`useAlbum` = estado da lista de fotos), `album-book` (o livro 3D, ver
-abaixo), `album-style` (temas de capa/papel/moldura/tipografia), `album-export`
-(contrato `AlbumExporter` + `pdf/`), `auth` e `album-save` (Fase 2, ver
-abaixo), `i18n` (pt/en via localStorage), `theme` (claro/escuro via
-`data-theme` no `<html>`, sem estado React).
+(`useAlbum` = o **acervo**: importação, EXIF, ordem cronológica),
+`album-print` (a régua de impressão, em milímetros), `album-editor` (o editor
+inteiro, ver abaixo), `album-export` (contrato `AlbumExporter` + `pdf/`), `auth`
+e `album-save` (Fase 2, ver abaixo), `i18n` (pt/en via localStorage), `theme`
+(claro/escuro via `data-theme` no `<html>`, sem estado React).
 
-O visual é o design system **Organic** (papel areia, acento terracota, cantos
-de 8/16/28px e controles pequenos em pílula), portado de `_ds/organic/` para os
-tokens no topo de `globals.css`. Ele substituiu o Classical (papel cinza,
-acento dourado, cantos de 2/4/7px, tipografia serifada) — nenhum componente
-inventa cor, fonte ou espaçamento fora dali. A landing (`features/landing/`) é
-a única tela com seções que sangram até a borda da janela: barra fixa que ganha
-fundo ao rolar, herói com foto e parallax (`useHeroScroll`), "antes e depois",
-passos, recursos e as perguntas frequentes abertas no corpo da página
-(`LandingFaq`, mesma lista de `features/faq/copy.ts`). A bolha flutuante de FAQ
-continua servindo as telas internas, e não aparece na landing.
+O visual continua sendo o design system **Organic** (papel areia, acento
+terracota, cantos de 8/16/28px e controles pequenos em pílula), nos tokens do
+topo de `globals.css` — nenhum componente inventa cor, fonte ou espaçamento
+fora dali. As classes `.ae-*` do editor vivem na mesma `@layer components` e
+lêem os mesmos tokens; a única cor saturada da tela do editor é `--ae-accent`,
+escrita em linha a partir da cor de capa escolhida.
 
-### `album-book/` — divisão por responsabilidade
+### `album-editor/` — divisão por responsabilidade
+
+O editor substituiu o antigo `album-book/`, em que as páginas eram *derivadas*
+da ordem da lista de fotos. Ali não havia onde pendurar capa editável, lombada
+ou área segura em milímetros: agora a composição é explícita — cada quadro
+guarda o id de uma foto. A ordem cronológica não sumiu, virou o **estado
+inicial** (`fillChronologically`), que é o que a pessoa vê antes de mexer em
+qualquer coisa.
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `AlbumBook.tsx` | orquestra: estado, arraste de fotos, os pedaços abaixo |
-| `BookStage.tsx` | o livro: perspectiva, folha girando, gesto de folhear |
-| `BookToolbar.tsx` / `PageStrip.tsx` / `PhotoTray.tsx` | navegação, tira de páginas, depósito |
-| `BookPage.tsx` / `PhotoSlot.tsx` / `StoryPage.tsx` / `DayNote.tsx` | conteúdo de uma página |
-| `usePageTurn.ts` | **só** navegação (em que spread estamos, como a folha se move) |
-| `useAlbumBook.ts` | **só** conteúdo (layouts, posições, textos, tema) |
-| `bookGeometry.ts` | função pura: dado o spread e a virada, o que aparece onde |
+| `AlbumEditor.tsx` | orquestra: abas, palco, escala, teclado, os pedaços abaixo |
+| `useEditorAlbum.ts` | **só** a composição (capa, lombada, páginas, quadros) |
+| `CoverWrap.tsx` | o desdobre completo: contracapa · lombada · capa |
+| `Book3D.tsx` | o álbum como objeto, orbitável |
+| `PageView.tsx` / `PageContent.tsx` | a página e o conteúdo dela |
+| `CoverElementView.tsx` | um elemento da capa, com arraste e alças |
+| `PrintGuides.tsx` | sangria, corte, área segura e vinco — por lado |
+| `CoverInspector.tsx` / `PagesInspector.tsx` | os controles, sem estado próprio |
+| `palette.ts` / `motifPaths.ts` / `copy.ts` | cores, grafismos e textos |
 
-`usePageTurn` e `useAlbumBook` foram separados de propósito: têm ritmos
-diferentes (um muda a cada frame do arraste, o outro a cada edição do
-usuário) — não voltar a juntá-los.
+O acervo (`useAlbum`) e a composição (`useEditorAlbum`) são separados de
+propósito: um sabe *de onde a foto veio*, o outro sabe *onde ela está*. Não
+voltar a juntá-los — foi o que permitiu trocar a montagem inteira sem tocar na
+leitura de EXIF.
 
 ### Decisões arquiteturais que não devem ser desfeitas sem motivo
 
-1. **A ordem da lista de fotos é a fonte de verdade da sequência.** Páginas
-   são derivadas dela (`lib/paginate.ts`), nunca armazenadas.
-2. **Inserções (páginas de história) são ancoradas no id de uma foto**, não na
-   chave da página — a foto é a única coisa estável quando o layout muda ou o
-   usuário reordena. `STORY_ANCHOR_START`/`STORY_ANCHOR_END` são âncoras
-   especiais para começo/fim do álbum.
-3. **Nada que o usuário criou pode sumir.** Remover uma página manda as fotos
-   de volta para o depósito (não apaga); uma inserção com âncora perdida vai
-   para o fim do álbum em vez de desaparecer.
-4. **Soltar foto sobre foto troca as duas, nunca insere** (inserir empurraria
-   o resto e remontaria as páginas seguintes).
-5. **Geometria do livro é função pura** (`bookGeometry.ts`) — testável sem
-   navegador; é a parte que mais quebra ao mexer no visual.
-6. **Zero requisição a terceiros, em execução e no build.** As fontes
-   (`Bricolage Grotesque` para título, `Figtree` para texto) são `.woff2`
-   versionados em `src/app/fonts/` carregados via `next/font/local` — **nunca
-   volte para `next/font/google`**, que baixa arquivos durante o build e quebra
-   sem rede; o `styles.css` original do design system abre com um `@import` do
-   Google Fonts pelo mesmo motivo, e ele também não entra. Vale para imagem: a
-   foto do herói é `public/hero.jpg`, versionada, não um link de banco de
-   imagens. A CSP (`connect-src 'self'`, `font-src 'self'`, `img-src 'self'`)
-   faz o navegador garantir isso.
-7. **O PDF redesenha a página num canvas, não fotografa o DOM.** Em
-   `album-export/pdf/drawPage.ts` a régua é `unit` = 1px de tela do livro:
-   todo número ali espelha o Tailwind de `BookPage`/`PhotoSlot` (`px-5` →
-   `20 * unit`). Mexeu no visual de um, confira o outro. `pdfWriter.ts`
-   empilha os JPEGs num PDF à mão (filtro `DCTDecode`, sem recompressão).
-8. **`resolveAlbumPalette` é a única ponte entre tema (CSS custom properties)
-   e canvas** — o canvas não tem cascata CSS. Tema novo = editar listas em
-   `album-style/theme.ts`, nunca tocar componente.
-9. **As classes do design system (`.btn`, `.input`, `.card`, `.seg`, `.kicker`,
-   `.page-shell`, `.field`, `.hero`, `.nav-bar`, etc.) vivem em `@layer
-   components` dentro de `globals.css`.** CSS fora de camada vence CSS dentro de uma — soltas, elas
-   perdiam para utilitários do Tailwind (`className="btn hidden sm:inline-flex"`
-   não escondia nada). Não tirar nada dessa camada.
-10. **`useIsNarrow` (`max-width: 767px`) ≠ `useIsTouch` (`hover: none`).**
-    Toque não é largura: controles que só aparecem no hover (alças de foto,
-    pílula de layout) usam `useIsTouch`, não breakpoint — um laptop touch é
-    largo e ainda precisa das alças visíveis.
-11. **Movimento de mouse não passa pelo React na landing** — variáveis CSS
+1. **A composição é dado, não derivação.** Cada `PhotoFrame` guarda `photoId`.
+   A ordem cronológica preenche os quadros vazios na chegada das fotos e nunca
+   desmancha o que já foi montado à mão.
+2. **Coordenadas ancoradas na área final, não no arquivo com sangria.**
+   `x`/`y` de um elemento de capa são % do retângulo de corte. Medir a partir
+   do arquivo deixaria "centralizado" 2,5 mm fora do centro impresso.
+3. **Guias de impressão por lado** (`PrintGuides`, `bleed: {top,right,…}`). A
+   capa não sangra do lado da lombada, a contracapa não sangra do outro, e a
+   lombada não sangra em lado nenhum — ali é dobra, não corte. Guia desenhada
+   igual nos quatro lados mente sobre onde a faca passa.
+4. **Nada que o usuário criou pode sumir.** Trocar de layout não apaga a foto
+   do quadro 4: a página guarda sempre `MAX_SLOTS` quadros. Remover uma folha
+   remove as duas páginas dela; a foto continua no acervo.
+5. **`Slot` dentro de `PageContent` é função, não componente.** Chamada como
+   `slot(0, style)`. Virando `<Slot />`, o React remonta o `<img>` a cada
+   render e o arraste de enquadramento pisca. Já foi corrigido uma vez.
+6. **A geometria de impressão é função pura** (`album-print/spec.ts`),
+   verificada por `scripts/checkPrintSpec.mts`. Toda medida é milímetro, e
+   arredondada — `5.72 - 2` em ponto flutuante vira teto de controle e limiar
+   de aviso na tela.
+7. **Zero requisição a terceiros, em execução e no build.** As fontes
+   (`Bricolage Grotesque` e `Figtree` para a interface; `Anton`,
+   `Archivo Black`, `Bebas Neue`, `Instrument Serif`, `Space Grotesk` e
+   `DM Sans` para a capa) são `.woff2` versionados em `src/app/fonts/`,
+   carregados por `next/font/local` — **nunca voltar para `next/font/google`**,
+   que baixa arquivos durante o build e quebra sem rede, nem para o `@import`
+   do Google Fonts. Vale para imagem: a foto do herói é `public/hero.jpg`,
+   versionada. A CSP (`connect-src 'self'`, `font-src 'self'`, `img-src
+   'self'`) faz o navegador garantir isso.
+8. **O PDF redesenha a página num canvas, em milímetros.** Em
+   `album-export/pdf/drawPrintPage.ts` a régua é `mm()`, não pixel de tela: o
+   arquivo tem que bater com o gabarito, e gabarito é medido em mm. O arquivo
+   sai na estrutura do R1219 — capa, contracapa e lombada em páginas próprias,
+   miolo uma página por página, tudo com 5 mm de sangria. `pdfWriter.ts`
+   empilha os JPEGs à mão (filtro `DCTDecode`, sem recompressão).
+9. **`motifPaths.ts` é a fonte única dos grafismos.** A tela desenha em SVG e o
+   canvas do PDF desenha o mesmo `d` num `Path2D`. Dois desenhos parecidos em
+   dois arquivos é como se perde a fidelidade entre tela e impresso.
+10. **`canvasFontFamily` é a única ponte entre CSS e canvas.** `next/font/local`
+    publica o nome da família só numa custom property, e o canvas não tem
+    cascata; a função lê a propriedade computada. Antes de desenhar, esperar
+    `document.fonts.ready` — sem isso o título sai na fonte substituta.
+11. **As classes do design system (`.btn`, `.input`, `.card`, `.seg`, `.ae-*`,
+    …) vivem em `@layer components` dentro de `globals.css`.** CSS fora de
+    camada vence CSS dentro de uma — soltas, elas perdiam para utilitários do
+    Tailwind (`className="btn hidden sm:inline-flex"` não escondia nada). Não
+    tirar nada dessa camada.
+12. **`useIsNarrow` (`max-width: 767px`) ≠ `useIsTouch` (`hover: none`).**
+    Toque não é largura: controle que só aparece no hover usa `useIsTouch`, não
+    breakpoint — um laptop touch é largo e ainda precisa das alças visíveis.
+13. **Movimento de mouse não passa pelo React na landing** — variáveis CSS
     escritas via ref dentro de `requestAnimationFrame` (`usePointerVars`).
-12. **O diário de viagem é indexado pelo *grupo de dia*, não pela página**
-    (`dayNotes` na composição, `DayNote.tsx` na tela). Chave de página muda
-    quando o layout ou a ordem mudam; o dia, não — texto escrito para o dia 12
-    continua no dia 12 depois de qualquer remontagem. Ele aparece só na página
-    que abre o dia (`AlbumPage.opensGroup`), cede espaço às fotos em vez de
-    tomar (teto de 5 linhas, igual na tela e no PDF) e some por completo quando
-    está vazio e ninguém está editando. Nada aqui é gerado pelo app.
-13. **Sem persistência de conteúdo fora da Fase 2.** Recarregar `/album`
-    (modo local) perde o álbum — intencional. Exceções que não são conteúdo:
-    idioma (`localStorage`) e a ponte para `/obrigado` (`sessionStorage`,
-    consumida na leitura).
+14. **Sem persistência de conteúdo fora da Fase 2.** Recarregar `/album` (modo
+    local) perde o álbum — intencional. Exceções que não são conteúdo: idioma
+    (`localStorage`) e a ponte para `/obrigado` (`sessionStorage`, consumida na
+    leitura).
 
 ### Fase 2 — Supabase (auth + persistência)
 
@@ -163,7 +170,7 @@ usuário) — não voltar a juntá-los.
   terminado o login, `useAlbumSave.resume()` continua o salvamento de onde
   parou.
 - **O que é salvo:** uma linha por foto (ordem, caminho no Storage, data) +
-  a composição inteira num JSONB. `album-save/composition.ts` é a fronteira:
+  a composição inteira num JSONB (versão 2 = o `EditorAlbum` inteiro). `album-save/composition.ts` é a fronteira:
   `parseComposition` nunca lança, então um álbum salvo por versão antiga do
   schema continua abrindo.
 - **Fotos sobem redimensionadas** (máx. 2000px, JPEG, ~300KB) direto do
@@ -205,8 +212,11 @@ usuário) — não voltar a juntá-los.
   partir de `NEXT_PUBLIC_SUPABASE_URL`. Uma env var definida depois do build
   não existe para o app (bloqueio silencioso por CSP, sem rastro no
   servidor) — trocar o valor exige um novo build.
-- **A página pública (`/album/[id]`) reusa o `BookStage`** com a prop
-  `readOnly`, em vez de um componente de galeria separado.
+- **A página pública (`/album/[id]`) reusa `Book3D` e `PageView`**, em vez de
+  um componente de galeria separado: o objeto é o produto.
+- **Foto de contribuição chega na bandeja, não numa página.** Aprovar acrescenta
+  uma linha em `album_photos` e não toca na `composition` — escrever a foto numa
+  página seria mexer na composição de alguém sem pedir.
 
 ## Estilo de código / convenções deste repo
 
