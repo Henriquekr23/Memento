@@ -2042,10 +2042,16 @@ html {
   min-width: 0;
   min-height: 0;
 }
+/* `safe center` e não `center`: com zoom o álbum fica maior que a bancada, e
+   um item centrado que estoura a caixa deixa de ter borda de início — a parte
+   de cima e a da esquerda ficam fora do alcance da rolagem. `safe` desliga a
+   centralização exatamente nesse caso. */
 .ae-stage {
   position: relative;
-  display: grid;
-  place-items: center;
+  display: flex;
+  justify-content: safe center;
+  align-items: safe center;
+  min-width: 0;
   overflow: auto;
   padding: clamp(16px, 3vw, 40px);
   /* Folga extra embaixo: é onde mora a dica de folhear. */
@@ -2267,7 +2273,6 @@ html {
 /* ── livro 3d ── */
 .ae-3d-stage {
   position: relative;
-  perspective: 2200px;
   display: grid;
   place-items: center;
   width: 100%;
@@ -2275,13 +2280,52 @@ html {
   cursor: grab;
   touch-action: none;
 }
+.ae-3d-stage:focus-visible {
+  outline: 2px solid var(--ae-accent);
+  outline-offset: -4px;
+  border-radius: 10px;
+}
 .ae-3d-stage:active {
   cursor: grabbing;
 }
+/* A cena é **plana** e é aqui que mora a perspectiva: a sombra projetada
+   precisa ficar atrás do livro sem entrar no espaço 3D dele (dentro, ela some
+   dentro do próprio volume) e sem carregar `filter` para uma caixa
+   `preserve-3d`. A perspectiva alcança só os filhos diretos, então ela desce
+   para cá junto com a caixa. */
+.ae-3d-scene {
+  position: relative;
+  display: grid;
+  place-items: center;
+  perspective: 1900px;
+  perspective-origin: 50% 44%;
+}
+/* A caixa do livro **não pode ter filter, opacity < 1 nem mask**: qualquer uma
+   dessas força `preserve-3d` a virar `flat` e achata as seis faces no mesmo
+   plano. Era um `drop-shadow` aqui que fazia o livro parecer um cartão. A
+   sombra virou o elemento abaixo, irmão e fora da caixa. */
 .ae-3d-box {
   position: relative;
   transform-style: preserve-3d;
-  filter: drop-shadow(0 40px 44px rgb(0 0 0 / 0.34));
+}
+.ae-3d-cast {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  z-index: 0;
+  display: block;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(
+    50% 50% at 50% 50%,
+    rgb(0 0 0 / 0.42),
+    rgb(0 0 0 / 0.14) 46%,
+    rgb(0 0 0 / 0) 74%
+  );
+  filter: blur(10px);
+}
+.ae-3d-box {
+  z-index: 1;
 }
 .ae-3d-hint {
   position: absolute;
@@ -2331,6 +2375,9 @@ html {
   z-index: 4;
   will-change: transform;
 }
+/* A sombra desta face é escrita em linha e proporcional ao quanto a folha está
+   levantada: uma sombra fixa aqui continuava pintada no quadro em que a folha
+   pousava e desaparecia junto com ela — o degrau que fazia a página piscar. */
 .ae-leaf-face {
   position: absolute;
   inset: 0;
@@ -2338,7 +2385,6 @@ html {
   overflow: hidden;
   background: #ffffff;
   backface-visibility: hidden;
-  box-shadow: 0 8px 26px -10px rgb(0 0 0 / 0.45);
 }
 .ae-leaf-shade {
   position: absolute;
@@ -2435,23 +2481,36 @@ html {
   border-top: 1px solid var(--ae-line);
   overflow-x: auto;
 }
-.ae-thumb {
-  flex: none;
+.ae-thumb-wrap {
   position: relative;
+  flex: none;
   width: clamp(58px, 6vw, 82px);
+}
+/* Uma folha selecionada não pode ocupar mais espaço do que uma folha em
+   repouso. O anel de seleção está **sempre desenhado**, com 2 px de largura
+   fixa; o que muda entre os estados é só a cor dele. Antes o anel nascia ao
+   clicar e a miniatura crescia 4 px em cada eixo, empurrando a fila inteira —
+   era esse o "zoom" no clique. Contorno, e não sombra interna, porque a
+   miniatura é coberta pela foto e sombra interna fica por baixo dela. */
+.ae-thumb {
+  position: relative;
+  display: block;
+  width: 100%;
   aspect-ratio: 3 / 2;
   border: 1px solid var(--ae-line);
   border-radius: 3px;
   overflow: hidden;
   background: #ffffff;
-  transition: border-color 0.15s, transform 0.15s;
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+  transition: border-color 0.15s, outline-color 0.15s;
 }
 .ae-thumb:hover {
-  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--ae-accent) 55%, var(--ae-line));
 }
 .ae-thumb.is-on {
   border-color: var(--ae-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ae-accent) 26%, transparent);
+  outline-color: color-mix(in srgb, var(--ae-accent) 32%, transparent);
 }
 .ae-thumb-label {
   position: absolute;
@@ -2472,16 +2531,64 @@ html {
   width: 100%;
   align-self: start;
 }
+.ae-grid-item {
+  position: relative;
+}
+/* Mesma regra da miniatura: o contorno tem largura fixa e só troca de cor, e
+   a célula ocupa exatamente o mesmo espaço selecionada ou não. */
 .ae-grid-cell {
   position: relative;
   overflow: hidden;
   background: #ffffff;
   box-shadow: 0 6px 18px -8px rgb(0 0 0 / 0.5);
-  outline: 1px solid var(--ae-line);
+  outline: 2px solid color-mix(in srgb, var(--ae-line) 70%, transparent);
   outline-offset: 1px;
+  transition: outline-color 0.15s;
 }
 .ae-grid-cell.is-on {
-  outline: 2px solid var(--ae-accent);
+  outline-color: var(--ae-accent);
+}
+/* Excluir a folha direto na miniatura: aparece no ponteiro e no foco, e fica
+   sempre visível no toque, onde não existe `hover`. */
+.ae-sheet-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgb(28 24 22 / 0.62);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.13s, background 0.13s;
+}
+.ae-grid-item .ae-sheet-del {
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+}
+.ae-thumb-wrap:hover .ae-sheet-del,
+.ae-grid-item:hover .ae-sheet-del,
+.ae-sheet-del:focus-visible {
+  opacity: 1;
+}
+/* Toque não tem `hover`: ali o botão fica. É `hover: none`, e não largura de
+   tela — um laptop com toque é largo e ainda precisa do ícone visível. */
+@media (hover: none) {
+  .ae-sheet-del {
+    opacity: 1;
+  }
+}
+.ae-sheet-del:hover {
+  background: #b0342f;
+}
+.ae-sheet-del:disabled {
+  display: none;
 }
 .ae-grid-add {
   border: 1.5px dashed var(--color-neutral-400);
@@ -2490,6 +2597,182 @@ html {
   place-items: center;
   align-content: center;
   gap: 6px;
+  color: var(--ae-ink-3);
+}
+
+/* ── escolha das fotos, antes do editor ──
+   Vive fora da bancada do editor: aqui manda o design system Organic (papel,
+   terracota, cantos de 8/16/28 px), e não os tokens `--ae-*`. */
+.pg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.pg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.pg-card {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 20px -14px rgb(0 0 0 / 0.5);
+  cursor: grab;
+  transition: box-shadow 0.16s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.pg-card:active {
+  cursor: grabbing;
+}
+.pg-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+/* Quem está sendo arrastado apaga; quem vai receber acende. O cartão nunca
+   muda de tamanho: quem se move é a sombra, não a caixa. */
+.pg-card.is-dragging {
+  opacity: 0.35;
+}
+.pg-card.is-over {
+  box-shadow: inset 0 0 0 3px var(--color-accent), 0 10px 26px -14px rgb(0 0 0 / 0.6);
+}
+.pg-ordinal {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: rgb(28 24 22 / 0.6);
+  backdrop-filter: blur(3px);
+  pointer-events: none;
+}
+.pg-act {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgb(28 24 22 / 0.62);
+  backdrop-filter: blur(3px);
+  transition: background 0.13s, opacity 0.13s;
+}
+.pg-act:hover:not(:disabled) {
+  background: rgb(28 24 22 / 0.9);
+}
+.pg-act:disabled {
+  opacity: 0.3;
+}
+.pg-del {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+.pg-del:hover {
+  background: #b0342f;
+}
+.pg-moves {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: flex;
+  gap: 4px;
+}
+/* Os controles só aparecem quando a foto está sob o ponteiro ou com foco de
+   teclado. No toque não existe `hover`, então ali eles ficam. */
+.pg-del,
+.pg-moves {
+  opacity: 0;
+  transition: opacity 0.13s;
+}
+.pg-card:hover .pg-del,
+.pg-card:hover .pg-moves,
+.pg-card:focus-within .pg-del,
+.pg-card:focus-within .pg-moves {
+  opacity: 1;
+}
+@media (hover: none) {
+  .pg-del,
+  .pg-moves {
+    opacity: 1;
+  }
+}
+.pg-confirm {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-divider);
+}
+
+/* ── zoom do palco ──
+   O palco rola; o controle não. Por isso ele mora no visor, que é o pai fixo,
+   e não dentro da área que rola. */
+.ae-viewport {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+}
+.ae-zoom {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--ae-line);
+  background: color-mix(in srgb, var(--ae-panel) 88%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px -10px rgb(0 0 0 / 0.5);
+}
+.ae-zoom button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: var(--ae-ink-2);
+  transition: background 0.13s, color 0.13s;
+}
+.ae-zoom button:hover:not(:disabled) {
+  background: var(--ae-panel-2);
+  color: var(--ae-ink);
+}
+.ae-zoom button:disabled {
+  opacity: 0.35;
+}
+/* A leitura da escala é o próprio botão de voltar ao ajuste: um número que não
+   faz nada ao lado de dois que fazem é um controle a menos disfarçado de
+   rótulo. */
+.ae-zoom-level {
+  width: auto;
+  min-width: 46px;
+  padding: 0 8px;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
   color: var(--ae-ink-3);
 }
 

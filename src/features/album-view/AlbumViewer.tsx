@@ -9,6 +9,8 @@ import type { PhotoResolver } from '@/features/album-editor/PageContent';
 import { accentFor, colorById } from '@/features/album-editor/palette';
 import { EDITOR_COPY } from '@/features/album-editor/copy';
 import { clamp } from '@/features/album-editor/useDrag';
+import { useStageZoom } from '@/features/album-editor/useStageZoom';
+import { ZoomControls } from '@/features/album-editor/ZoomControls';
 import { useLang } from '@/features/i18n/LangProvider';
 import { IconBook, IconChevronLeft, IconChevronRight, IconLayers } from '@/features/album-editor/icons';
 import type { AlbumComposition } from '@/features/album-save/composition';
@@ -38,8 +40,14 @@ export function AlbumViewer({
 
   const [view, setView] = useState<'book' | 'pages'>('book');
   const [sheetIndex, setSheetIndex] = useState(0);
-  const [ppm, setPpm] = useState(1.2);
+  const [fitPpm, setFitPpm] = useState(1.2);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const zoom = useStageZoom(stageRef);
+
+  /* Mesma régua do editor: o zoom multiplica o encaixe, e 100% quer dizer "o
+     álbum inteiro na tela" em qualquer janela. */
+  const ppm = fitPpm * zoom.zoom;
 
   const color = colorById(album.color);
   const spine = album.spine.mm ?? spineWidth(album.pages.length, paperById(album.paper).mm);
@@ -64,18 +72,24 @@ export function AlbumViewer({
 
   useEffect(() => {
     const fit = () => {
-      const node = stageRef.current;
-      if (!node) return;
-      const availableW = node.clientWidth - 32;
-      const availableH = node.clientHeight - 32;
+      const node = viewportRef.current;
+      const stage = stageRef.current;
+      if (!node || !stage) return;
+      // Medir o visor, e não o palco: o palco rola, e a barra de rolagem que
+      // aparece com o zoom mudaria a medida do encaixe a cada aproximação.
+      const box = getComputedStyle(stage);
+      const padX = parseFloat(box.paddingLeft) + parseFloat(box.paddingRight);
+      const padY = parseFloat(box.paddingTop) + parseFloat(box.paddingBottom);
+      const availableW = node.clientWidth - padX;
+      const availableH = node.clientHeight - padY;
       const bleed = SPEC.bleed * 2;
-      const needW = view === 'pages' ? (SPEC.trim.w + bleed) * 2 : SPEC.trim.w * 1.5;
-      const needH = view === 'pages' ? SPEC.trim.h + bleed : SPEC.trim.h * 1.35;
-      setPpm(clamp(Math.min(availableW / needW, availableH / needH), 0.3, 4));
+      const needW = view === 'pages' ? (SPEC.trim.w + bleed) * 2 : SPEC.trim.w * 1.34;
+      const needH = view === 'pages' ? SPEC.trim.h + bleed : SPEC.trim.h * 1.3;
+      setFitPpm(clamp(Math.min(availableW / needW, availableH / needH), 0.3, 4));
     };
     fit();
     const observer = new ResizeObserver(fit);
-    const node = stageRef.current;
+    const node = viewportRef.current;
     if (node) observer.observe(node);
     return () => observer.disconnect();
   }, [view]);
@@ -118,38 +132,41 @@ export function AlbumViewer({
       </div>
 
       <div className="ae-main">
-        <div className="ae-stage" ref={stageRef}>
-          {view === 'book' ? (
-            <Book3D album={named} spine={spine} ppm={ppm} hint={copy.orbitHint} />
-          ) : (
-            <div className="ae-sheet">
-              {([['left', leftIndex], ['right', rightIndex]] as const).map(([hand, index]) => {
-                const page = album.pages[index];
-                if (!page) return null;
-                return (
-                  <span
-                    key={page.id}
-                    style={{
-                      display: 'block',
-                      position: 'relative',
-                      marginLeft: hand === 'right' ? -SPEC.bleed * 2 * ppm : 0,
-                    }}
-                  >
-                    <PageView
-                      page={page}
-                      index={index}
-                      ppm={ppm}
-                      hand={hand}
-                      guides={false}
-                      ink={color.ink}
-                      resolve={resolve}
-                    />
-                  </span>
-                );
-              })}
-              <div className="ae-gutter" />
-            </div>
-          )}
+        <div className="ae-viewport" ref={viewportRef}>
+          <div className="ae-stage" ref={stageRef}>
+            {view === 'book' ? (
+              <Book3D album={named} spine={spine} ppm={ppm} hint={copy.orbitHint} />
+            ) : (
+              <div className="ae-sheet">
+                {([['left', leftIndex], ['right', rightIndex]] as const).map(([hand, index]) => {
+                  const page = album.pages[index];
+                  if (!page) return null;
+                  return (
+                    <span
+                      key={page.id}
+                      style={{
+                        display: 'block',
+                        position: 'relative',
+                        marginLeft: hand === 'right' ? -SPEC.bleed * 2 * ppm : 0,
+                      }}
+                    >
+                      <PageView
+                        page={page}
+                        index={index}
+                        ppm={ppm}
+                        hand={hand}
+                        guides={false}
+                        ink={color.ink}
+                        resolve={resolve}
+                      />
+                    </span>
+                  );
+                })}
+                <div className="ae-gutter" />
+              </div>
+            )}
+          </div>
+          <ZoomControls zoom={zoom} copy={copy} />
         </div>
 
         {view === 'pages' && (

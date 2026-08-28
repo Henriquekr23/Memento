@@ -23,6 +23,7 @@ import {
   IconLayers,
   IconPlus,
   IconRuler,
+  IconTrash,
   IconType,
 } from './icons';
 import { SheetPreview } from './PageView';
@@ -30,6 +31,8 @@ import { PagesInspector } from './PagesInspector';
 import type { PhotoResolver } from './PageContent';
 import { SheetStage } from './SheetStage';
 import { useSheetTurn } from './useSheetTurn';
+import { useStageZoom } from './useStageZoom';
+import { ZoomControls } from './ZoomControls';
 import { accentFor, colorById } from './palette';
 import { clamp } from './useDrag';
 import { useEditorAlbum } from './useEditorAlbum';
@@ -75,7 +78,17 @@ export function AlbumEditor({
   const copy = EDITOR_COPY[lang];
 
   const state = useEditorAlbum(initialAlbum);
-  const { album, patch, spine, sheets, updateFrame, addSheet, fillChronologically } = state;
+  const {
+    album,
+    patch,
+    spine,
+    sheets,
+    updateFrame,
+    addSheet,
+    removeSheet,
+    minPages,
+    fillChronologically,
+  } = state;
 
   const [view, setView] = useState<View>('pages');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -84,9 +97,17 @@ export function AlbumEditor({
   const [sheetIndex, setSheetIndex] = useState(0);
   const [selectedSlot, setSelectedSlot] = useState(0);
   const [activeSide, setActiveSide] = useState<'left' | 'right'>('left');
-  const [ppm, setPpm] = useState(1.7);
+  /** Escala de encaixe: quanto o álbum precisa medir para caber na bancada. */
+  const [fitPpm, setFitPpm] = useState(1.7);
 
+  const viewportRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const zoom = useStageZoom(stageRef);
+
+  /* O zoom multiplica o encaixe em vez de substituí-lo: assim "100%" quer
+     dizer "o álbum inteiro na tela" em qualquer janela, e mudar o tamanho da
+     janela não perde a aproximação escolhida. */
+  const ppm = fitPpm * zoom.zoom;
 
   const color = colorById(album.color);
   const accent = accentFor(color);
@@ -115,12 +136,21 @@ export function AlbumEditor({
   }, [album, onChange]);
 
   /* ── escala do palco: o álbum sempre cabe na área disponível ──────────── */
+  /* A medida sai do **visor**, não do palco: o palco rola, e uma barra de
+     rolagem que aparece encolhe a medida, que encolhe o álbum, que faz a barra
+     sumir — vai e volta enquanto a janela estiver perto do limite. O visor não
+     rola nunca, então mede o mesmo com zoom e sem. */
   useEffect(() => {
     const fit = () => {
-      const node = stageRef.current;
-      if (!node) return;
-      const availableW = node.clientWidth - 56;
-      const availableH = node.clientHeight - 56;
+      const node = viewportRef.current;
+      const stage = stageRef.current;
+      if (!node || !stage) return;
+
+      const box = getComputedStyle(stage);
+      const padX = parseFloat(box.paddingLeft) + parseFloat(box.paddingRight);
+      const padY = parseFloat(box.paddingTop) + parseFloat(box.paddingBottom);
+      const availableW = node.clientWidth - padX;
+      const availableH = node.clientHeight - padY;
       const bleed = SPEC.bleed * 2;
 
       let needW: number;
@@ -129,18 +159,21 @@ export function AlbumEditor({
       if (view === 'cover') needW = SPEC.trim.w * 2 + spine + bleed;
       else if (view === 'pages') needW = (SPEC.trim.w + bleed) * 2;
       else if (view === 'book') {
-        needW = SPEC.trim.w * 1.5;
-        needH = SPEC.trim.h * 1.35;
+        // A caixa do livro é pouco maior que o próprio livro: na pose de
+        // repouso ele projeta ~90% da largura da capa, e a folga que sobra é
+        // para a sombra no chão. Com 1,5× ele virava um selo no meio da mesa.
+        needW = SPEC.trim.w * 1.34;
+        needH = SPEC.trim.h * 1.3;
       } else return;
 
       // Teto e piso da escala: sem eles o álbum vira um selo numa tela larga
       // ou estoura o palco numa estreita.
-      setPpm(clamp(Math.min(availableW / needW, availableH / needH), 0.45, 3));
+      setFitPpm(clamp(Math.min(availableW / needW, availableH / needH), 0.45, 3));
     };
 
     fit();
     const observer = new ResizeObserver(fit);
-    const node = stageRef.current;
+    const node = viewportRef.current;
     if (node) observer.observe(node);
     return () => observer.disconnect();
   }, [view, spine]);
@@ -304,89 +337,112 @@ export function AlbumEditor({
 
       <div className="ae-body">
         <div className="ae-main">
-          <div className="ae-stage" ref={stageRef}>
-            {view === 'cover' && (
-              <CoverWrap
-                album={album}
-                spine={spine}
-                ppm={ppm}
-                guides={guides}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                onChange={state.updateElement}
-                snap={snap}
-                setSnap={setSnap}
-              />
-            )}
+          {/* O visor não rola; o palco dentro dele rola. É essa divisão que
+              deixa o controle de escala parado no canto enquanto o álbum
+              ampliado corre por baixo. */}
+          <div className="ae-viewport" ref={viewportRef}>
+            <div className="ae-stage" ref={stageRef}>
+              {view === 'cover' && (
+                <CoverWrap
+                  album={album}
+                  spine={spine}
+                  ppm={ppm}
+                  guides={guides}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  onChange={state.updateElement}
+                  snap={snap}
+                  setSnap={setSnap}
+                />
+              )}
 
-            {view === 'book' && (
-              <Book3D album={album} spine={spine} ppm={ppm} hint={copy.orbitHint} />
-            )}
+              {view === 'book' && (
+                <Book3D album={album} spine={spine} ppm={ppm} hint={copy.orbitHint} />
+              )}
 
-            {view === 'pages' && leftPage && rightPage && (
-              <SheetStage
-                album={album}
-                sheets={sheets}
-                sheetIndex={safeSheet}
-                turn={turn}
-                ppm={ppm}
-                guides={guides}
-                ink={color.ink}
-                resolve={resolve}
-                activeSide={activeSide}
-                onActiveSide={setActiveSide}
-                selectedSlot={selectedSlot}
-                onSelectSlot={setSelectedSlot}
-                onFrame={onFrame}
-                onDropPhoto={onDropPhoto}
-                hint={copy.flipHint}
-              />
-            )}
+              {view === 'pages' && leftPage && rightPage && (
+                <SheetStage
+                  album={album}
+                  sheets={sheets}
+                  sheetIndex={safeSheet}
+                  turn={turn}
+                  ppm={ppm}
+                  guides={guides}
+                  ink={color.ink}
+                  resolve={resolve}
+                  activeSide={activeSide}
+                  onActiveSide={setActiveSide}
+                  selectedSlot={selectedSlot}
+                  onSelectSlot={setSelectedSlot}
+                  onFrame={onFrame}
+                  onDropPhoto={onDropPhoto}
+                  hint={copy.flipHint}
+                />
+              )}
 
-            {view === 'grid' && (
-              <div className="ae-grid">
-                {sheets.map(([a, b], index) => (
+              {view === 'grid' && (
+                <div className="ae-grid">
+                  {sheets.map(([a, b], index) => (
+                    /* A lixeira é **irmã** do botão que abre a folha, nunca
+                       filha: botão dentro de botão não é HTML válido, e o
+                       clique de dentro nunca chegaria inteiro ao lugar certo. */
+                    <div className="ae-grid-item" key={album.pages[a].id}>
+                      <button
+                        type="button"
+                        style={{ display: 'block', textAlign: 'left', width: '100%' }}
+                        onClick={() => {
+                          setSheetIndex(index);
+                          setView('pages');
+                        }}
+                      >
+                        <span
+                          className={`ae-grid-cell${safeSheet === index ? ' is-on' : ''}`}
+                          style={{
+                            display: 'block',
+                            aspectRatio: `${SPEC.trim.w * 2} / ${SPEC.trim.h}`,
+                          }}
+                        >
+                          <SheetPreview
+                            pages={album.pages}
+                            left={a}
+                            right={b}
+                            ink={color.ink}
+                            ppm={0.72}
+                            resolve={resolve}
+                          />
+                        </span>
+                        <span className="ae-meta" style={{ display: 'block', marginTop: 6 }}>
+                          {a + 1}–{b + 1}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="ae-sheet-del"
+                        aria-label={copy.removeSheet}
+                        title={copy.removeSheet}
+                        disabled={album.pages.length <= minPages}
+                        onClick={() => removeSheet(a)}
+                      >
+                        <IconTrash size={14} />
+                      </button>
+                    </div>
+                  ))}
                   <button
-                    key={album.pages[a].id}
                     type="button"
-                    style={{ display: 'block', textAlign: 'left' }}
-                    onClick={() => {
-                      setSheetIndex(index);
-                      setView('pages');
-                    }}
+                    className="ae-grid-add"
+                    style={{ aspectRatio: `${SPEC.trim.w * 2} / ${SPEC.trim.h}` }}
+                    onClick={addSheet}
                   >
-                    <span
-                      className={`ae-grid-cell${safeSheet === index ? ' is-on' : ''}`}
-                      style={{
-                        display: 'block',
-                        aspectRatio: `${SPEC.trim.w * 2} / ${SPEC.trim.h}`,
-                      }}
-                    >
-                      <SheetPreview
-                        pages={album.pages}
-                        left={a}
-                        right={b}
-                        ink={color.ink}
-                        ppm={0.72}
-                        resolve={resolve}
-                      />
-                    </span>
-                    <span className="ae-meta" style={{ display: 'block', marginTop: 6 }}>
-                      {a + 1}–{b + 1}
-                    </span>
+                    <IconPlus size={18} />
+                    <span style={{ fontSize: 11.5 }}>{copy.newSheet}</span>
                   </button>
-                ))}
-                <button
-                  type="button"
-                  className="ae-grid-add"
-                  style={{ aspectRatio: `${SPEC.trim.w * 2} / ${SPEC.trim.h}` }}
-                  onClick={addSheet}
-                >
-                  <IconPlus size={18} />
-                  <span style={{ fontSize: 11.5 }}>{copy.newSheet}</span>
-                </button>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
+            {/* A grade não tem escala própria — as miniaturas dela são de
+                tamanho fixo. Um controle que não muda nada é pior que a
+                ausência dele. */}
+            {view !== 'grid' && <ZoomControls zoom={zoom} copy={copy} />}
           </div>
 
           {(view === 'pages' || view === 'grid') && (
@@ -402,33 +458,46 @@ export function AlbumEditor({
               </button>
 
               {sheets.map(([a, b], index) => (
-                <button
-                  key={album.pages[a].id}
-                  type="button"
-                  className={`ae-thumb${safeSheet === index ? ' is-on' : ''}`}
-                  onClick={() => setSheetIndex(index)}
-                >
-                  <span
-                    style={{
-                      position: 'absolute',
-                      inset: '0 0 11px 0',
-                      overflow: 'hidden',
-                      display: 'block',
-                    }}
+                <span className="ae-thumb-wrap" key={album.pages[a].id}>
+                  <button
+                    type="button"
+                    className={`ae-thumb${safeSheet === index ? ' is-on' : ''}`}
+                    aria-pressed={safeSheet === index}
+                    aria-label={copy.sheetRange(a + 1, b + 1)}
+                    onClick={() => setSheetIndex(index)}
                   >
-                    <SheetPreview
-                      pages={album.pages}
-                      left={a}
-                      right={b}
-                      ink={color.ink}
-                      ppm={0.2}
-                      resolve={resolve}
-                    />
-                  </span>
-                  <span className="ae-thumb-label">
-                    {a + 1}–{b + 1}
-                  </span>
-                </button>
+                    <span
+                      style={{
+                        position: 'absolute',
+                        inset: '0 0 11px 0',
+                        overflow: 'hidden',
+                        display: 'block',
+                      }}
+                    >
+                      <SheetPreview
+                        pages={album.pages}
+                        left={a}
+                        right={b}
+                        ink={color.ink}
+                        ppm={0.2}
+                        resolve={resolve}
+                      />
+                    </span>
+                    <span className="ae-thumb-label">
+                      {a + 1}–{b + 1}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="ae-sheet-del"
+                    aria-label={copy.removeSheet}
+                    title={copy.removeSheet}
+                    disabled={album.pages.length <= minPages}
+                    onClick={() => removeSheet(a)}
+                  >
+                    <IconTrash size={12} />
+                  </button>
+                </span>
               ))}
 
               <button

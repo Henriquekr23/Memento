@@ -173,6 +173,21 @@ export function SheetStage({
   const angle = leafOnRight ? -progress * 180 : progress * 180;
   const lift = Math.sin(Math.min(1, Math.max(0, progress)) * Math.PI);
 
+  /*
+   * Sombreado da folha em movimento.
+   *
+   * As duas faces têm que chegar a **zero** exatamente onde a folha pousa — e
+   * ela pousa em cima de uma página que não tem sombra nenhuma. Enquanto a face
+   * de trás terminava a virada ainda com 0,24 de preto e a folha carregava um
+   * `box-shadow` fixo, o quadro em que ela era desmontada clareava a página de
+   * uma vez: era esse degrau, e não a animação, o "piscar" da página da
+   * esquerda a cada virada. Agora as três curvas nascem e morrem em zero, e o
+   * que some no fim da virada já não estava pintando nada.
+   */
+  const faceShade = lift * 0.55;
+  const backShade = Math.max(0, 1 - progress) * 0.42;
+  const leafShadow = lift * 0.45;
+
   return (
     <div className="ae-flip" style={{ width: sheetW, height: pageH }}>
       <div className="ae-sheet" style={{ width: sheetW, height: pageH }}>
@@ -197,22 +212,31 @@ export function SheetStage({
                 : 'none',
             }}
           >
-            <div className="ae-leaf-face">
+            <div
+              className="ae-leaf-face"
+              style={{ boxShadow: `0 8px 26px -10px rgba(0,0,0,${leafShadow.toFixed(3)})` }}
+            >
               {half(leafOnRight ? 'right' : 'left', current, false)}
               <div
                 className="ae-leaf-shade"
                 style={{
-                  opacity: lift * 0.55,
+                  opacity: faceShade,
                   background: `linear-gradient(to ${leafOnRight ? 'left' : 'right'}, rgba(0,0,0,.04), rgba(0,0,0,.62))`,
                 }}
               />
             </div>
-            <div className="ae-leaf-face is-back" style={{ transform: 'rotateY(180deg)' }}>
+            <div
+              className="ae-leaf-face is-back"
+              style={{
+                transform: 'rotateY(180deg)',
+                boxShadow: `0 8px 26px -10px rgba(0,0,0,${leafShadow.toFixed(3)})`,
+              }}
+            >
               {half(leafOnRight ? 'left' : 'right', neighbour, false)}
               <div
                 className="ae-leaf-shade"
                 style={{
-                  opacity: (1 - lift) * 0.18 + 0.06,
+                  opacity: backShade,
                   background: `linear-gradient(to ${leafOnRight ? 'right' : 'left'}, rgba(0,0,0,.02), rgba(0,0,0,.4))`,
                 }}
               />

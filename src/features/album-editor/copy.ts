@@ -162,9 +162,26 @@ export interface EditorCopy {
   /* livro 3d */
   orbitHint: string;
 
+  /* zoom do palco */
+  zoomGroup: string;
+  zoomIn: string;
+  zoomOut: string;
+  zoomFit: string;
+
   /* vazio */
   emptyTitle: string;
   emptyBody: string;
+
+  /* tela de partida: escolher as fotos antes de abrir o editor */
+  startCount: (n: number) => string;
+  startOrderNote: string;
+  startManualNote: string;
+  startSortByDate: string;
+  startRemovePhoto: (name: string) => string;
+  startMoveLeft: string;
+  startMoveRight: string;
+  startConfirm: string;
+  startConfirmHint: string;
 }
 
 const PT: EditorCopy = {
@@ -311,9 +328,27 @@ const PT: EditorCopy = {
   orbitHint: 'arraste para girar',
   flipHint: 'arraste a borda da folha para virar a página',
 
+  zoomGroup: 'Escala',
+  zoomIn: 'Aproximar',
+  zoomOut: 'Afastar',
+  zoomFit: 'Encaixar na tela',
+
   emptyTitle: 'Comece pelas fotos',
   emptyBody:
     'Envie as fotos da viagem. O Memento lê a data e a hora gravadas em cada arquivo e já monta as páginas em ordem — daí você reorganiza como quiser.',
+
+  startCount: (n) => (n === 1 ? '1 foto escolhida' : `${n} fotos escolhidas`),
+  startOrderNote:
+    'Em ordem de data e hora, lidas do próprio arquivo. Arraste uma foto sobre outra para trocar de lugar — ou use as setas do cartão, que fazem o mesmo pelo teclado.',
+  startManualNote:
+    'Ordem definida por você. Fotos novas entram no fim da fila em vez de se misturarem à sequência.',
+  startSortByDate: 'Voltar à ordem por data',
+  startRemovePhoto: (name) => `Tirar ${name} do álbum`,
+  startMoveLeft: 'Mover para trás',
+  startMoveRight: 'Mover para a frente',
+  startConfirm: 'Confirmar e montar o álbum',
+  startConfirmHint:
+    'Nada é enviado para lugar nenhum: o álbum abre aqui mesmo, no seu navegador. Dá para acrescentar e trocar fotos depois de abrir.',
 };
 
 const EN: EditorCopy = {
@@ -460,9 +495,27 @@ const EN: EditorCopy = {
   orbitHint: 'drag to rotate',
   flipHint: 'drag the edge of the sheet to turn the page',
 
+  zoomGroup: 'Scale',
+  zoomIn: 'Zoom in',
+  zoomOut: 'Zoom out',
+  zoomFit: 'Fit to screen',
+
   emptyTitle: 'Start with the photos',
   emptyBody:
     'Upload the trip photos. Memento reads the date and time recorded in each file and lays the pages out in order — then you rearrange them however you like.',
+
+  startCount: (n) => (n === 1 ? '1 photo chosen' : `${n} photos chosen`),
+  startOrderNote:
+    'In date and time order, read from the files themselves. Drag one photo onto another to swap them — or use the arrows on the card, which do the same from the keyboard.',
+  startManualNote:
+    'Your own order. New photos join the end of the queue instead of merging into the sequence.',
+  startSortByDate: 'Back to date order',
+  startRemovePhoto: (name) => `Remove ${name} from the album`,
+  startMoveLeft: 'Move back',
+  startMoveRight: 'Move forward',
+  startConfirm: 'Confirm and build the album',
+  startConfirmHint:
+    'Nothing is uploaded anywhere: the album opens right here, in your browser. You can add and swap photos after it opens.',
 };
 
 export const EDITOR_COPY: Record<Lang, EditorCopy> = { pt: PT, en: EN };

@@ -161,6 +161,40 @@ leitura de EXIF.
     local) perde o álbum — intencional. Exceções que não são conteúdo: idioma
     (`localStorage`) e a ponte para `/obrigado` (`sessionStorage`, consumida na
     leitura).
+15. **Importar não abre o editor.** `/album` tem duas etapas: a de escolher as
+    fotos (`EditorStart` + `PhotoOrderGrid` — acrescentar, remover, reordenar) e
+    a bancada. A segunda começa no clique de "Confirmar e montar o álbum"
+    (`isEditing` na página), nunca na chegada da primeira foto. Quem manda
+    duzentas fotos ainda está escolhendo; abrir a composição ali obrigava a
+    desmanchá-la para continuar escolhendo.
+16. **Nada que carrega `transform-style: preserve-3d` pode receber `filter`,
+    `opacity` < 1 ou `mask`.** Qualquer propriedade de agrupamento força o
+    `preserve-3d` a virar `flat`, e as faces achatam todas no mesmo plano. Foi
+    um `drop-shadow` em `.ae-3d-box` que deixou o livro do `Book3D` parecendo um
+    cartão com uma listra na borda por muito tempo: a sombra projetada mora fora
+    da caixa (`.ae-3d-cast`), e a perspectiva desceu para `.ae-3d-scene`, que é
+    o pai direto da caixa.
+17. **A luz da cena 3D é fixa; quem gira é o livro.** `lit()` em `Book3D` dá o
+    brilho de cada face pela normal dela — não há `brightness` chapado por face.
+    Com a luz do lado errado a lombada saía mais clara que a capa e sumia dentro
+    dela.
+18. **Marca de seleção não pode mudar o tamanho do que ela marca.** Miniatura de
+    folha e célula da grade têm contorno de 2 px **sempre desenhado**; o que
+    muda entre selecionado e não é só a cor. Anel que nasce no clique fazia a
+    peça crescer 4 px em cada eixo e a fila inteira dançar. Contorno, e não
+    sombra interna: a peça é coberta pela foto, e `inset` fica por baixo dela.
+19. **Sombreado da folha em movimento nasce e morre em zero.** As duas faces de
+    `.ae-leaf` e a sombra dela são proporcionais ao progresso da virada
+    (`SheetStage`). Um valor residual no fim — a face de trás terminava com 0,24
+    de preto, e a folha tinha `box-shadow` fixo — clareava a página de uma vez
+    no quadro em que a folha era desmontada: era esse degrau o "piscar" da
+    página da esquerda a cada virada, e não a animação.
+20. **O zoom do palco multiplica o encaixe, não substitui.** `useStageZoom` dá
+    um fator; `ppm = fitPpm * zoom`. A medida do encaixe sai do **visor**
+    (`.ae-viewport`, que não rola), nunca do palco: medir o palco faz a barra de
+    rolagem do zoom encolher a medida, que encolhe o álbum, que tira a barra. E
+    `.ae-stage` centraliza com `safe center` — centralização normal deixa a
+    borda de início do conteúdo ampliado fora do alcance da rolagem.
 
 ### Fase 2 — Supabase (auth + persistência)
 
