@@ -138,6 +138,8 @@ export function AlbumViewer({
               <Book3D album={named} spine={spine} ppm={ppm} hint={copy.orbitHint} />
             ) : (
               <div className="ae-sheet">
+                {/* A sombra projetada mora fora da folha — ver `.ae-sheet-cast`. */}
+                <div className="ae-sheet-cast" aria-hidden />
                 {([['left', leftIndex], ['right', rightIndex]] as const).map(([hand, index]) => {
                   const page = album.pages[index];
                   if (!page) return null;
@@ -158,6 +160,7 @@ export function AlbumViewer({
                         guides={false}
                         ink={color.ink}
                         resolve={resolve}
+                        hideNumber={!album.showPageNumbers}
                       />
                     </span>
                   );

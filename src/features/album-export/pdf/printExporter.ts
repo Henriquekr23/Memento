@@ -178,8 +178,12 @@ export async function buildPrintPdf(
     }
 
     drawInnerPage(page.ctx, editorPage, contextOf(album, images), mm, {
-      // Página ímpar (índice par) fica à direita da folha: lombada à esquerda.
-      spineSide: index % 2 === 0 ? 'left' : 'right',
+      // A folha do editor é o par (par, ímpar) aberto: a página de índice par é
+      // a da **esquerda**, e a lombada dela fica à direita. O arquivo dizia o
+      // contrário do que a tela mostrava, e a margem do lado da lombada saía
+      // impressa na borda errada.
+      spineSide: index % 2 === 0 ? 'right' : 'left',
+      number: index + 1,
     });
 
     await push(page.canvas, fileW, fileH);

@@ -1943,15 +1943,46 @@ html {
   outline: none;
   border-bottom-color: var(--ae-accent);
 }
+/* As abas são o mesmo interruptor deslizante do segmentado do inspetor, num
+   trilho maior: o cursor gruda no ponteiro e assenta na aba mais próxima ao
+   soltar. O respiro de 3 px é o que `useTrackDrag` mede. */
 .ae-tabs {
+  position: relative;
   display: flex;
   flex: none;
-  gap: 2px;
+  gap: 0;
   background: var(--ae-panel-2);
   padding: 3px;
   border-radius: 8px;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+.ae-tabs.is-dragging {
+  cursor: grabbing;
+}
+/* O realce da aba corrente é uma peça só, que desliza. Ela não muda o tamanho
+   de nada: as abas têm sempre a mesma caixa, só a cor do texto muda. */
+.ae-tab-knob {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  border-radius: 6px;
+  background: var(--ae-panel);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.07), 0 0 0 1px rgb(0 0 0 / 0.04);
+  transition: transform 0.18s cubic-bezier(0.22, 0.61, 0.36, 1);
+  pointer-events: none;
+}
+.ae-tabs.is-dragging .ae-tab-knob {
+  transition: none;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2), 0 0 0 1px rgb(0 0 0 / 0.06);
 }
 .ae-tabs button {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1963,15 +1994,14 @@ html {
   font-size: 12.5px;
   font-weight: 500;
   color: var(--ae-ink-2);
-  transition: background 0.15s, color 0.15s;
+  cursor: inherit;
+  transition: color 0.15s;
 }
 .ae-tabs button:hover {
   color: var(--ae-ink);
 }
 .ae-tabs button.is-on {
-  background: var(--ae-panel);
   color: var(--ae-ink);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.07), 0 0 0 1px rgb(0 0 0 / 0.04);
 }
 .ae-spacer {
   flex: 1;
@@ -2086,6 +2116,18 @@ html {
   background: transparent;
   overflow: hidden;
 }
+/* A caixa que recorta a foto.
+   `contain: paint` e não só `overflow: hidden`: dentro de um contexto 3D
+   (`preserve-3d` da folha que vira) o recorte de um ancestral pode ser ignorado
+   pelo navegador, e a foto ampliada aparecia por fora da página. `contain`
+   obriga o recorte e ainda faz da caixa o bloco de contenção da foto lá
+   dentro — que é medida em % dela. */
+.ae-crop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  contain: paint;
+}
 .ae-slot.is-selected {
   box-shadow: inset 0 0 0 2px var(--ae-accent);
 }
@@ -2142,6 +2184,61 @@ html {
 .ae-fold.is-right {
   --ae-fold-in: to left;
   --ae-fold-out: to right;
+}
+/* ── texto solto na página ──
+   A camada fica exatamente sobre a **área final**: as coordenadas de um bloco
+   são % do que vai ser impresso, como as da capa. `is-behind` passa por baixo
+   das fotos, `is-front` por cima — é o mesmo bloco, só a ordem muda. */
+.ae-page-live {
+  position: absolute;
+  touch-action: none;
+  /* A camada cobre a página inteira: sem isto ela roubaria o arraste de
+     enquadramento da foto que está por baixo. Quem recebe o ponteiro é o
+     bloco de texto, não a camada. */
+  pointer-events: none;
+}
+.ae-page-live .ae-ptext {
+  pointer-events: auto;
+}
+.ae-page-live .ae-ptext.is-static {
+  pointer-events: none;
+}
+.ae-page-live.is-behind {
+  z-index: 0;
+}
+.ae-page-live.is-front {
+  z-index: 2;
+}
+.ae-ptext {
+  position: absolute;
+  border-radius: 3px;
+  touch-action: none;
+}
+.ae-ptext.is-selected {
+  outline: 1px solid var(--ae-accent);
+  outline-offset: 4px;
+}
+/* Bloco vazio continua sendo alvo: sem isto ele desaparece e não há como
+   pegá-lo de volta na página. */
+.ae-ptext:not(.is-static):hover {
+  outline: 1px dashed color-mix(in srgb, var(--ae-accent) 55%, transparent);
+  outline-offset: 4px;
+}
+/* Digitação no lugar: a caixa cobre o texto desenhado, com a mesma tipografia,
+   para a linha quebrar durante a digitação onde vai quebrar impressa. */
+.ae-ptext-edit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: inherit;
+  margin: 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  caret-color: currentColor;
 }
 .ae-page-number {
   position: absolute;
@@ -2349,6 +2446,17 @@ html {
   position: relative;
   flex: none;
   transform-style: preserve-3d;
+}
+/* A sombra projetada da folha, plana e irmã da caixa 3D — nunca dentro dela.
+   Dentro, ela entrava na ordenação por profundidade junto com a folha que gira
+   e se desregulava no meio da virada; e como era a única peça da folha com
+   tamanho aparente variável, dava a impressão de a página inchar e encolher.
+   Mesma razão do `.ae-3d-cast` do livro. */
+.ae-sheet-cast {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
   box-shadow:
     0 34px 70px -30px rgb(0 0 0 / 0.55),
     0 4px 12px rgb(0 0 0 / 0.16);
@@ -3206,8 +3314,11 @@ textarea.ae-input {
   .ae-tab-text {
     display: none;
   }
+  /* `flex-basis`, e não `width`: as abas são itens flexíveis de base zero (é o
+     que as mantém do mesmo tamanho, embaixo do cursor deslizante), e uma
+     largura fixa não teria efeito nenhum sobre elas. */
   .ae-tabs button {
-    width: 34px;
+    flex-basis: 34px;
     padding: 0;
   }
 }

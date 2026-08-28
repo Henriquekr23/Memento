@@ -13,6 +13,7 @@ export interface EditorCopy {
   tabPages: string;
   tabBook: string;
   tabGrid: string;
+  views: string;
   guides: string;
   guidesTip: string;
   export: string;
@@ -127,8 +128,38 @@ export interface EditorCopy {
   frameNumber: (i: number) => string;
   spreadPhotoGroup: string;
   fieldZoom: string;
-  frameNote: string;
   clearFrame: string;
+  pageFill: string;
+  pageFillHint: string;
+  fillBleed: string;
+  fillMargin: string;
+  pageGap: string;
+  pageGapHint: string;
+  fieldFit: string;
+  fitCover: string;
+  fitContain: string;
+  fitNote: string;
+  recenterFrame: string;
+  pageTextGroup: string;
+  addCaption: string;
+  addOverlay: string;
+  addHeader: string;
+  textNew: string;
+  pageTextNote: string;
+  fieldColor: string;
+  colorInk: string;
+  colorWhite: string;
+  colorDark: string;
+  fieldBackdrop: string;
+  backdropNone: string;
+  backdropPaper: string;
+  backdropShade: string;
+  fieldDepth: string;
+  depthFront: string;
+  depthBehind: string;
+  removeText: string;
+  pageNumbers: string;
+  pageNumbersHint: string;
   trayGroup: string;
   trayUpload: string;
   trayUsed: string;
@@ -191,6 +222,7 @@ const PT: EditorCopy = {
   tabPages: 'Páginas',
   tabBook: 'Livro',
   tabGrid: 'Grade',
+  views: 'Vista',
   guides: 'Guias',
   guidesTip: 'Sangria, corte, área segura e vinco',
   export: 'Exportar',
@@ -304,9 +336,40 @@ const PT: EditorCopy = {
   frameNumber: (i) => `Quadro ${i}`,
   spreadPhotoGroup: 'Foto espelhada',
   fieldZoom: 'Zoom',
-  frameNote:
-    'Arraste a foto na página para escolher o enquadramento. Solte uma imagem da bandeja direto no quadro.',
   clearFrame: 'Tirar foto do quadro',
+  pageFill: 'Preenchimento',
+  pageFillHint: 'da página',
+  fillBleed: 'Até a borda',
+  fillMargin: 'Com margem',
+  pageGap: 'Respiro',
+  pageGapHint: 'entre quadros',
+  fieldFit: 'Encaixe',
+  fitCover: 'Preencher',
+  fitContain: 'Foto inteira',
+  fitNote:
+    'Preencher recorta o que passa do quadro; foto inteira mostra a imagem toda e deixa o papel aparecer. Nos dois, o zoom aproxima e o arraste escolhe o pedaço — sem nunca deixar sobrar papel dentro do quadro.',
+  recenterFrame: 'Centralizar de novo',
+  pageTextGroup: 'Texto na página',
+  addCaption: '+ Legenda',
+  addOverlay: '+ Sobre a foto',
+  addHeader: '+ Topo',
+  textNew: 'Escreva aqui',
+  pageTextNote:
+    'Arraste o texto na página para posicionar. Dois cliques nele abrem a digitação; as alças mudam a largura e o corpo.',
+  fieldColor: 'Cor',
+  colorInk: 'Tinta',
+  colorWhite: 'Branco',
+  colorDark: 'Escuro',
+  fieldBackdrop: 'Fundo',
+  backdropNone: 'Nenhum',
+  backdropPaper: 'Papel',
+  backdropShade: 'Sombra',
+  fieldDepth: 'Ordem',
+  depthFront: 'Na frente',
+  depthBehind: 'Atrás',
+  removeText: 'Remover texto',
+  pageNumbers: 'Número da página',
+  pageNumbersHint: 'no pé, lado externo',
   trayGroup: 'Bandeja',
   trayUpload: 'Enviar',
   trayUsed: 'já está numa página',
@@ -358,6 +421,7 @@ const EN: EditorCopy = {
   tabPages: 'Pages',
   tabBook: 'Book',
   tabGrid: 'Grid',
+  views: 'View',
   guides: 'Guides',
   guidesTip: 'Bleed, trim, safe area and hinge',
   export: 'Export',
@@ -471,9 +535,40 @@ const EN: EditorCopy = {
   frameNumber: (i) => `Frame ${i}`,
   spreadPhotoGroup: 'Spread photo',
   fieldZoom: 'Zoom',
-  frameNote:
-    'Drag the photo on the page to choose the crop. Drop an image from the tray straight into a frame.',
   clearFrame: 'Remove photo from frame',
+  pageFill: 'Fill',
+  pageFillHint: 'of the page',
+  fillBleed: 'To the edge',
+  fillMargin: 'With margin',
+  pageGap: 'Gap',
+  pageGapHint: 'between frames',
+  fieldFit: 'Fit',
+  fitCover: 'Fill frame',
+  fitContain: 'Whole photo',
+  fitNote:
+    'Fill frame crops whatever runs past the frame; whole photo shows the entire image and lets the paper show. In both, zoom moves closer and dragging picks the part — never leaving paper inside the frame.',
+  recenterFrame: 'Recentre',
+  pageTextGroup: 'Text on the page',
+  addCaption: '+ Caption',
+  addOverlay: '+ Over the photo',
+  addHeader: '+ Top',
+  textNew: 'Write here',
+  pageTextNote:
+    'Drag the text on the page to place it. Double-click it to type; the handles change the width and the size.',
+  fieldColor: 'Colour',
+  colorInk: 'Ink',
+  colorWhite: 'White',
+  colorDark: 'Dark',
+  fieldBackdrop: 'Backdrop',
+  backdropNone: 'None',
+  backdropPaper: 'Paper',
+  backdropShade: 'Shade',
+  fieldDepth: 'Order',
+  depthFront: 'In front',
+  depthBehind: 'Behind',
+  removeText: 'Remove text',
+  pageNumbers: 'Page number',
+  pageNumbersHint: 'at the foot, outer side',
   trayGroup: 'Tray',
   trayUpload: 'Upload',
   trayUsed: 'already on a page',

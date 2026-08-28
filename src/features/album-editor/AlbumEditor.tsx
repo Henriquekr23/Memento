@@ -5,7 +5,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLang } from '@/features/i18n/LangProvider';
 import { SPEC, fileSize, PAPERS } from '@/features/album-print/spec';
 import { formatMm } from '@/lib/format';
-import type { CoverElement, EditorAlbum, PhotoFrame } from '@/types/album-editor';
+import type {
+  CoverElement,
+  EditorAlbum,
+  PageTextBlock,
+  PhotoFrame,
+} from '@/types/album-editor';
+import { resetFraming } from '@/types/album-editor';
 import type { PaperId } from '@/features/album-print/spec';
 import type { Photo } from '@/types/photo';
 
@@ -13,7 +19,7 @@ import { Book3D } from './Book3D';
 import { CoverInspector } from './CoverInspector';
 import { CoverWrap, type SnapState } from './CoverWrap';
 import { EDITOR_COPY } from './copy';
-import { Group, Row } from './controls';
+import { Group, Row, Seg, useTrackDrag } from './controls';
 import {
   IconBook,
   IconChevronLeft,
@@ -38,6 +44,9 @@ import { clamp } from './useDrag';
 import { useEditorAlbum } from './useEditorAlbum';
 
 type View = 'cover' | 'pages' | 'book' | 'grid';
+
+/** A ordem do trilho das abas — é ela que o arraste percorre. */
+const TAB_IDS: View[] = ['cover', 'pages', 'book', 'grid'];
 
 export interface AlbumEditorProps {
   /** Acervo: fotos já importadas, com EXIF lido e em ordem cronológica. */
@@ -96,10 +105,12 @@ export function AlbumEditor({
   const [guides, setGuides] = useState(false);
   const [sheetIndex, setSheetIndex] = useState(0);
   const [selectedSlot, setSelectedSlot] = useState(0);
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [activeSide, setActiveSide] = useState<'left' | 'right'>('left');
   /** Escala de encaixe: quanto o álbum precisa medir para caber na bancada. */
   const [fitPpm, setFitPpm] = useState(1.7);
 
+  const tabsRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const zoom = useStageZoom(stageRef);
@@ -189,6 +200,7 @@ export function AlbumEditor({
 
       if (event.key === 'Escape') {
         setSelectedId(null);
+        setSelectedTextId(null);
         return;
       }
       if (!selectedElement) return;
@@ -247,7 +259,20 @@ export function AlbumEditor({
 
   const onDropPhoto = (pageIndex: number, slot: number, photoId: string) => {
     setSelectedSlot(slot);
-    updateFrame(pageIndex, slot, { photoId, zoom: 1, offsetX: 0, offsetY: 0 });
+    // A foto troca; o encaixe escolhido para aquele quadro fica.
+    const fit = album.pages[pageIndex]?.slots[slot]?.fit ?? 'cover';
+    updateFrame(pageIndex, slot, { photoId, ...resetFraming(fit) });
+  };
+
+  const onTextChange = (
+    pageIndex: number,
+    id: string,
+    changes: Partial<PageTextBlock>,
+  ) => state.updateTextBlock(pageIndex, id, changes);
+
+  const onSelectText = (pageIndex: number, id: string | null) => {
+    setActiveSide(pageIndex === leftIndex ? 'left' : 'right');
+    setSelectedTextId(id);
   };
 
   const tabs: { id: View; label: string; icon: React.ReactNode }[] = [
@@ -256,6 +281,16 @@ export function AlbumEditor({
     { id: 'book', label: copy.tabBook, icon: <IconBook size={13} /> },
     { id: 'grid', label: copy.tabGrid, icon: <IconGrid size={13} /> },
   ];
+
+  /* As abas são um interruptor: segurar e arrastar passeia por elas e solta na
+     mais próxima. O clique direto numa aba continua valendo. */
+  const pickTab = useCallback((next: number) => setView(TAB_IDS[next]), []);
+  const tabTrack = useTrackDrag(
+    tabsRef,
+    TAB_IDS.length,
+    Math.max(0, TAB_IDS.indexOf(view)),
+    pickTab,
+  );
 
   const file = fileSize(album.orientation);
 
@@ -283,7 +318,15 @@ export function AlbumEditor({
             ficava pesada à esquerda. */}
         <span className="ae-spacer" />
 
-        <div className="ae-tabs">
+        <div
+          className={`ae-tabs${tabTrack.dragging ? ' is-dragging' : ''}`}
+          ref={tabsRef}
+          role="group"
+          aria-label={copy.views}
+          onPointerDown={tabTrack.onPointerDown}
+          onKeyDown={tabTrack.onKeyDown}
+        >
+          <span className="ae-tab-knob" aria-hidden style={tabTrack.knobStyle} />
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -376,6 +419,10 @@ export function AlbumEditor({
                   onSelectSlot={setSelectedSlot}
                   onFrame={onFrame}
                   onDropPhoto={onDropPhoto}
+                  selectedTextId={selectedTextId}
+                  onSelectText={onSelectText}
+                  onTextChange={onTextChange}
+                  hideNumber={!album.showPageNumbers}
                   hint={copy.flipHint}
                 />
               )}
@@ -542,11 +589,27 @@ export function AlbumEditor({
               onActiveSide={setActiveSide}
               selectedSlot={selectedSlot}
               onSelectSlot={setSelectedSlot}
+              selectedTextId={selectedTextId}
+              onSelectText={setSelectedTextId}
               onUpload={onUpload}
             />
           )}
 
           <Group title={copy.printGroup}>
+            {/* O número da página é ajuste do álbum inteiro, não da folha: uma
+                numeração que existe em metade do livro não é numeração. */}
+            <Row label={copy.pageNumbers} hint={copy.pageNumbersHint} stack>
+              <Seg<boolean>
+                full
+                label={copy.pageNumbers}
+                value={album.showPageNumbers}
+                onChange={(showPageNumbers) => patch({ showPageNumbers })}
+                options={[
+                  { value: true, label: copy.yes },
+                  { value: false, label: copy.no },
+                ]}
+              />
+            </Row>
             <Row label={copy.fieldPaper}>
               <select
                 className="ae-input"

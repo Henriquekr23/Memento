@@ -7,6 +7,7 @@ import type {
   CoverElement,
   EditorAlbum,
   EditorPage,
+  PageTextBlock,
   PhotoFrame,
 } from '@/types/album-editor';
 import {
@@ -112,6 +113,54 @@ export function useEditorAlbum(initial?: EditorAlbum) {
     },
     [],
   );
+
+  /* ── texto na página ──────────────────────────────────────────────────── */
+
+  /**
+   * Os blocos de texto são da **página**, não do álbum: é a página que carrega
+   * a legenda daquela foto, e é ela que some quando a folha é removida. Guardar
+   * a lista aqui — e não numa camada à parte indexada por página — é o que faz
+   * remover uma folha remover o texto dela sem nenhum código a mais.
+   */
+  const addTextBlock = useCallback((pageIndex: number, block: PageTextBlock) => {
+    setAlbum((current) => ({
+      ...current,
+      pages: current.pages.map((page, i) =>
+        i === pageIndex ? { ...page, textBlocks: [...page.textBlocks, block] } : page,
+      ),
+    }));
+    return block.id;
+  }, []);
+
+  const updateTextBlock = useCallback(
+    (pageIndex: number, id: string, changes: Partial<PageTextBlock>) => {
+      setAlbum((current) => ({
+        ...current,
+        pages: current.pages.map((page, i) =>
+          i === pageIndex
+            ? {
+                ...page,
+                textBlocks: page.textBlocks.map((block) =>
+                  block.id === id ? { ...block, ...changes } : block,
+                ),
+              }
+            : page,
+        ),
+      }));
+    },
+    [],
+  );
+
+  const removeTextBlock = useCallback((pageIndex: number, id: string) => {
+    setAlbum((current) => ({
+      ...current,
+      pages: current.pages.map((page, i) =>
+        i === pageIndex
+          ? { ...page, textBlocks: page.textBlocks.filter((block) => block.id !== id) }
+          : page,
+      ),
+    }));
+  }, []);
 
   const addSheet = useCallback(() => {
     setAlbum((current) => ({
@@ -236,6 +285,9 @@ export function useEditorAlbum(initial?: EditorAlbum) {
     addMotif,
     updatePage,
     updateFrame,
+    addTextBlock,
+    updateTextBlock,
+    removeTextBlock,
     addSheet,
     removeSheet,
     fillChronologically,

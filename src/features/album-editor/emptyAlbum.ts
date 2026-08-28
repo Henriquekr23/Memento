@@ -23,6 +23,7 @@ export function emptyAlbum(orientation: Orientation = 'portrait'): EditorAlbum {
       makeText({ role: 'title', text: '', size: 30, y: 62, width: 84, tracking: -3 }),
     ],
     back: { show: false, text: '' },
+    showPageNumbers: true,
     spine: {
       show: true,
       direction: 'ascending',
