@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 
 import { SPEC } from '@/features/album-print/spec';
-import type { EditorAlbum, PhotoFrame } from '@/types/album-editor';
+import type { EditorAlbum, PageTextBlock, PhotoFrame } from '@/types/album-editor';
 
 import { PageContent, type PhotoResolver } from './PageContent';
 import { PageView } from './PageView';
@@ -27,6 +27,10 @@ interface SheetStageProps {
   onSelectSlot: (slot: number) => void;
   onFrame: (pageIndex: number, slot: number, changes: Partial<PhotoFrame>) => void;
   onDropPhoto: (pageIndex: number, slot: number, photoId: string) => void;
+  selectedTextId: string | null;
+  onSelectText: (pageIndex: number, id: string | null) => void;
+  onTextChange: (pageIndex: number, id: string, changes: Partial<PageTextBlock>) => void;
+  hideNumber: boolean;
   hint: string;
 }
 
@@ -53,6 +57,10 @@ export function SheetStage({
   onSelectSlot,
   onFrame,
   onDropPhoto,
+  selectedTextId,
+  onSelectText,
+  onTextChange,
+  hideNumber,
   hint,
 }: SheetStageProps) {
   const drag = useRef<{ x: number; moved: boolean } | null>(null);
@@ -102,6 +110,9 @@ export function SheetStage({
               selectedSlot={editable ? 0 : -1}
               onFrame={(slot, changes) => onFrame(leftIndex, slot, changes)}
               onDropPhoto={(slot, photoId) => onDropPhoto(leftIndex, slot, photoId)}
+              selectedTextId={editable ? selectedTextId : null}
+              onSelectText={(id) => onSelectText(leftIndex, id)}
+              onTextChange={(id, changes) => onTextChange(leftIndex, id, changes)}
             />
             <PrintGuides ppm={ppm} spineSide="left" show={guides} />
           </div>
@@ -134,6 +145,13 @@ export function SheetStage({
           }}
           onFrame={(slot, changes) => onFrame(index, slot, changes)}
           onDropPhoto={(slot, photoId) => onDropPhoto(index, slot, photoId)}
+          selectedTextId={editable && activeSide === hand ? selectedTextId : null}
+          onSelectText={(id) => {
+            onActiveSide(hand);
+            onSelectText(index, id);
+          }}
+          onTextChange={(id, changes) => onTextChange(index, id, changes)}
+          hideNumber={hideNumber}
         />
       </div>
     );
@@ -173,8 +191,39 @@ export function SheetStage({
   const angle = leafOnRight ? -progress * 180 : progress * 180;
   const lift = Math.sin(Math.min(1, Math.max(0, progress)) * Math.PI);
 
+  /*
+   * Sombreado da folha em movimento.
+   *
+   * As duas faces têm que chegar a **zero** exatamente onde a folha pousa — e
+   * ela pousa em cima de uma página que não tem sombra nenhuma. Enquanto a face
+   * de trás terminava a virada ainda com 0,24 de preto e a folha carregava um
+   * `box-shadow` fixo, o quadro em que ela era desmontada clareava a página de
+   * uma vez: era esse degrau, e não a animação, o "piscar" da página da
+   * esquerda a cada virada. Agora as três curvas nascem e morrem em zero, e o
+   * que some no fim da virada já não estava pintando nada.
+   */
+  const faceShade = lift * 0.55;
+  const backShade = Math.max(0, 1 - progress) * 0.42;
+  const leafShadow = lift * 0.45;
+
   return (
-    <div className="ae-flip" style={{ width: sheetW, height: pageH }}>
+    /*
+     * A perspectiva é **proporcional à folha**, não um número fixo: com um
+     * valor fixo, a mesma virada projeta pouco numa folha pequena e infla a
+     * página inteira quando o zoom deixa a folha grande — era esse o
+     * "aumentou e depois encolheu" a cada troca de página. Preso à largura, o
+     * efeito da virada é o mesmo em qualquer escala — e a câmera fica longe o
+     * bastante (4,5 larguras) para a folha girar sem inchar: no meio da virada
+     * ela cresce ~12%, e não os ~25% de antes.
+     */
+    <div
+      className="ae-flip"
+      style={{ width: sheetW, height: pageH, perspective: sheetW * 4.5 }}
+    >
+      {/* A sombra projetada mora **fora** da caixa 3D e não se mexe: dentro
+          dela ela era reordenada em profundidade junto com a folha que gira, e
+          desregulava no meio da virada. Mesma razão do `.ae-3d-cast` do livro. */}
+      <div className="ae-sheet-cast" aria-hidden />
       <div className="ae-sheet" style={{ width: sheetW, height: pageH }}>
         <div className="ae-half" style={{ left: 0, width: halfW, height: pageH }}>
           {half('left', baseLeft, !turning)}
@@ -197,22 +246,31 @@ export function SheetStage({
                 : 'none',
             }}
           >
-            <div className="ae-leaf-face">
+            <div
+              className="ae-leaf-face"
+              style={{ boxShadow: `0 8px 26px -10px rgba(0,0,0,${leafShadow.toFixed(3)})` }}
+            >
               {half(leafOnRight ? 'right' : 'left', current, false)}
               <div
                 className="ae-leaf-shade"
                 style={{
-                  opacity: lift * 0.55,
+                  opacity: faceShade,
                   background: `linear-gradient(to ${leafOnRight ? 'left' : 'right'}, rgba(0,0,0,.04), rgba(0,0,0,.62))`,
                 }}
               />
             </div>
-            <div className="ae-leaf-face is-back" style={{ transform: 'rotateY(180deg)' }}>
+            <div
+              className="ae-leaf-face is-back"
+              style={{
+                transform: 'rotateY(180deg)',
+                boxShadow: `0 8px 26px -10px rgba(0,0,0,${leafShadow.toFixed(3)})`,
+              }}
+            >
               {half(leafOnRight ? 'left' : 'right', neighbour, false)}
               <div
                 className="ae-leaf-shade"
                 style={{
-                  opacity: (1 - lift) * 0.18 + 0.06,
+                  opacity: backShade,
                   background: `linear-gradient(to ${leafOnRight ? 'right' : 'left'}, rgba(0,0,0,.02), rgba(0,0,0,.4))`,
                 }}
               />

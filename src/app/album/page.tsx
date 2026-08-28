@@ -37,7 +37,19 @@ export default function AlbumPage() {
   const [composition, setComposition] = useState<EditorAlbum | null>(null);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
 
+  /**
+   * Se o editor já foi aberto.
+   *
+   * Importar não abre mais o álbum sozinho. Enquanto isto for `false` a pessoa
+   * fica na tela de escolha — acrescentando, tirando e reordenando fotos
+   * quantas vezes quiser —, e o editor abre no clique do botão, só. Antes, a
+   * primeira foto já montava as páginas, e quem ainda estava escolhendo tinha
+   * que desmanchar composição para continuar escolhendo.
+   */
+  const [isEditing, setIsEditing] = useState(false);
+
   const hasPhotos = album.photos.length > 0;
+  const isBuilding = hasPhotos && isEditing;
 
   const { addFiles } = album;
   const handleStart = useCallback(
@@ -91,9 +103,9 @@ export default function AlbumPage() {
     // Com o editor aberto a régua da página abre: uma bancada de 1054 px no
     // meio de uma tela de 1440 é o que empurrava a barra e o inspetor para
     // fora. A marca, a linha e o rodapé acompanham — continua uma régua só.
-    <main className={`page-shell page-body${hasPhotos ? ' is-wide' : ''}`}>
+    <main className={`page-shell page-body${isBuilding ? ' is-wide' : ''}`}>
       <SiteNav variant="inner" tagline="Guarde a memória" />
-      <hr className={`hr ${hasPhotos ? '' : 'mb-6'}`} />
+      <hr className={`hr ${isBuilding ? '' : 'mb-6'}`} />
 
       {/* Entrar sem sair da página: navegar destruiria o álbum, que só existe
           na memória desta aba. Ver `InlineAuthDialog`. */}
@@ -112,18 +124,25 @@ export default function AlbumPage() {
         onConfirm={() => {
           album.clear();
           setComposition(null);
+          setIsEditing(false);
           setIsClearConfirmOpen(false);
         }}
         onCancel={() => setIsClearConfirmOpen(false)}
       />
 
       <div className="space-y-6">
-        {!hasPhotos && (
+        {!isBuilding && (
           <EditorStart
             name={album.name}
             onNameChange={album.setName}
             isImporting={album.status.isImporting}
             onStart={handleStart}
+            photos={album.photos}
+            onMove={album.movePhoto}
+            onRemove={album.removePhoto}
+            onSortByDate={album.sortByDate}
+            isManuallyOrdered={album.isManuallyOrdered}
+            onConfirm={() => setIsEditing(true)}
           />
         )}
 
@@ -165,7 +184,7 @@ export default function AlbumPage() {
         {error && <p className="text-sm text-red-400">{error}</p>}
         {cloud.error && <p className="text-sm text-red-400">{cloud.error}</p>}
 
-        {hasPhotos && (
+        {isBuilding && (
           // O editor ocupa a tela inteira abaixo da barra: é uma bancada, não um
           // bloco de conteúdo no meio da página.
           <div className="h-[calc(100dvh-140px)] min-h-[560px] overflow-hidden rounded-[16px] border border-[var(--color-divider)]">
@@ -220,7 +239,7 @@ export default function AlbumPage() {
       {/* A bolha de ajuda é fixa no canto inferior direito — exatamente onde
           fica o inspetor com o editor aberto. Some enquanto a bancada está em
           uso; na tela de partida ela continua ali. */}
-      {!hasPhotos && <FaqWidget />}
+      {!isBuilding && <FaqWidget />}
     </main>
   );
 }

@@ -1,9 +1,10 @@
 'use client';
 
 import { SPEC } from '@/features/album-print/spec';
-import type { EditorPage, PhotoFrame } from '@/types/album-editor';
+import type { EditorPage, PageTextBlock, PhotoFrame } from '@/types/album-editor';
 
 import { PageContent, type PhotoResolver } from './PageContent';
+import { PAGE_NUMBER, numberOverPhoto } from './pageLayout';
 import { PrintGuides, type SpineSide } from './PrintGuides';
 
 interface PageViewProps {
@@ -21,6 +22,9 @@ interface PageViewProps {
   onSelectSlot?: (index: number) => void;
   onFrame?: (index: number, patch: Partial<PhotoFrame>) => void;
   onDropPhoto?: (index: number, photoId: string) => void;
+  selectedTextId?: string | null;
+  onSelectText?: (id: string | null) => void;
+  onTextChange?: (id: string, patch: Partial<PageTextBlock>) => void;
   hideNumber?: boolean;
 }
 
@@ -38,12 +42,16 @@ export function PageView({
   onSelectSlot,
   onFrame,
   onDropPhoto,
+  selectedTextId = null,
+  onSelectText,
+  onTextChange,
   hideNumber = false,
 }: PageViewProps) {
   const width = (SPEC.trim.w + SPEC.bleed * 2) * ppm;
   const height = (SPEC.trim.h + SPEC.bleed * 2) * ppm;
   // A lombada fica do lado de dentro: à direita na página par, à esquerda na ímpar.
   const spineSide: SpineSide = hand === 'right' ? 'left' : 'right';
+  const onPhoto = numberOverPhoto(page);
 
   return (
     <div className="ae-page" style={{ width, height }}>
@@ -59,17 +67,20 @@ export function PageView({
         onSelectSlot={onSelectSlot}
         onFrame={onFrame}
         onDropPhoto={onDropPhoto}
+        selectedTextId={selectedTextId}
+        onSelectText={onSelectText}
+        onTextChange={onTextChange}
       />
 
       {!hideNumber && (
         <span
-          className={`ae-page-number${page.layout === 'full' ? ' is-on-photo' : ''}`}
+          className={`ae-page-number${onPhoto ? ' is-on-photo' : ''}`}
           style={{
-            [hand === 'right' ? 'right' : 'left']: (SPEC.bleed + 7) * ppm,
-            bottom: (SPEC.bleed + 6) * ppm,
-            fontSize: Math.max(6, 2.6 * ppm),
+            [hand === 'right' ? 'right' : 'left']: (SPEC.bleed + PAGE_NUMBER.edge) * ppm,
+            bottom: (SPEC.bleed + PAGE_NUMBER.bottom) * ppm,
+            fontSize: Math.max(6, PAGE_NUMBER.size * ppm),
             // Sobre foto sangrada o número precisa ser claro; sobre papel, escuro.
-            color: page.layout === 'full' ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.45)',
+            color: onPhoto ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.45)',
           }}
         >
           {index + 1}

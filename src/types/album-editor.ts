@@ -26,6 +26,16 @@ export type CoverFontId =
 
 export type TextAlign = 'left' | 'center' | 'right';
 
+/**
+ * Como a foto ocupa o quadro.
+ *
+ * `cover` preenche o quadro e recorta o excesso; `contain` mostra a foto
+ * inteira e deixa o papel aparecer em volta. Os dois são só o **encaixe de
+ * partida**: o zoom multiplica a partir dele e o arraste escolhe o pedaço, com
+ * os limites calculados pelo tamanho real da imagem (ver `frameCrop.ts`).
+ */
+export type FrameFit = 'cover' | 'contain';
+
 interface CoverElementBase {
   id: string;
   /**
@@ -131,11 +141,55 @@ export function layoutById(id: EditorLayoutId): EditorLayout {
 /** Quadro de uma página. `photoId` aponta para uma foto do acervo. */
 export interface PhotoFrame {
   photoId: string | null;
-  /** 1–3. */
+  /** Encaixe de partida da foto no quadro. */
+  fit: FrameFit;
+  /** Escala sobre o encaixe. 1 = o encaixe puro. */
   zoom: number;
-  /** Deslocamento do enquadramento, em % do quadro. */
+  /**
+   * Deslocamento do enquadramento, em % do **lado desenhado da foto** — não do
+   * quadro. É a mesma régua que o PDF usa (`drawCovered`), e é ela que deixa o
+   * limite ser calculado sem saber o tamanho do quadro em pixels: o quanto
+   * sobra da foto para fora do quadro é uma razão, não um número de tela.
+   *
+   * O valor guardado nunca é podado: quem desenha é que o limita ao que aquele
+   * zoom permite (`clampOffset`). Assim afastar e voltar a aproximar devolve o
+   * enquadramento que a pessoa tinha escolhido, em vez de esquecê-lo.
+   */
   offsetX: number;
   offsetY: number;
+}
+
+/** Fundo da caixa de texto — o que deixa uma legenda legível sobre a foto. */
+export type TextBackdrop = 'none' | 'paper' | 'shade';
+
+/**
+ * Um bloco de texto solto na página: legenda, frase sobre a foto, título no
+ * alto. É um só mecanismo para os três — o que muda entre eles é a posição, o
+ * corpo e a ordem em relação à foto, não a natureza da peça.
+ */
+export interface PageTextBlock {
+  id: string;
+  text: string;
+  /** Centro da caixa, em % da **área final** (o retângulo depois do corte). */
+  x: number;
+  y: number;
+  /** Largura da caixa, em % da largura da área final. */
+  width: number;
+  /** Corpo em milímetros — a mesma unidade da capa e da gráfica. */
+  size: number;
+  font: CoverFontId;
+  align: TextAlign;
+  /** `null` = herda a tinta pareada da cor do álbum. */
+  color: string | null;
+  uppercase: boolean;
+  /** Entrelinha como múltiplo do corpo. */
+  leading: number;
+  /** Entreletra em centésimos de em (o que a UI mostra como %). */
+  tracking: number;
+  rotation: number;
+  /** Atrás das fotos, em vez de por cima delas. */
+  behind: boolean;
+  backdrop: TextBackdrop;
 }
 
 export interface EditorPage {
@@ -143,9 +197,18 @@ export interface EditorPage {
   layout: EditorLayoutId;
   /** Só vale na página da esquerda: a foto atravessa a folha inteira. */
   spread: boolean;
+  /**
+   * Preenchimento total: os quadros vão até a borda do papel, sem margem
+   * branca, inclusive quando a página está dividida em vários. Desligado, a
+   * página volta a ter a margem de 10 mm (12 mm do lado da lombada).
+   */
+  fill: boolean;
+  /** Respiro entre quadros, em milímetros. 0 = quadros encostados. */
+  gap: number;
   heading: string;
   body: string;
   slots: PhotoFrame[];
+  textBlocks: PageTextBlock[];
 }
 
 /* ── álbum ───────────────────────────────────────────────────────────────── */
@@ -159,6 +222,8 @@ export interface EditorAlbum {
   elements: CoverElement[];
   back: BackCover;
   spine: SpineConfig;
+  /** Numeração impressa no pé da página. Ligada por padrão. */
+  showPageNumbers: boolean;
   pages: EditorPage[];
 }
 
@@ -169,7 +234,12 @@ export function newId(): string {
 }
 
 export function emptyFrame(): PhotoFrame {
-  return { photoId: null, zoom: 1, offsetX: 0, offsetY: 0 };
+  return { photoId: null, fit: 'cover', zoom: 1, offsetX: 0, offsetY: 0 };
+}
+
+/** Deslocamento e zoom de volta ao começo, mantendo o encaixe escolhido. */
+export function resetFraming(fit: FrameFit = 'cover'): Partial<PhotoFrame> {
+  return { fit, zoom: 1, offsetX: 0, offsetY: 0 };
 }
 
 export function makePage(over: Partial<EditorPage> = {}): EditorPage {
@@ -181,9 +251,15 @@ export function makePage(over: Partial<EditorPage> = {}): EditorPage {
     // dela (ver `ae-fold`). Quem quiser a moldura tem o layout `inset`.
     layout: 'full',
     spread: false,
+    // Preenchimento total é o padrão também quando a página se divide: quatro
+    // fotos sangradas continuam sendo uma página de fotolivro; quatro fotos
+    // com margem branca em volta são uma folha de contato.
+    fill: true,
+    gap: 0,
     heading: '',
     body: '',
     slots: Array.from({ length: MAX_SLOTS }, emptyFrame),
+    textBlocks: [],
     ...over,
   };
 }
@@ -221,6 +297,70 @@ export function makeMotif(over: Partial<CoverMotifElement> = {}): CoverMotifElem
     color: null,
     ...over,
   };
+}
+
+export function makeTextBlock(over: Partial<PageTextBlock> = {}): PageTextBlock {
+  return {
+    id: newId(),
+    text: '',
+    x: 50,
+    y: 50,
+    width: 72,
+    size: 5,
+    font: 'dm',
+    align: 'center',
+    color: null,
+    uppercase: false,
+    leading: 1.35,
+    tracking: 0,
+    rotation: 0,
+    behind: false,
+    backdrop: 'none',
+    ...over,
+  };
+}
+
+/**
+ * Os três lugares que um texto ocupa numa página de álbum. São **partidas**,
+ * não formatos fechados: nascido o bloco, tudo nele continua editável e ele
+ * anda para onde a pessoa arrastar.
+ */
+export type TextBlockPreset = 'caption' | 'overlay' | 'header';
+
+export function makePresetTextBlock(preset: TextBlockPreset): PageTextBlock {
+  if (preset === 'overlay') {
+    return makeTextBlock({
+      y: 50,
+      width: 78,
+      size: 13,
+      font: 'anton',
+      uppercase: true,
+      tracking: -2,
+      leading: 0.92,
+      color: '#FFFFFF',
+      backdrop: 'shade',
+    });
+  }
+  if (preset === 'header') {
+    return makeTextBlock({
+      y: 12,
+      width: 80,
+      size: 6,
+      font: 'grotesk',
+      align: 'left',
+      leading: 1.15,
+    });
+  }
+  // Legenda: rente ao pé da área segura, discreta, sobre papel ou sobre foto.
+  return makeTextBlock({
+    y: 88,
+    width: 76,
+    size: 3.6,
+    font: 'dm',
+    leading: 1.4,
+    color: '#FFFFFF',
+    backdrop: 'shade',
+  });
 }
 
 /** O título é o único elemento com papel fixo — a lombada lê dele. */

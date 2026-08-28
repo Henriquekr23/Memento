@@ -32,9 +32,12 @@ import {
   type EditorAlbum,
   type EditorLayoutId,
   type EditorPage,
+  type FrameFit,
   type MotifShape,
+  type PageTextBlock,
   type PhotoFrame,
   type TextAlign,
+  type TextBackdrop,
 } from '@/types/album-editor';
 
 /**
@@ -89,6 +92,8 @@ const PAPER_IDS = PAPERS.map((paper) => paper.id) as PaperId[];
 const FONT_IDS = COVER_FONTS.map((font) => font.id) as CoverFontId[];
 const LAYOUT_IDS = EDITOR_LAYOUTS.map((layout) => layout.id) as EditorLayoutId[];
 const ALIGNS: TextAlign[] = ['left', 'center', 'right'];
+const FITS: FrameFit[] = ['cover', 'contain'];
+const BACKDROPS: TextBackdrop[] = ['none', 'paper', 'shade'];
 
 function coverElement(value: unknown): CoverElement | null {
   if (!isRecord(value)) return null;
@@ -129,21 +134,52 @@ function frame(value: unknown): PhotoFrame {
   if (!isRecord(value)) return emptyFrame();
   return {
     photoId: typeof value.photoId === 'string' ? value.photoId : null,
-    zoom: num(value.zoom, 1, 1, 4),
+    fit: oneOf<FrameFit>(value.fit, FITS, 'cover'),
+    zoom: num(value.zoom, 1, 0.5, 4),
     offsetX: num(value.offsetX, 0, -100, 100),
     offsetY: num(value.offsetY, 0, -100, 100),
+  };
+}
+
+function textBlock(value: unknown): PageTextBlock | null {
+  if (!isRecord(value)) return null;
+  return {
+    id: str(value.id) || newId(),
+    text: str(value.text),
+    x: num(value.x, 50, -50, 150),
+    y: num(value.y, 50, -50, 150),
+    width: num(value.width, 72, 5, 100),
+    size: num(value.size, 5, 1, 100),
+    font: oneOf<CoverFontId>(value.font, FONT_IDS, 'dm'),
+    align: oneOf<TextAlign>(value.align, ALIGNS, 'center'),
+    color: typeof value.color === 'string' ? value.color : null,
+    uppercase: bool(value.uppercase, false),
+    leading: num(value.leading, 1.35, 0.5, 3),
+    tracking: num(value.tracking, 0, -50, 100),
+    rotation: num(value.rotation, 0, -360, 360),
+    behind: bool(value.behind, false),
+    backdrop: oneOf<TextBackdrop>(value.backdrop, BACKDROPS, 'none'),
   };
 }
 
 function page(value: unknown): EditorPage {
   if (!isRecord(value)) return makePage();
   const slots = Array.isArray(value.slots) ? value.slots : [];
+  const blocks = Array.isArray(value.textBlocks) ? value.textBlocks : [];
   return {
     id: str(value.id) || newId(),
     layout: oneOf<EditorLayoutId>(value.layout, LAYOUT_IDS, 'full'),
     spread: bool(value.spread, false),
+    // Página **nova** nasce com preenchimento total (`makePage`), mas página
+    // salva antes de o campo existir não pode mudar de cara ao ser reaberta:
+    // quem montou uma grade com margem branca guardou aquilo, não isto.
+    fill: bool(value.fill, false),
+    gap: num(value.gap, 0, 0, 30),
     heading: str(value.heading),
     body: str(value.body),
+    textBlocks: blocks
+      .map(textBlock)
+      .filter((block): block is PageTextBlock => block !== null),
     // Sempre `MAX_SLOTS` quadros: trocar de layout não pode perder a foto que
     // estava no quadro 4 só porque o layout novo tem três.
     slots: Array.from({ length: MAX_SLOTS }, (_, i) => frame(slots[i])),
@@ -176,6 +212,7 @@ function editorAlbum(value: unknown): EditorAlbum {
     color: oneOf(value.color, COLOR_IDS, DEFAULT_COLOR),
     elements,
     back: { show: bool(back.show, false), text: str(back.text) },
+    showPageNumbers: bool(value.showPageNumbers, true),
     spine: {
       show: bool(spine.show, true),
       direction: spine.direction === 'descending' ? 'descending' : 'ascending',

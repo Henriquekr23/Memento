@@ -65,35 +65,39 @@ export interface SegOption<T> {
   title?: string;
 }
 
+export interface TrackDrag {
+  dragging: boolean;
+  /** Estilo do cursor: em pixels durante o gesto, em casas no repouso. */
+  knobStyle: React.CSSProperties;
+  onPointerDown: (event: React.PointerEvent) => void;
+  onKeyDown: (event: React.KeyboardEvent) => void;
+}
+
 /**
- * Segmentado: escolha exclusiva entre duas ou três opções curtas.
+ * O gesto de um controle de casas: segurar e arrastar entre elas.
  *
- * Ele é um **interruptor de verdade**: o cursor gruda no ponteiro e anda junto
- * com ele, em pixels, em vez de pular de casa em casa. Segurar e arrastar é o
- * gesto natural de quem vê um botão deslizante — sem isso o controle parece
- * dois botões colados e pede mira. Ao soltar, o cursor assenta na casa mais
- * próxima com a mesma curva de animação do repouso.
+ * O cursor gruda no ponteiro e anda em **pixels**, em vez de pular de casa em
+ * casa — sem isso o controle parece dois ou quatro botões colados e pede mira.
+ * Ao soltar, ele assenta na casa mais próxima com a curva do repouso. O clique
+ * direto numa casa continua funcionando: quem clica sem arrastar já cai na
+ * primeira leitura do `pointerdown`.
+ *
+ * Vive fora do `Seg` porque as abas do álbum (capa · páginas · livro · grade)
+ * são o mesmo gesto num trilho maior. O respiro de 3 px é o mesmo no CSS dos
+ * dois (`.ae-seg`, `.ae-tabs`).
  */
-export function Seg<T extends string | boolean>({
-  value,
-  onChange,
-  options,
-  full = false,
-  label,
-}: {
-  value: T;
-  onChange: (value: T) => void;
-  options: SegOption<T>[];
-  full?: boolean;
-  /** Nome acessível do grupo — a `Row` não rotula mais por envolvimento. */
-  label?: string;
-}) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const count = options.length;
-  const index = Math.max(
-    0,
-    options.findIndex((option) => option.value === value),
-  );
+export function useTrackDrag(
+  /**
+   * O nó do trilho é criado por quem chama, e não devolvido daqui: uma
+   * referência que sai de um hook dentro de um objeto lido na renderização é
+   * exatamente o que a regra `react-hooks/refs` proíbe — e com razão, porque
+   * ninguém sabe dizer, olhando a chamada, que aquele campo não é um valor.
+   */
+  trackRef: React.RefObject<HTMLDivElement | null>,
+  count: number,
+  index: number,
+  onPick: (next: number) => void,
+): TrackDrag {
   /**
    * Cursor durante o gesto: posição e largura em pixels, medidas no
    * `pointerdown` e atualizadas no `pointermove`. Guardadas em estado, e não
@@ -101,10 +105,10 @@ export function Seg<T extends string | boolean>({
    * controle assim ficar um quadro atrás do dedo.
    */
   const [drag, setDrag] = useState<{ x: number; seg: number } | null>(null);
-  // Última casa entregue neste gesto: evita disparar `onChange` a cada pixel.
+  // Última casa entregue neste gesto: evita disparar `onPick` a cada pixel.
   const lastRef = useRef(index);
 
-  /** Trilho em pixels. O respiro de 3 px é o mesmo do CSS (`.ae-seg`). */
+  /** Trilho em pixels. O respiro de 3 px é o mesmo do CSS. */
   const geometry = useCallback(() => {
     const node = trackRef.current;
     if (!node) return null;
@@ -112,7 +116,7 @@ export function Seg<T extends string | boolean>({
     const pad = 3;
     const inner = Math.max(0, rect.width - pad * 2);
     return { left: rect.left, pad, inner, seg: inner / count };
-  }, [count]);
+  }, [count, trackRef]);
 
   const follow = useCallback(
     (clientX: number) => {
@@ -129,9 +133,9 @@ export function Seg<T extends string | boolean>({
       );
       if (next === lastRef.current) return;
       lastRef.current = next;
-      onChange(options[next].value);
+      onPick(next);
     },
-    [count, geometry, onChange, options],
+    [count, geometry, onPick],
   );
 
   const onPointerDown = (event: React.PointerEvent) => {
@@ -158,30 +162,63 @@ export function Seg<T extends string | boolean>({
     event.preventDefault();
     const next = Math.min(count - 1, Math.max(0, index + step));
     lastRef.current = next;
-    onChange(options[next].value);
+    onPick(next);
   };
+
+  return {
+    dragging: drag !== null,
+    knobStyle: drag
+      ? { width: drag.seg, transform: `translateX(${drag.x}px)` }
+      : {
+          width: `calc((100% - 6px) / ${count})`,
+          transform: `translateX(${index * 100}%)`,
+        },
+    onPointerDown,
+    onKeyDown,
+  };
+}
+
+/**
+ * Segmentado: escolha exclusiva entre duas ou três opções curtas.
+ *
+ * Ele é um **interruptor de verdade** — ver `useTrackDrag`.
+ */
+export function Seg<T extends string | boolean>({
+  value,
+  onChange,
+  options,
+  full = false,
+  label,
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  options: SegOption<T>[];
+  full?: boolean;
+  /** Nome acessível do grupo — a `Row` não rotula mais por envolvimento. */
+  label?: string;
+}) {
+  const count = options.length;
+  const index = Math.max(
+    0,
+    options.findIndex((option) => option.value === value),
+  );
+  const pick = useCallback(
+    (next: number) => onChange(options[next].value),
+    [onChange, options],
+  );
+  const trackRef = useRef<HTMLDivElement>(null);
+  const track = useTrackDrag(trackRef, count, index, pick);
 
   return (
     <div
       ref={trackRef}
-      className={`ae-seg${full ? ' is-full' : ''}${drag ? ' is-dragging' : ''}`}
+      className={`ae-seg${full ? ' is-full' : ''}${track.dragging ? ' is-dragging' : ''}`}
       role="group"
       aria-label={label}
-      onPointerDown={onPointerDown}
-      onKeyDown={onKeyDown}
+      onPointerDown={track.onPointerDown}
+      onKeyDown={track.onKeyDown}
     >
-      <span
-        className="ae-seg-knob"
-        aria-hidden
-        style={
-          drag
-            ? { width: drag.seg, transform: `translateX(${drag.x}px)` }
-            : {
-                width: `calc((100% - 6px) / ${count})`,
-                transform: `translateX(${index * 100}%)`,
-              }
-        }
-      />
+      <span className="ae-seg-knob" aria-hidden style={track.knobStyle} />
       {options.map((option) => (
         <button
           key={String(option.value)}

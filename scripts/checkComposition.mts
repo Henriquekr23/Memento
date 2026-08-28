@@ -53,6 +53,7 @@ const album = {
     },
   ],
   back: { show: true, text: 'Onze dias.' },
+  showPageNumbers: true,
   spine: {
     show: true,
     direction: 'ascending',
@@ -67,26 +68,50 @@ const album = {
       id: 'p1',
       layout: 'full',
       spread: false,
+      fill: true,
+      gap: 0,
       heading: '',
       body: '',
+      textBlocks: [
+        {
+          id: 'tb1',
+          text: 'Santorini, 6h12',
+          x: 50,
+          y: 88,
+          width: 76,
+          size: 3.6,
+          font: 'dm',
+          align: 'center',
+          color: '#FFFFFF',
+          uppercase: false,
+          leading: 1.4,
+          tracking: 0,
+          rotation: 0,
+          behind: false,
+          backdrop: 'shade',
+        },
+      ],
       slots: [
-        { photoId: 'a', zoom: 1.4, offsetX: 5, offsetY: -3 },
-        { photoId: null, zoom: 1, offsetX: 0, offsetY: 0 },
-        { photoId: null, zoom: 1, offsetX: 0, offsetY: 0 },
-        { photoId: null, zoom: 1, offsetX: 0, offsetY: 0 },
+        { photoId: 'a', fit: 'cover', zoom: 1.4, offsetX: 5, offsetY: -3 },
+        { photoId: null, fit: 'cover', zoom: 1, offsetX: 0, offsetY: 0 },
+        { photoId: null, fit: 'cover', zoom: 1, offsetX: 0, offsetY: 0 },
+        { photoId: null, fit: 'cover', zoom: 1, offsetX: 0, offsetY: 0 },
       ],
     },
     {
       id: 'p2',
       layout: 'duoH',
       spread: false,
+      fill: true,
+      gap: 2.5,
       heading: 'Oia',
       body: 'Subimos antes do sol.',
+      textBlocks: [],
       slots: [
-        { photoId: 'b', zoom: 1, offsetX: 0, offsetY: 0 },
-        { photoId: 'c', zoom: 1, offsetX: 0, offsetY: 0 },
-        { photoId: null, zoom: 1, offsetX: 0, offsetY: 0 },
-        { photoId: null, zoom: 1, offsetX: 0, offsetY: 0 },
+        { photoId: 'b', fit: 'contain', zoom: 1, offsetX: 0, offsetY: 0 },
+        { photoId: 'c', fit: 'cover', zoom: 1, offsetX: 0, offsetY: 0 },
+        { photoId: null, fit: 'cover', zoom: 1, offsetX: 0, offsetY: 0 },
+        { photoId: null, fit: 'cover', zoom: 1, offsetX: 0, offsetY: 0 },
       ],
     },
   ],
@@ -130,6 +155,44 @@ assert.equal(dirty.album.pages[0].slots[0].photoId, null, 'id que não é texto 
 assert.equal(dirty.album.spine.direction, 'ascending', 'direção desconhecida cai no padrão');
 assert.equal(dirty.album.spine.offset, 100, 'porcentagem fora da faixa é grampeada');
 assert.equal(dirty.album.spine.mm, null, 'espessura que não é número vira calculada');
+assert.equal(
+  dirty.album.showPageNumbers,
+  true,
+  'álbum sem o campo do número de página abre com a numeração ligada',
+);
+assert.equal(
+  dirty.album.pages[0].fill,
+  false,
+  'página salva antes do preenchimento total não muda de cara ao reabrir',
+);
+assert.equal(dirty.album.pages[0].gap, 0, 'respiro ausente é zero');
+assert.deepEqual(dirty.album.pages[0].textBlocks, [], 'página sem textos abre com a lista vazia');
+assert.equal(dirty.album.pages[0].slots[0].fit, 'cover', 'encaixe ausente é preencher');
+
+// ── Texto na página: entrada torta não derruba nem inventa ─────────────────
+const messyText = parseComposition({
+  version: 2,
+  album: {
+    pages: [
+      {
+        layout: 'full',
+        textBlocks: [
+          { text: 'oi', font: 'comic', align: 'justify', backdrop: 'vidro', size: 999 },
+          'isto não é um bloco',
+          null,
+        ],
+      },
+    ],
+  },
+});
+const block = messyText.album.pages[0].textBlocks[0];
+assert.equal(messyText.album.pages[0].textBlocks.length, 1, 'bloco que não é objeto é descartado');
+assert.equal(block.text, 'oi', 'o texto sobrevive');
+assert.ok(block.id.length > 0, 'bloco sem id ganha um');
+assert.equal(block.font, 'dm', 'fonte desconhecida cai no padrão');
+assert.equal(block.align, 'center', 'alinhamento desconhecido cai no padrão');
+assert.equal(block.backdrop, 'none', 'fundo desconhecido cai no padrão');
+assert.equal(block.size, 100, 'corpo fora da faixa é grampeado');
 
 const textElement = dirty.album.elements.find((el) => el.kind === 'text' && el.text === 'ok');
 assert.ok(textElement, 'elemento de texto válido sobrevive');
@@ -168,6 +231,11 @@ assert.equal(
   pruned.album.pages[0].slots[0].zoom,
   1.4,
   'o enquadramento do quadro que ficou não é mexido',
+);
+assert.equal(
+  pruned.album.pages[0].textBlocks[0].text,
+  'Santorini, 6h12',
+  'a poda de fotos não toca no texto da página',
 );
 assert.equal(
   pruned.album.pages[1].heading,

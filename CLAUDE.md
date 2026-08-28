@@ -35,6 +35,7 @@ scripts avulsos rodados via `tsx` (não fazem parte do `tsconfig`/build):
 ```bash
 npx tsx scripts/checkComposition.mts     # ida/volta da composição por JSON, entradas corrompidas, migração da v1, poda de quadros órfãos
 npx tsx scripts/checkPrintSpec.mts       # geometria de impressão: formato, sangria, lombada, corpo do texto
+npx tsx scripts/checkFrameCrop.mts       # enquadramento da foto (encaixe, zoom, limite do arraste) e margens da página
 
 # Supabase (exige conta de verdade; apaga o álbum de teste no fim):
 MEMENTO_EMAIL=... MEMENTO_PASSWORD=... npx tsx scripts/checkSupabaseSave.mts
@@ -95,6 +96,8 @@ qualquer coisa.
 | `PageView.tsx` / `PageContent.tsx` | a página e o conteúdo dela |
 | `CoverElementView.tsx` | um elemento da capa, com arraste e alças |
 | `PrintGuides.tsx` | sangria, corte, área segura e vinco — por lado |
+| `PageTextView.tsx` | um bloco de texto da página, com arraste e edição no lugar |
+| `frameCrop.ts` / `pageLayout.ts` | contas puras: enquadramento da foto e margens da página |
 | `CoverInspector.tsx` / `PagesInspector.tsx` | os controles, sem estado próprio |
 | `palette.ts` / `motifPaths.ts` / `copy.ts` | cores, grafismos e textos |
 
@@ -161,6 +164,78 @@ leitura de EXIF.
     local) perde o álbum — intencional. Exceções que não são conteúdo: idioma
     (`localStorage`) e a ponte para `/obrigado` (`sessionStorage`, consumida na
     leitura).
+15. **Importar não abre o editor.** `/album` tem duas etapas: a de escolher as
+    fotos (`EditorStart` + `PhotoOrderGrid` — acrescentar, remover, reordenar) e
+    a bancada. A segunda começa no clique de "Confirmar e montar o álbum"
+    (`isEditing` na página), nunca na chegada da primeira foto. Quem manda
+    duzentas fotos ainda está escolhendo; abrir a composição ali obrigava a
+    desmanchá-la para continuar escolhendo.
+16. **Nada que carrega `transform-style: preserve-3d` pode receber `filter`,
+    `opacity` < 1 ou `mask`.** Qualquer propriedade de agrupamento força o
+    `preserve-3d` a virar `flat`, e as faces achatam todas no mesmo plano. Foi
+    um `drop-shadow` em `.ae-3d-box` que deixou o livro do `Book3D` parecendo um
+    cartão com uma listra na borda por muito tempo: a sombra projetada mora fora
+    da caixa (`.ae-3d-cast`), e a perspectiva desceu para `.ae-3d-scene`, que é
+    o pai direto da caixa.
+17. **A luz da cena 3D é fixa; quem gira é o livro.** `lit()` em `Book3D` dá o
+    brilho de cada face pela normal dela — não há `brightness` chapado por face.
+    Com a luz do lado errado a lombada saía mais clara que a capa e sumia dentro
+    dela.
+18. **Marca de seleção não pode mudar o tamanho do que ela marca.** Miniatura de
+    folha e célula da grade têm contorno de 2 px **sempre desenhado**; o que
+    muda entre selecionado e não é só a cor. Anel que nasce no clique fazia a
+    peça crescer 4 px em cada eixo e a fila inteira dançar. Contorno, e não
+    sombra interna: a peça é coberta pela foto, e `inset` fica por baixo dela.
+19. **Sombreado da folha em movimento nasce e morre em zero.** As duas faces de
+    `.ae-leaf` e a sombra dela são proporcionais ao progresso da virada
+    (`SheetStage`). Um valor residual no fim — a face de trás terminava com 0,24
+    de preto, e a folha tinha `box-shadow` fixo — clareava a página de uma vez
+    no quadro em que a folha era desmontada: era esse degrau o "piscar" da
+    página da esquerda a cada virada, e não a animação.
+20. **O zoom do palco multiplica o encaixe, não substitui.** `useStageZoom` dá
+    um fator; `ppm = fitPpm * zoom`. A medida do encaixe sai do **visor**
+    (`.ae-viewport`, que não rola), nunca do palco: medir o palco faz a barra de
+    rolagem do zoom encolher a medida, que encolhe o álbum, que tira a barra. E
+    `.ae-stage` centraliza com `safe center` — centralização normal deixa a
+    borda de início do conteúdo ampliado fora do alcance da rolagem.
+
+21. **A conta do enquadramento é uma só, e é pura** (`frameCrop.ts`). A tela
+    posiciona a foto com ela e o canvas do PDF redesenha com ela — as razões
+    entre o lado desenhado da foto e o lado do quadro, e o teto do
+    deslocamento. Enquanto cada meio tinha a sua, o arquivo saía diferente da
+    página montada; e o teto fixo de ±40 que existia antes não conhecia nem o
+    tamanho da foto nem o zoom, que é como a foto abria papel vazio dentro do
+    quadro e escapava da página. **O deslocamento guardado nunca é podado** —
+    quem desenha é que o limita (`clampOffset`), então afastar e voltar a
+    aproximar devolve o enquadramento escolhido em vez de esquecê-lo.
+22. **A foto é posicionada, não `object-fit` com `transform` por cima.** Ela
+    mora dentro de `.ae-crop`, do tamanho que o encaixe e o zoom pedem, e o
+    arraste move a foto. O recorte é `contain: paint`, não só
+    `overflow: hidden`: dentro do contexto 3D da folha que vira, o recorte de
+    um ancestral pode ser ignorado, e a foto ampliada aparecia por fora da
+    página. E o toque na foto **já** começa o arraste — antes ele só
+    selecionava o quadro, e era preciso clicar, soltar e arrastar de novo.
+23. **As margens da página são uma medida só** (`pageInsets`, em milímetros a
+    partir da borda do contêiner). Preenchimento total é recuo zero — o quadro
+    vai até a borda do arquivo, sangria inclusive. "Página inteira" sangra
+    sempre e "com margem" tem margem sempre: são as duas respostas para uma
+    foto só, e o interruptor de preenchimento não manda nelas.
+24. **Sombra de peça que gira mora fora da peça.** A folha do miolo projeta a
+    sombra por `.ae-sheet-cast`, irmã plana da caixa `preserve-3d` — dentro
+    dela a sombra entrava na ordenação por profundidade e se desregulava no
+    meio da virada. E a perspectiva do palco é **proporcional à folha**
+    (`sheetW * 4.5`, escrita em linha): fixa em pixels, a mesma virada inflava
+    a página quando o zoom deixava a folha grande. Mesma família do
+    `.ae-3d-cast` do livro (decisão 16).
+25. **Texto de página é dado da página** (`EditorPage.textBlocks`), como o
+    quadro é. Legenda, frase sobre a foto e título no alto são o **mesmo**
+    bloco em posições diferentes — `makePresetTextBlock` só escolhe a partida.
+    Guardar na página, e não numa camada indexada por página, é o que faz
+    remover uma folha remover o texto dela sem código nenhum a mais.
+26. **Controle de casas com cursor deslizante é um gesto só** (`useTrackDrag`),
+    usado pelo segmentado do inspetor e pelas abas do editor. O nó do trilho é
+    criado por quem chama: uma referência devolvida de dentro de um hook e lida
+    na renderização é o que a regra `react-hooks/refs` proíbe.
 
 ### Fase 2 — Supabase (auth + persistência)
 
