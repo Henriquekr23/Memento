@@ -259,3 +259,48 @@ Cada foto pendente ocupa storage como qualquer outra (~300 KB) **antes** de o
 dono decidir. Os tetos do banco são 300 pendentes por álbum e 100 por pessoa por
 álbum — no pior caso, uma caixa de entrada cheia são ~90 MB de um 1 GB. Descartar
 apaga o arquivo na hora, e apagar o álbum varre também a subpasta `contrib/`.
+
+## Fase 3 · A3 — editar álbum salvo, convite que monta junto, álbum finalizado
+
+Rode o `schema.sql` inteiro de novo. O bloco novo cria a tabela
+`album_editors`, as colunas `albums.invite_role` e `albums.locked_at`, as
+funções `edits_album` / `can_edit_album` / `album_owner` /
+`can_edit_album_folder` / `save_album_composition` / `join_album_as_editor`, e
+**refaz** três funções que já existiam: `album_by_invite` (agora devolve o
+papel do convite e se o álbum está finalizado), `can_contribute` e
+`can_read_album`. Refazer é obrigatório — sem isso o convite antigo continua
+recebendo foto em álbum finalizado.
+
+Depois de rodar, confira no painel:
+
+- **Table editor → `album_editors`** existe, com RLS ligada e **sem política de
+  insert**. Isso é intencional: entrar é só por `join_album_as_editor`.
+- **Database → Functions** lista `save_album_composition` e
+  `join_album_as_editor`, ambas `security definer`.
+- **Storage → Policies** ganhou `photos: colaborador envia`, `photos:
+  colaborador lê` e `photos: colaborador apaga`.
+
+### Por que o colaborador não tem `update` em `albums`
+
+RLS decide **linha**, não coluna. Uma política de update para colaborador
+deixaria ele trocar `is_public`, `invite_token` — e `user_id`, isto é, roubar o
+álbum — falando direto com o PostgREST, que a chave publicável alcança. Por
+isso a gravação passa por `save_album_composition`, que escreve exatamente
+`title`, `composition` e `photo_count`. O dono passa pela mesma função: um
+caminho só é o que garante que "álbum finalizado não aceita gravação" não tenha
+porta lateral.
+
+### O que "finalizado" tranca de verdade
+
+`locked_at` preenchido faz `can_edit_album` e `can_contribute` devolverem falso
+— então nem a composição muda, nem entra foto pelo convite, para ninguém. O que
+ele **não** tranca é o dono: a política de update de `albums` continua sendo a
+dele, e é assim que ele reabre. Trancar o dono no banco seria teatro, já que
+destrancar é um clique dele mesmo.
+
+### Onde isso pesa no free tier
+
+Nada novo de storage: reeditar não reenvia foto que já subiu, e a foto tirada
+do álbum é apagada do bucket na mesma gravação. O teto de colaboradores por
+álbum é 20 — um link de montagem vazado é acesso de escrita, e sem teto uma
+tabela inteira de contas entraria por ele.

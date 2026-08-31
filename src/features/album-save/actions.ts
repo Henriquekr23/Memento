@@ -8,6 +8,13 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { nameOf } from '@/features/auth/name';
 
 import { parseComposition, type AlbumComposition } from './composition';
+import {
+  MAX_PHOTOS_PER_ALBUM,
+  cleanTitle,
+  isPhotoId,
+  safeInt,
+  safeIso,
+} from './sanitize';
 
 /**
  * Escrita de álbuns. Tudo que grava metadado passa por aqui — o navegador só
@@ -37,36 +44,6 @@ export type ActionResult<T = null> =
   | { ok: false; error: string };
 
 const NOT_SIGNED_IN = 'Entre na sua conta para guardar o álbum.';
-
-/**
- * Teto de fotos por álbum.
- *
- * Não é limite de produto — é limite de requisição. A lista de fotos vem do
- * navegador, e uma chamada forjada com dezenas de milhares de itens viraria um
- * `insert` gigante contra o banco do free tier. Nenhum álbum de verdade chega
- * perto disso; um pedido que chega, chega errado.
- */
-const MAX_PHOTOS_PER_ALBUM = 500;
-
-/** Título vazio não ajuda ninguém a se achar na lista. */
-function cleanTitle(title: string): string {
-  const trimmed = title.trim().slice(0, 120);
-  return trimmed.length > 0 ? trimmed : 'Álbum sem nome';
-}
-
-/** Inteiro não-negativo, ou `null`. Número vindo do cliente pode ser qualquer coisa. */
-function safeInt(value: unknown, max: number): number | null {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
-  const rounded = Math.round(value);
-  return rounded >= 0 && rounded <= max ? rounded : null;
-}
-
-/** Data em ISO, ou `null`. */
-function safeIso(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const time = Date.parse(value);
-  return Number.isFinite(time) ? new Date(time).toISOString() : null;
-}
 
 export async function createAlbumDraft(
   title: string,
@@ -117,7 +94,7 @@ export async function finalizeAlbum(input: {
   const prefix = `${user.id}/${input.albumId}/`;
   const rows = [];
   for (const photo of input.photos) {
-    if (typeof photo.id !== 'string' || photo.id.length < 8 || photo.id.length > 64) {
+    if (!isPhotoId(photo.id)) {
       return { ok: false, error: 'O índice do álbum veio inválido. Tente de novo.' };
     }
     if (!photo.storagePath.startsWith(prefix)) {

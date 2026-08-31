@@ -6,7 +6,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { SiteNav } from '@/components/SiteNav';
 import { AlbumCard } from '@/features/album-view/AlbumCard';
 import { firstNameOf, nameOf } from '@/features/auth/name';
-import { listMyAlbums } from '@/features/album-view/loadAlbum';
+import { listAlbumsIEdit, listMyAlbums } from '@/features/album-view/loadAlbum';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { getSessionUser } from '@/lib/supabase/server';
 
@@ -27,6 +27,10 @@ export default async function AlbumsPage() {
   if (!user) redirect('/entrar?next=%2Falbums');
 
   const albums = await listMyAlbums();
+  // Álbuns de outras pessoas em que este usuário entrou por um convite de
+  // montagem. Sem esta seção, quem foi convidado dependeria de guardar o link
+  // do convite para achar o álbum de novo.
+  const shared = await listAlbumsIEdit();
 
   return (
     <main className="page-shell page-body">
@@ -70,6 +74,23 @@ export default async function AlbumsPage() {
             <AlbumCard key={album.id} album={album} />
           ))}
         </ul>
+      )}
+
+      {shared.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-[family-name:var(--font-heading)] text-2xl">
+            Montando com outras pessoas
+          </h2>
+          <p className="muted mt-1 mb-4 text-sm">
+            Álbuns em que você foi convidado a montar. Quem compartilha e quem
+            apaga é quem começou o álbum.
+          </p>
+          <ul className="space-y-4">
+            {shared.map((album) => (
+              <AlbumCard key={album.id} album={album} variant="shared" />
+            ))}
+          </ul>
+        </section>
       )}
 
       <SiteFooter />

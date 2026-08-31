@@ -4,9 +4,19 @@ import { revalidatePath } from 'next/cache';
 
 import { PHOTOS_BUCKET } from '@/lib/supabase/env';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type { AlbumContributionRow, AlbumPhotoRow } from '@/lib/supabase/types';
+import type {
+  AlbumContributionRow,
+  AlbumInviteRole,
+  AlbumPhotoRow,
+} from '@/lib/supabase/types';
 
 import type { ActionResult } from '@/features/album-save/actions';
+import {
+  MAX_PHOTOS_PER_ALBUM,
+  isUuid,
+  safeInt,
+  safeIso,
+} from '@/features/album-save/sanitize';
 import { nameOf } from '@/features/auth/name';
 
 import {
@@ -35,23 +45,6 @@ const NOT_SIGNED_IN = 'Entre na sua conta para continuar.';
 const INVITE_GONE =
   'Este convite não vale mais. Peça um link novo para quem montou o álbum.';
 
-/** O mesmo teto de `album-save`: um álbum guardado na nuvem cabe até isto. */
-const MAX_PHOTOS_PER_ALBUM = 500;
-
-function safeInt(value: unknown, max: number): number | null {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
-  const rounded = Math.round(value);
-  return rounded >= 0 && rounded <= max ? rounded : null;
-}
-
-function safeIso(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const time = Date.parse(value);
-  return Number.isFinite(time) ? new Date(time).toISOString() : null;
-}
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 // ── Convite: abrir e fechar ────────────────────────────────────────────────
 
 /**
@@ -60,8 +53,16 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * Renovar e abrir são a mesma operação de propósito: gerar um token novo
  * invalida o anterior no mesmo instante, que é exatamente o que "revogar e
  * reabrir" quer dizer. Um álbum tem um convite válido por vez.
+ *
+ * E, portanto, **um papel por vez** (Fase 3 · A3): trocar "só mandar fotos"
+ * por "mandar e editar" gera outro link. O contrário — dois links vivos com
+ * papéis diferentes — pareceria mais generoso e seria pior: revogar o convite
+ * de edição deixaria o de envio aberto sem ninguém perceber.
  */
-export async function openInvite(albumId: string): Promise<ActionResult<string>> {
+export async function openInvite(
+  albumId: string,
+  role: AlbumInviteRole = 'contribute',
+): Promise<ActionResult<{ token: string; role: AlbumInviteRole }>> {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -69,10 +70,11 @@ export async function openInvite(albumId: string): Promise<ActionResult<string>>
   if (!user) return { ok: false, error: NOT_SIGNED_IN };
 
   const token = crypto.randomUUID();
+  const safeRole: AlbumInviteRole = role === 'edit' ? 'edit' : 'contribute';
 
   const { error } = await supabase
     .from('albums')
-    .update({ invite_token: token })
+    .update({ invite_token: token, invite_role: safeRole })
     .eq('id', albumId)
     .eq('user_id', user.id)
     // Convite para um rascunho não faz sentido: o convidado abriria um álbum
@@ -85,7 +87,7 @@ export async function openInvite(albumId: string): Promise<ActionResult<string>>
   }
 
   revalidatePath(`/album/${albumId}`);
-  return { ok: true, data: token };
+  return { ok: true, data: { token, role: safeRole } };
 }
 
 /**
@@ -127,7 +129,7 @@ export async function closeInvite(albumId: string): Promise<ActionResult> {
 export async function resolveInvite(
   token: string,
 ): Promise<ActionResult<InviteTarget>> {
-  if (!UUID.test(token)) return { ok: false, error: INVITE_GONE };
+  if (!isUuid(token)) return { ok: false, error: INVITE_GONE };
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -137,6 +139,8 @@ export async function resolveInvite(
       owner_id: string;
       title: string;
       author_name: string;
+      role: AlbumInviteRole;
+      locked: boolean;
     }>();
 
   if (error || !data) return { ok: false, error: INVITE_GONE };
@@ -148,8 +152,52 @@ export async function resolveInvite(
       ownerId: data.owner_id,
       title: data.title,
       authorName: data.author_name,
+      role: data.role === 'edit' ? 'edit' : 'contribute',
+      locked: data.locked === true,
     },
   };
+}
+
+/**
+ * Aceitar um convite de edição: entrar na lista de colaboradores do álbum.
+ *
+ * Quem chama aqui ainda não pode ler a linha do álbum — é justamente o que
+ * está pedindo —, então nada disto é conferido no servidor Next: a função
+ * `join_album_as_editor` do banco é `security definer` e é ela que confere o
+ * token, o papel do convite e a tranca, num lugar só. A tabela
+ * `album_editors` não tem política de insert; esta é a única porta.
+ */
+export async function acceptEditInvite(
+  token: string,
+): Promise<ActionResult<string>> {
+  if (!isUuid(token)) return { ok: false, error: INVITE_GONE };
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: NOT_SIGNED_IN };
+
+  const { data, error } = await supabase.rpc('join_album_as_editor', {
+    token,
+    joiner_name: nameOf(user),
+  });
+
+  if (error) {
+    console.error('[album-contrib] falha ao entrar como colaborador', error);
+    return { ok: false, error: 'Não foi possível abrir o álbum. Tente de novo.' };
+  }
+  if (typeof data !== 'string') {
+    return {
+      ok: false,
+      error:
+        'Este convite não abre a montagem do álbum — ou o álbum já foi finalizado.',
+    };
+  }
+
+  revalidatePath(`/album/${data}`);
+  revalidatePath('/albums');
+  return { ok: true, data };
 }
 
 /**
@@ -185,7 +233,7 @@ export async function recordContributions(input: {
   for (const photo of input.photos) {
     // O id vem do navegador porque o caminho do arquivo o contém — e o arquivo
     // sobe antes da linha existir. Formato errado aqui é chamada forjada.
-    if (!UUID.test(photo.id)) {
+    if (!isUuid(photo.id)) {
       return { ok: false, error: 'O envio veio inválido. Tente de novo.' };
     }
     // O caminho também vem do navegador. A RLS confere o mesmo prefixo, mas
@@ -230,7 +278,7 @@ async function ownedContribution(
   userId: string,
   contributionId: string,
 ): Promise<AlbumContributionRow | null> {
-  if (!UUID.test(contributionId)) return null;
+  if (!isUuid(contributionId)) return null;
 
   const { data } = await supabase
     .from('album_contributions')

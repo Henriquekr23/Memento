@@ -5,6 +5,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { SiteNav } from '@/components/SiteNav';
 import { ContributeForm } from '@/features/album-contrib/ContributeForm';
 import { resolveInvite } from '@/features/album-contrib/actions';
+import { AcceptInvite } from '@/features/album-edit/AcceptInvite';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { getSessionUser } from '@/lib/supabase/server';
 
@@ -19,6 +20,12 @@ import { getSessionUser } from '@/lib/supabase/server';
  * Storage a aceitar `anon` gravando na pasta de outra pessoa, com o token como
  * única tranca; com login, cada foto que chega tem um remetente, o dono vê quem
  * mandou e dá para limitar por pessoa.
+ *
+ * Fase 3 · A3: o convite pode vir com papel de montagem. Nesse caso a página
+ * oferece as duas portas na mesma tela — abrir a bancada ou só mandar fotos —,
+ * porque quem foi chamado para montar o álbum quase sempre também tem fotos
+ * para dar, e obrigá-lo a escolher entre as duas coisas seria uma escolha
+ * inventada.
  */
 
 export const metadata: Metadata = {
@@ -66,6 +73,27 @@ export default async function ContribuirPage({
     );
   }
 
+  // Álbum finalizado: o link existe e o token é válido, mas a porta está
+  // fechada. Dizer isso é diferente de dizer "convite encerrado" — ninguém
+  // revogou nada, o álbum é que ficou pronto.
+  if (invite.data.locked) {
+    return shell(
+      <section className="card mx-auto max-w-[520px] p-6 text-center">
+        <h1 className="font-[family-name:var(--font-heading)] text-2xl">
+          Álbum finalizado
+        </h1>
+        <p className="muted mt-2 text-sm">
+          <strong>{invite.data.title}</strong> já foi dado por pronto, então não
+          entra mais foto nem mudança. Se você acha que ainda dá tempo, fale com{' '}
+          {invite.data.authorName || 'quem montou o álbum'}.
+        </p>
+        <Link href="/album" className="btn btn-primary btn-sm mt-5">
+          Montar um álbum meu
+        </Link>
+      </section>,
+    );
+  }
+
   const user = await getSessionUser();
   if (!user) {
     return shell(
@@ -74,8 +102,11 @@ export default async function ContribuirPage({
           Entre para mandar suas fotos
         </h1>
         <p className="muted mt-2 text-sm">
-          {invite.data.authorName || 'Quem montou o álbum'} pediu as suas fotos
-          para <strong>{invite.data.title}</strong>. A conta é o que deixa quem
+          {invite.data.authorName || 'Quem montou o álbum'}{' '}
+          {invite.data.role === 'edit'
+            ? 'chamou você para montar'
+            : 'pediu as suas fotos para'}{' '}
+          <strong>{invite.data.title}</strong>. A conta é o que deixa quem
           recebe saber que as fotos vieram de você.
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
@@ -95,6 +126,19 @@ export default async function ContribuirPage({
           </Link>
         </div>
       </section>,
+    );
+  }
+
+  if (invite.data.role === 'edit') {
+    return shell(
+      <div className="mx-auto grid max-w-[720px] gap-6">
+        <AcceptInvite
+          token={token}
+          title={invite.data.title}
+          authorName={invite.data.authorName}
+        />
+        <ContributeForm target={invite.data} />
+      </div>,
     );
   }
 

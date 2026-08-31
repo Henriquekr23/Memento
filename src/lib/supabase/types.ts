@@ -11,6 +11,9 @@
 
 export type AlbumStatus = 'draft' | 'ready';
 
+/** O que o link de convite dá a quem entra por ele. */
+export type AlbumInviteRole = 'contribute' | 'edit';
+
 export interface AlbumRow {
   id: string;
   user_id: string;
@@ -24,6 +27,16 @@ export interface AlbumRow {
    * e o de todo álbum criado antes desta feature. Revogar é apagar o token.
    */
   invite_token: string | null;
+  /**
+   * Papel do convite corrente (Fase 3 · A3). `contribute` recebe fotos numa
+   * caixa de entrada; `edit` abre a bancada para quem entrar pelo link.
+   */
+  invite_role: AlbumInviteRole;
+  /**
+   * Quando o álbum foi dado por pronto (Fase 3 · A3). `null` = ainda em
+   * montagem. Álbum finalizado não aceita edição nem contribuição.
+   */
+  locked_at: string | null;
   /** Composição editorial serializada — ver `features/album-save/composition`. */
   composition: unknown;
   photo_count: number;
@@ -65,4 +78,19 @@ export interface AlbumContributionRow {
   timestamp_source: 'exif' | 'file';
   status: 'pending' | 'approved';
   created_at: string;
+}
+
+/**
+ * Quem foi convidado a editar e aceitou (Fase 3 · A3).
+ *
+ * A linha nasce no aceite do convite, por `join_album_as_editor` — a tabela
+ * não tem política de insert de propósito. Tirar alguém é apagar a linha; o
+ * link de convite continua valendo para quem mais tiver.
+ */
+export interface AlbumEditorRow {
+  album_id: string;
+  user_id: string;
+  /** Nome de quem entrou, copiado do cadastro no aceite. */
+  editor_name: string;
+  joined_at: string;
 }
