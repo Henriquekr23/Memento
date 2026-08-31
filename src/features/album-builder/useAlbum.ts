@@ -28,14 +28,35 @@ const INITIAL_STATUS: ImportStatus = {
   oversizedFileNames: [],
 };
 
-export function useAlbum() {
-  const [name, setName] = useState('');
-  const [photos, setPhotos] = useState<Photo[]>([]);
+/**
+ * O ponto de partida do acervo.
+ *
+ * Vazio na Fase 1 (a pessoa chega e importa). Preenchido ao reabrir um álbum
+ * guardado na nuvem: as fotos vêm do banco, com URL assinada no lugar do
+ * object URL, e a ordem que volta é a que foi salva — não a cronológica.
+ */
+export interface AlbumSeed {
+  name?: string;
+  photos?: readonly Photo[];
+}
+
+export function useAlbum(seed?: AlbumSeed) {
+  const [name, setName] = useState(seed?.name ?? '');
+  const [photos, setPhotos] = useState<Photo[]>(() => [...(seed?.photos ?? [])]);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [status, setStatus] = useState<ImportStatus>(INITIAL_STATUS);
 
-  /** Enquanto false, novas fotos entram já reordenadas cronologicamente. */
-  const [isManuallyOrdered, setIsManuallyOrdered] = useState(false);
+  /**
+   * Enquanto false, novas fotos entram já reordenadas cronologicamente.
+   *
+   * Um álbum que veio do banco começa como **ordenado à mão**, mesmo que
+   * ninguém tenha arrastado nada: aquela ordem é uma decisão já tomada, e
+   * reordenar tudo por data ao acrescentar uma foto desmancharia o álbum que a
+   * pessoa abriu para mexer num detalhe.
+   */
+  const [isManuallyOrdered, setIsManuallyOrdered] = useState(
+    (seed?.photos?.length ?? 0) > 0,
+  );
 
   // Object URLs precisam ser revogados para não vazar memória.
   const previewUrlsRef = useRef<Set<string>>(new Set());
@@ -92,7 +113,10 @@ export function useAlbum() {
   const removePhoto = useCallback((id: string) => {
     setPhotos((prev) => {
       const target = prev.find((photo) => photo.id === id);
-      if (target) {
+      // Só object URL desta aba é revogado. Foto vinda da nuvem tem URL
+      // assinada (`https://`), que não é criada por `createObjectURL` — o
+      // `previewUrlsRef` é justamente quem sabe a diferença.
+      if (target && previewUrlsRef.current.has(target.previewUrl)) {
         URL.revokeObjectURL(target.previewUrl);
         previewUrlsRef.current.delete(target.previewUrl);
       }

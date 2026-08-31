@@ -8,6 +8,8 @@
  * para que o contrato inteiro esteja em um lugar só.
  */
 
+import type { AlbumInviteRole } from '@/lib/supabase/types';
+
 /** Quantas fotos um convidado manda de uma vez. */
 export const MAX_PHOTOS_PER_SUBMISSION = 40;
 
@@ -17,6 +19,14 @@ export interface InviteTarget {
   ownerId: string;
   title: string;
   authorName: string;
+  /**
+   * O que este convite dá (Fase 3 · A3). `contribute` é o da A2: mandar fotos
+   * para a caixa de entrada, sem ver o álbum. `edit` abre a bancada — quem
+   * entra monta o álbum junto com o dono, e continua podendo mandar fotos.
+   */
+  role: AlbumInviteRole;
+  /** Álbum já finalizado: o convite existe, mas não recebe mais nada. */
+  locked: boolean;
 }
 
 export interface ContributionInput {

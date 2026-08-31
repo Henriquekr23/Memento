@@ -36,6 +36,7 @@ scripts avulsos rodados via `tsx` (não fazem parte do `tsconfig`/build):
 npx tsx scripts/checkComposition.mts     # ida/volta da composição por JSON, entradas corrompidas, migração da v1, poda de quadros órfãos
 npx tsx scripts/checkPrintSpec.mts       # geometria de impressão: formato, sangria, lombada, corpo do texto
 npx tsx scripts/checkFrameCrop.mts       # enquadramento da foto (encaixe, zoom, limite do arraste) e margens da página
+npx tsx scripts/checkAlbumEdit.mts       # replanejamento das fotos ao reeditar: o que sobe, o que fica, o que sai do bucket
 
 # Supabase (exige conta de verdade; apaga o álbum de teste no fim):
 MEMENTO_EMAIL=... MEMENTO_PASSWORD=... npx tsx scripts/checkSupabaseSave.mts
@@ -68,7 +69,8 @@ Features relevantes: `exif-reader` (parseExif, nunca lança), `album-builder`
 (`useAlbum` = o **acervo**: importação, EXIF, ordem cronológica),
 `album-print` (a régua de impressão, em milímetros), `album-editor` (o editor
 inteiro, ver abaixo), `album-export` (contrato `AlbumExporter` + `pdf/`), `auth`
-e `album-save` (Fase 2, ver abaixo), `i18n` (pt/en via localStorage), `theme`
+e `album-save` (Fase 2, ver abaixo), `album-contrib` e `album-edit` (Fase 3,
+ver abaixo), `i18n` (pt/en via localStorage), `theme`
 (claro/escuro via `data-theme` no `<html>`, sem estado React).
 
 O visual continua sendo o design system **Organic** (papel areia, acento
@@ -287,11 +289,52 @@ leitura de EXIF.
   partir de `NEXT_PUBLIC_SUPABASE_URL`. Uma env var definida depois do build
   não existe para o app (bloqueio silencioso por CSP, sem rastro no
   servidor) — trocar o valor exige um novo build.
-- **A página pública (`/album/[id]`) reusa `Book3D` e `PageView`**, em vez de
-  um componente de galeria separado: o objeto é o produto.
+- **A página pública (`/album/[id]`) reusa `Book3D` e `SheetStage`**, em vez de
+  um componente de galeria separado: o objeto é o produto. A folha vem com
+  `readOnly`, que tira as alças e, sem enquadramento de foto para disputar o
+  gesto, alarga a borda de folhear até a metade inteira — ler o álbum vira a
+  página com o mesmo arraste da bancada, e por isso não há barra de setas
+  embaixo dele. Nessa largura a borda usa `touch-action: pan-y`, senão a folha
+  prenderia a rolagem do celular.
 - **Foto de contribuição chega na bandeja, não numa página.** Aprovar acrescenta
   uma linha em `album_photos` e não toca na `composition` — escrever a foto numa
   página seria mexer na composição de alguém sem pedir.
+
+### Fase 3 · A3 — reeditar, montar junto, finalizar
+
+- **Álbum salvo reabre na mesma bancada** (`/album/{id}/editar`,
+  `album-edit/`). O editor não sabe de onde a foto veio: recebe `Photo[]` com
+  `previewUrl`, que aqui é URL assinada. Foi essa fronteira que fez a edição
+  caber num componente em vez de num segundo editor. `useAlbum` aceita uma
+  semente (`AlbumSeed`) e, com ela, já nasce "ordenado à mão" — reordenar por
+  data ao acrescentar uma foto desmancharia o álbum que a pessoa abriu para
+  mexer num detalhe.
+- **Reeditar não reenvia o que já subiu** (`album-edit/plan.ts`, puro, com
+  script próprio). O critério é o id da foto, que é o que a composição
+  referencia e o que compõe o caminho no bucket. A foto que sai do álbum é
+  apagada do Storage na mesma gravação — senão o 1 GB vira cemitério de
+  arquivo que nada referencia.
+- **O colaborador não tem `update` em `albums`.** RLS decide linha, não coluna:
+  uma política de update deixaria ele trocar `is_public`, `invite_token` ou
+  `user_id` falando direto com o PostgREST. A gravação passa por
+  `save_album_composition` (`security definer`), que escreve três colunas e
+  confere `can_edit_album`. O dono passa pela mesma função — caminho único é o
+  que impede uma porta lateral na tranca.
+- **O convite tem um papel por vez** (`albums.invite_role`), porque tem um
+  token por vez. Trocar o papel gera outro link e mata o anterior. Dois links
+  vivos pareceriam mais generosos e seriam piores: revogar o de edição
+  deixaria o de envio aberto sem ninguém notar. Entrar como colaborador é ato
+  explícito (`join_album_as_editor`) — `album_editors` **não tem política de
+  insert**, essa função é a única porta.
+- **Fechar o convite não tira ninguém.** Quem já entrou continua dentro; tirar
+  é apagar a linha de `album_editors` (`CollaboratorList`). São duas portas
+  diferentes, e a tela diz isso.
+- **"Enviar o álbum" (`albums.locked_at`) é estado do álbum, não permissão.**
+  Finalizado, `can_edit_album` e `can_contribute` devolvem falso: nem
+  composição muda, nem entra foto pelo convite, para ninguém. Só o dono reabre
+  — e a tranca não vale para ele no banco de propósito, porque destrancar é um
+  clique dele mesmo; o que a tranca garante de verdade está em
+  `save_album_composition`.
 
 ## Estilo de código / convenções deste repo
 

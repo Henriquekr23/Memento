@@ -21,15 +21,22 @@ interface SheetStageProps {
   guides: boolean;
   ink: string;
   resolve: PhotoResolver;
-  activeSide: Hand;
-  onActiveSide: (side: Hand) => void;
-  selectedSlot: number;
-  onSelectSlot: (slot: number) => void;
-  onFrame: (pageIndex: number, slot: number, changes: Partial<PhotoFrame>) => void;
-  onDropPhoto: (pageIndex: number, slot: number, photoId: string) => void;
-  selectedTextId: string | null;
-  onSelectText: (pageIndex: number, id: string | null) => void;
-  onTextChange: (pageIndex: number, id: string, changes: Partial<PageTextBlock>) => void;
+  /**
+   * Só ler: nada de alça, seleção ou arraste de enquadramento — e, sem eles, a
+   * borda de folhear pode ocupar a metade inteira da folha (ver `edgeW`). É o
+   * que a página do álbum salvo usa para ter a mesma virada da bancada sem ter
+   * a bancada junto.
+   */
+  readOnly?: boolean;
+  activeSide?: Hand;
+  onActiveSide?: (side: Hand) => void;
+  selectedSlot?: number;
+  onSelectSlot?: (slot: number) => void;
+  onFrame?: (pageIndex: number, slot: number, changes: Partial<PhotoFrame>) => void;
+  onDropPhoto?: (pageIndex: number, slot: number, photoId: string) => void;
+  selectedTextId?: string | null;
+  onSelectText?: (pageIndex: number, id: string | null) => void;
+  onTextChange?: (pageIndex: number, id: string, changes: Partial<PageTextBlock>) => void;
   hideNumber: boolean;
   hint: string;
 }
@@ -51,13 +58,14 @@ export function SheetStage({
   guides,
   ink,
   resolve,
-  activeSide,
+  readOnly = false,
+  activeSide = 'left',
   onActiveSide,
-  selectedSlot,
+  selectedSlot = -1,
   onSelectSlot,
   onFrame,
   onDropPhoto,
-  selectedTextId,
+  selectedTextId = null,
   onSelectText,
   onTextChange,
   hideNumber,
@@ -108,11 +116,11 @@ export function SheetStage({
               spineSide="left"
               editable={editable}
               selectedSlot={editable ? 0 : -1}
-              onFrame={(slot, changes) => onFrame(leftIndex, slot, changes)}
-              onDropPhoto={(slot, photoId) => onDropPhoto(leftIndex, slot, photoId)}
+              onFrame={(slot, changes) => onFrame?.(leftIndex, slot, changes)}
+              onDropPhoto={(slot, photoId) => onDropPhoto?.(leftIndex, slot, photoId)}
               selectedTextId={editable ? selectedTextId : null}
-              onSelectText={(id) => onSelectText(leftIndex, id)}
-              onTextChange={(id, changes) => onTextChange(leftIndex, id, changes)}
+              onSelectText={(id) => onSelectText?.(leftIndex, id)}
+              onTextChange={(id, changes) => onTextChange?.(leftIndex, id, changes)}
             />
             <PrintGuides ppm={ppm} spineSide="left" show={guides} />
           </div>
@@ -127,7 +135,7 @@ export function SheetStage({
       <div
         className="ae-half-inner"
         style={{ left: hand === 'left' ? 0 : -overlap / 2, width: pageW, height: pageH }}
-        onPointerDownCapture={editable ? () => onActiveSide(hand) : undefined}
+        onPointerDownCapture={editable ? () => onActiveSide?.(hand) : undefined}
       >
         <PageView
           page={page}
@@ -140,17 +148,17 @@ export function SheetStage({
           editable={editable}
           selectedSlot={editable && activeSide === hand ? selectedSlot : -1}
           onSelectSlot={(slot) => {
-            onActiveSide(hand);
-            onSelectSlot(slot);
+            onActiveSide?.(hand);
+            onSelectSlot?.(slot);
           }}
-          onFrame={(slot, changes) => onFrame(index, slot, changes)}
-          onDropPhoto={(slot, photoId) => onDropPhoto(index, slot, photoId)}
+          onFrame={(slot, changes) => onFrame?.(index, slot, changes)}
+          onDropPhoto={(slot, photoId) => onDropPhoto?.(index, slot, photoId)}
           selectedTextId={editable && activeSide === hand ? selectedTextId : null}
           onSelectText={(id) => {
-            onActiveSide(hand);
-            onSelectText(index, id);
+            onActiveSide?.(hand);
+            onSelectText?.(index, id);
           }}
-          onTextChange={(id, changes) => onTextChange(index, id, changes)}
+          onTextChange={(id, changes) => onTextChange?.(index, id, changes)}
           hideNumber={hideNumber}
         />
       </div>
@@ -176,16 +184,24 @@ export function SheetStage({
       }
       turn.update(ev.clientX);
     };
-    const up = () => {
+    const up = (ev?: PointerEvent) => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
       // Clique parado na borda também vira: é o gesto de quem não arrasta.
-      turn.end(!drag.current?.moved);
+      // `pointercancel` é o dedo que o navegador levou embora para rolar a
+      // página — ali a folha volta para o lugar, nunca vira.
+      turn.end(ev?.type !== 'pointercancel' && !drag.current?.moved);
       drag.current = null;
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    // Sem isto, um arraste que vira rolagem no celular deixa a folha parada no
+    // meio da virada: `pointerup` nunca chega depois de um `pointercancel`.
+    window.addEventListener('pointercancel', up);
   };
+
+  const edgeW = readOnly ? halfW : Math.min(56, halfW * 0.18);
 
   const leafOnRight = state?.direction === 'next';
   const angle = leafOnRight ? -progress * 180 : progress * 180;
@@ -226,10 +242,10 @@ export function SheetStage({
       <div className="ae-sheet-cast" aria-hidden />
       <div className="ae-sheet" style={{ width: sheetW, height: pageH }}>
         <div className="ae-half" style={{ left: 0, width: halfW, height: pageH }}>
-          {half('left', baseLeft, !turning)}
+          {half('left', baseLeft, !turning && !readOnly)}
         </div>
         <div className="ae-half" style={{ left: halfW, width: halfW, height: pageH }}>
-          {half('right', baseRight, !turning)}
+          {half('right', baseRight, !turning && !readOnly)}
         </div>
 
         {state && neighbour && (
@@ -282,17 +298,19 @@ export function SheetStage({
         <div className="ae-sheet-paper" />
       </div>
 
-      {/* Bordas de folhear: só as faixas externas, para não roubar o arraste de
-          enquadramento da foto, que vive no meio da página. */}
+      {/* Bordas de folhear. Na bancada são só as faixas externas, para não
+          roubar o arraste de enquadramento da foto, que vive no meio da
+          página; na leitura não há o que roubar, e cada metade inteira pega o
+          gesto — que é como se pega uma folha num livro de verdade. */}
       <span
-        className="ae-flip-edge is-prev"
-        style={{ width: Math.min(56, halfW * 0.18) }}
+        className={`ae-flip-edge is-prev${readOnly ? ' is-wide' : ''}`}
+        style={{ width: edgeW, cursor: turn.canTurn('prev') ? undefined : 'default' }}
         onPointerDown={(event) => startDrag('prev', event)}
         aria-hidden
       />
       <span
-        className="ae-flip-edge is-next"
-        style={{ width: Math.min(56, halfW * 0.18) }}
+        className={`ae-flip-edge is-next${readOnly ? ' is-wide' : ''}`}
+        style={{ width: edgeW, cursor: turn.canTurn('next') ? undefined : 'default' }}
         onPointerDown={(event) => startDrag('next', event)}
         aria-hidden
       />

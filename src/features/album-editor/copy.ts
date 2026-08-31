@@ -189,6 +189,8 @@ export interface EditorCopy {
 
   /* miolo: gesto de folhear */
   flipHint: string;
+  /* o mesmo gesto na leitura, onde a folha inteira é a alça */
+  flipHintRead: string;
 
   /* livro 3d */
   orbitHint: string;
@@ -390,6 +392,7 @@ const PT: EditorCopy = {
 
   orbitHint: 'arraste para girar',
   flipHint: 'arraste a borda da folha para virar a página',
+  flipHintRead: 'arraste a página para virar',
 
   zoomGroup: 'Escala',
   zoomIn: 'Aproximar',
@@ -589,6 +592,7 @@ const EN: EditorCopy = {
 
   orbitHint: 'drag to rotate',
   flipHint: 'drag the edge of the sheet to turn the page',
+  flipHintRead: 'drag the page to turn it',
 
   zoomGroup: 'Scale',
   zoomIn: 'Zoom in',

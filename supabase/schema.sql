@@ -572,3 +572,382 @@ create policy "photos: convidado envia para a caixa de entrada"
       (storage.foldername(name))[1]
     )
   );
+
+-- ═════════════════════════════════════════════════════════════════════════
+-- Fase 3 · A3 — Álbum que continua editável, convite que também edita,
+--               e o gesto de dar o álbum por pronto
+--
+-- Três coisas novas, e vale dizer em uma frase por que elas são uma só:
+--
+-- 1. **O álbum salvo volta para a bancada.** Antes, salvar era um ponto final:
+--    a composição virava linha no banco e a única forma de mudar alguma coisa
+--    era montar outro álbum do zero. Agora `/album/{id}/editar` reabre o mesmo
+--    álbum, e salvar reescreve a linha em vez de criar outra.
+-- 2. **O convite ganha um papel.** O mesmo link que hoje só recebe fotos pode
+--    ser aberto como convite de *edição*: quem entra por ele monta o álbum
+--    junto com o dono. Continua sendo uma pessoa por vez mexendo — não há
+--    edição simultânea aqui, e a última gravação vence.
+-- 3. **`locked_at` é o "enviei".** Um álbum finalizado para de aceitar edição
+--    e para de aceitar contribuição. É o estado em que o álbum foi para a
+--    gráfica e ninguém deve mais mexer.
+--
+-- A decisão que organiza o resto: **o colaborador não recebe `update` na
+-- tabela `albums`**. RLS decide linha, não coluna — uma política de update
+-- para colaborador deixaria ele trocar `is_public`, `invite_token` ou até
+-- `user_id` falando direto com o PostgREST. Por isso a gravação da composição
+-- passa por uma função `security definer` (`save_album_composition`) que
+-- escreve exatamente três colunas. O dono continua com a política normal, que é
+-- o que o deixa reabrir um álbum finalizado — a tranca é do conteúdo, não do
+-- dono.
+-- ═════════════════════════════════════════════════════════════════════════
+
+-- Papel do convite corrente. 'contribute' é o comportamento da A2 e o padrão
+-- de todo álbum que já existe: o link recebe fotos e não mostra o álbum.
+-- 'edit' abre a bancada para quem entrar. Um álbum tem um convite por vez, e
+-- portanto um papel por vez — trocar o papel é gerar outro link.
+alter table public.albums
+  add column if not exists invite_role text not null default 'contribute';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'albums_invite_role' and conrelid = 'public.albums'::regclass
+  ) then
+    update public.albums set invite_role = 'contribute'
+      where invite_role not in ('contribute', 'edit');
+    alter table public.albums add constraint albums_invite_role
+      check (invite_role in ('contribute', 'edit'));
+  end if;
+end $$;
+
+-- Quando o álbum foi dado por pronto. `null` = ainda em montagem, que é o
+-- estado de todo álbum existente. Guardamos o instante, e não um booleano,
+-- porque a data é o que a tela mostra ("finalizado em 12 de março") e o
+-- booleano se deduz dela.
+alter table public.albums
+  add column if not exists locked_at timestamptz;
+
+-- Quem foi convidado a editar e aceitou.
+--
+-- A linha nasce no aceite, não no convite: o token não sabe para quem foi
+-- mandado, e é o aceite que dá nome e id a quem entrou. Revogar é apagar a
+-- linha — o link pode continuar aberto sem que aquela pessoa volte.
+create table if not exists public.album_editors (
+  album_id    uuid not null references public.albums (id) on delete cascade,
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  -- Copiado do cadastro no aceite, pelo mesmo motivo de `albums.author_name`
+  -- e de `album_contributions.contributor_name`: o dono precisa ver quem está
+  -- junto sem ter permissão de ler `auth.users`.
+  editor_name text not null default '',
+  joined_at   timestamptz not null default now(),
+
+  primary key (album_id, user_id),
+  constraint album_editors_sizes check (char_length(editor_name) <= 200)
+);
+
+create index if not exists album_editors_user_idx
+  on public.album_editors (user_id, joined_at desc);
+
+-- Teto de colaboradores. O link de convite é público por natureza: sem teto,
+-- um link vazado enche a tabela e dá acesso de escrita a um número arbitrário
+-- de contas.
+create or replace function public.enforce_album_editor_cap()
+returns trigger language plpgsql as $$
+begin
+  if (
+    select count(*) from public.album_editors where album_id = new.album_id
+  ) > 20 then
+    raise exception 'este álbum já tem colaboradores demais';
+  end if;
+  return null;
+end $$;
+
+drop trigger if exists album_editors_cap on public.album_editors;
+create trigger album_editors_cap
+  after insert on public.album_editors
+  for each row execute function public.enforce_album_editor_cap();
+
+-- ── Funções de apoio ─────────────────────────────────────────────────────
+
+-- "Esta pessoa está na lista de colaboradores deste álbum?"
+-- `security definer` porque quem pergunta, nas políticas de `albums`, é
+-- justamente quem ainda não tem permissão de ler a linha do álbum.
+create or replace function public.edits_album(target uuid)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select auth.uid() is not null and exists (
+    select 1 from public.album_editors e
+    where e.album_id = target and e.user_id = auth.uid()
+  );
+$$;
+
+-- "Esta pessoa pode mexer no conteúdo deste álbum agora?"
+-- Repare no `locked_at is null`: a tranca vale para o dono também. Ela não é
+-- uma questão de permissão, é o estado do álbum — e é por isso que ela mora
+-- aqui, e não numa conferência do lado do servidor Next que uma chamada direta
+-- ao PostgREST pularia.
+create or replace function public.can_edit_album(target uuid)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.albums a
+    where a.id = target
+      and a.status = 'ready'
+      and a.locked_at is null
+      and (
+        a.user_id = auth.uid()
+        or exists (
+          select 1 from public.album_editors e
+          where e.album_id = a.id and e.user_id = auth.uid()
+        )
+      )
+  );
+$$;
+
+-- Dono do álbum. É o primeiro pedaço do caminho de toda foto no Storage, e o
+-- colaborador não tem como descobri-lo de outro jeito.
+create or replace function public.album_owner(target uuid)
+returns uuid
+language sql stable security definer set search_path = public as $$
+  select a.user_id from public.albums a where a.id = target;
+$$;
+
+-- A versão por pasta, para as políticas de `storage.objects` — que só têm o
+-- caminho do arquivo em mãos. Espelha `can_contribute`.
+create or replace function public.can_edit_album_folder(
+  album_folder text,
+  owner_folder text
+)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.can_edit_album(public.try_uuid(album_folder))
+    and public.album_owner(public.try_uuid(album_folder))::text = owner_folder;
+$$;
+
+-- ── Gravar a composição sem abrir a tabela inteira ───────────────────────
+--
+-- O colaborador precisa escrever `title`, `composition` e `photo_count` — e
+-- **só**. Uma política de update daria a linha inteira, incluindo `is_public`,
+-- `invite_token`, `locked_at` e `user_id`; RLS não filtra coluna. Esta função
+-- é a coluna que falta: ela roda como dona da tabela, confere `can_edit_album`
+-- (que já inclui a tranca) e escreve os três campos.
+--
+-- O dono passa por aqui também. Um caminho só para os dois é o que garante que
+-- "álbum finalizado não aceita gravação" não tenha uma porta lateral.
+create or replace function public.save_album_composition(
+  target uuid,
+  new_title text,
+  new_composition jsonb,
+  new_photo_count integer
+)
+returns boolean
+language plpgsql volatile security definer set search_path = public as $$
+begin
+  if not public.can_edit_album(target) then
+    return false;
+  end if;
+
+  update public.albums
+  set title = left(coalesce(new_title, ''), 200),
+      composition = coalesce(new_composition, '{}'::jsonb),
+      photo_count = greatest(coalesce(new_photo_count, 0), 0)
+  where id = target;
+
+  return true;
+end $$;
+
+revoke execute on function public.save_album_composition(uuid, text, jsonb, integer) from public;
+grant execute on function public.save_album_composition(uuid, text, jsonb, integer) to authenticated;
+
+-- ── Entrar como colaborador ──────────────────────────────────────────────
+--
+-- O convidado não pode ler `albums` (é justamente o que ele está pedindo), então
+-- não tem como inserir a própria linha em `album_editors` conferindo o token —
+-- e a tabela, de propósito, **não tem política de insert**: a única porta é
+-- esta função.
+create or replace function public.join_album_as_editor(token uuid, joiner_name text)
+returns uuid
+language plpgsql volatile security definer set search_path = public as $$
+declare
+  found public.albums%rowtype;
+begin
+  if auth.uid() is null then
+    return null;
+  end if;
+
+  select * into found from public.albums a
+  where a.invite_token = token
+    and a.invite_role = 'edit'
+    and a.status = 'ready'
+    and a.locked_at is null;
+
+  if found.id is null then
+    return null;
+  end if;
+
+  -- O dono não entra na própria lista: ele já pode tudo, e uma linha ali
+  -- faria a tela dizer "você foi convidado para o seu álbum".
+  if found.user_id = auth.uid() then
+    return found.id;
+  end if;
+
+  insert into public.album_editors (album_id, user_id, editor_name)
+  values (found.id, auth.uid(), left(coalesce(joiner_name, ''), 200))
+  on conflict (album_id, user_id) do nothing;
+
+  return found.id;
+end $$;
+
+revoke execute on function public.join_album_as_editor(uuid, text) from public;
+grant execute on function public.join_album_as_editor(uuid, text) to authenticated;
+
+-- ── O convite passa a dizer o papel ──────────────────────────────────────
+-- `drop` antes do `create`: o tipo de retorno mudou (ganhou `role`), e
+-- `create or replace` não muda assinatura de função.
+drop function if exists public.album_by_invite(uuid);
+
+create or replace function public.album_by_invite(token uuid)
+returns table (
+  id uuid,
+  owner_id uuid,
+  title text,
+  author_name text,
+  role text,
+  locked boolean
+)
+language sql stable security definer set search_path = public as $$
+  select a.id, a.user_id, a.title, a.author_name, a.invite_role,
+         a.locked_at is not null
+  from public.albums a
+  where a.invite_token = token and a.status = 'ready';
+$$;
+
+revoke execute on function public.album_by_invite(uuid) from public;
+grant execute on function public.album_by_invite(uuid) to anon, authenticated;
+
+-- Álbum finalizado não recebe mais nada — nem edição, nem foto pelo convite.
+-- É o mesmo `can_contribute` da A2 com a tranca acrescentada.
+create or replace function public.can_contribute(album_folder text, owner_folder text)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select auth.uid() is not null and exists (
+    select 1 from public.albums a
+    where a.id = public.try_uuid(album_folder)
+      and a.invite_token is not null
+      and a.status = 'ready'
+      and a.locked_at is null
+      and a.user_id::text = owner_folder
+  );
+$$;
+
+-- Colaborador lê o álbum como o dono lê — inclusive privado, que é o caso
+-- normal enquanto o álbum está sendo montado.
+create or replace function public.can_read_album(target uuid)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.albums a
+    where a.id = target
+      and (
+        a.user_id = auth.uid()
+        or (a.is_public and a.status = 'ready')
+        or exists (
+          select 1 from public.album_editors e
+          where e.album_id = a.id and e.user_id = auth.uid()
+        )
+      )
+  );
+$$;
+
+-- ── RLS ──────────────────────────────────────────────────────────────────
+
+alter table public.album_editors enable row level security;
+
+-- Sem política de insert de propósito: entrar é por `join_album_as_editor`.
+drop policy if exists "colaboradores: dono e o próprio leem" on public.album_editors;
+create policy "colaboradores: dono e o próprio leem"
+  on public.album_editors for select to authenticated
+  using (public.owns_album(album_id) or user_id = auth.uid());
+
+-- O dono tira quem quiser; o colaborador sai quando quiser.
+drop policy if exists "colaboradores: dono remove, o próprio sai" on public.album_editors;
+create policy "colaboradores: dono remove, o próprio sai"
+  on public.album_editors for delete to authenticated
+  using (public.owns_album(album_id) or user_id = auth.uid());
+
+-- A linha do álbum, para quem foi convidado a editar. Só leitura: escrever é
+-- por `save_album_composition`.
+drop policy if exists "albums: colaborador lê" on public.albums;
+create policy "albums: colaborador lê"
+  on public.albums for select to authenticated
+  using (public.edits_album(id));
+
+-- As fotos: o colaborador acrescenta e tira, como o dono. O prefixo continua
+-- sendo conferido — e agora contra a pasta do **dono**, que é onde as fotos
+-- deste álbum moram, e não contra a de quem está gravando.
+--
+-- O ramo do dono é o de antes, sem a tranca, e por dois motivos: o primeiro
+-- salvamento de um álbum grava fotos enquanto ele ainda é `draft` (e
+-- `can_edit_album` exige `ready`), e trancar o dono no banco seria teatro —
+-- ele destranca o álbum com um clique. O que a tranca garante de verdade está
+-- em `save_album_composition`: com o álbum finalizado, a composição não muda
+-- por caminho nenhum.
+drop policy if exists "fotos: dono escreve" on public.album_photos;
+create policy "fotos: dono escreve"
+  on public.album_photos for insert to authenticated
+  with check (
+    (
+      public.owns_album(album_id)
+      and starts_with(storage_path, auth.uid()::text || '/' || album_id::text || '/')
+    )
+    or (
+      public.can_edit_album(album_id)
+      and starts_with(
+        storage_path,
+        public.album_owner(album_id)::text || '/' || album_id::text || '/'
+      )
+    )
+  );
+
+drop policy if exists "fotos: dono apaga" on public.album_photos;
+create policy "fotos: dono apaga"
+  on public.album_photos for delete to authenticated
+  using (public.owns_album(album_id) or public.can_edit_album(album_id));
+
+-- ── Storage ──────────────────────────────────────────────────────────────
+-- O colaborador escreve na pasta do álbum (não na subpasta `contrib`: o que
+-- ele manda **é** foto do álbum, não contribuição a aprovar), lê para montar a
+-- página e apaga o que tirou do álbum.
+drop policy if exists "photos: colaborador envia" on storage.objects;
+create policy "photos: colaborador envia"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'photos'
+    and array_length(storage.foldername(name), 1) = 2
+    and public.can_edit_album_folder(
+      (storage.foldername(name))[2],
+      (storage.foldername(name))[1]
+    )
+  );
+
+drop policy if exists "photos: colaborador lê" on storage.objects;
+create policy "photos: colaborador lê"
+  on storage.objects for select to authenticated
+  using (
+    bucket_id = 'photos'
+    and array_length(storage.foldername(name), 1) >= 2
+    and public.edits_album(public.try_uuid((storage.foldername(name))[2]))
+  );
+
+drop policy if exists "photos: colaborador apaga" on storage.objects;
+create policy "photos: colaborador apaga"
+  on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'photos'
+    and array_length(storage.foldername(name), 1) = 2
+    and public.can_edit_album_folder(
+      (storage.foldername(name))[2],
+      (storage.foldername(name))[1]
+    )
+  );

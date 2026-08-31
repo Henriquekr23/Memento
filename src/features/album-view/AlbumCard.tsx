@@ -9,8 +9,21 @@ import { deleteAlbum } from '@/features/album-save/actions';
 import { ShareControls } from '@/features/album-view/ShareControls';
 import type { AlbumListItem } from '@/features/album-view/loadAlbum';
 
-/** Uma linha da lista: abrir, compartilhar, apagar. */
-export function AlbumCard({ album }: { album: AlbumListItem }) {
+/**
+ * Uma linha da lista: abrir, editar, compartilhar, apagar.
+ *
+ * `variant` diz de quem é o álbum. No álbum de outra pessoa — aquele em que
+ * este usuário foi convidado a montar — não existe link público nem apagar:
+ * quem compartilha e quem desfaz é o dono. O que sobra é abrir e editar, que é
+ * exatamente o que o convite deu.
+ */
+export function AlbumCard({
+  album,
+  variant = 'mine',
+}: {
+  album: AlbumListItem;
+  variant?: 'mine' | 'shared';
+}) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,19 +61,36 @@ export function AlbumCard({ album }: { album: AlbumListItem }) {
           </Link>
           <p className="muted mt-1 text-sm">
             {album.photoCount} {album.photoCount === 1 ? 'foto' : 'fotos'} · {created}
+            {album.lockedAt ? ' · finalizado' : ''}
           </p>
         </div>
 
         <div className="flex flex-col items-start gap-3 sm:items-end">
-          <ShareControls albumId={album.id} isPublic={album.isPublic} />
-          <button
-            type="button"
-            onClick={() => setConfirming(true)}
-            disabled={pending}
-            className="btn btn-secondary btn-sm"
-          >
-            Apagar
-          </button>
+          {variant === 'mine' && (
+            <ShareControls albumId={album.id} isPublic={album.isPublic} />
+          )}
+          <div className="flex flex-wrap gap-2">
+            {/* Álbum finalizado não oferece editar: a bancada recusaria a
+                abertura, e um botão que leva a um aviso é um botão quebrado. */}
+            {!album.lockedAt && (
+              <Link
+                href={`/album/${album.id}/editar`}
+                className="btn btn-secondary btn-sm"
+              >
+                Editar
+              </Link>
+            )}
+            {variant === 'mine' && (
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                disabled={pending}
+                className="btn btn-secondary btn-sm"
+              >
+                Apagar
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

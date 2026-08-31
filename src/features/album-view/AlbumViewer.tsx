@@ -4,15 +4,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { SPEC } from '@/features/album-print/spec';
 import { Book3D } from '@/features/album-editor/Book3D';
-import { PageView } from '@/features/album-editor/PageView';
 import type { PhotoResolver } from '@/features/album-editor/PageContent';
+import { SheetStage } from '@/features/album-editor/SheetStage';
+import { useSheetTurn } from '@/features/album-editor/useSheetTurn';
 import { accentFor, colorById } from '@/features/album-editor/palette';
 import { EDITOR_COPY } from '@/features/album-editor/copy';
 import { clamp } from '@/features/album-editor/useDrag';
 import { useStageZoom } from '@/features/album-editor/useStageZoom';
 import { ZoomControls } from '@/features/album-editor/ZoomControls';
 import { useLang } from '@/features/i18n/LangProvider';
-import { IconBook, IconChevronLeft, IconChevronRight, IconLayers } from '@/features/album-editor/icons';
+import { IconBook, IconLayers } from '@/features/album-editor/icons';
 import type { AlbumComposition } from '@/features/album-save/composition';
 import { paperById, spineWidth } from '@/features/album-print/spec';
 import type { Photo } from '@/types/photo';
@@ -70,6 +71,12 @@ export function AlbumViewer({
   const safeSheet = clamp(sheetIndex, 0, Math.max(0, sheets.length - 1));
   const [leftIndex, rightIndex] = sheets[safeSheet] ?? [0, 1];
 
+  /* A mesma máquina de virar folha da bancada — e, com ela, o mesmo gesto:
+     segurar a folha e arrastar. Ler o álbum de outra pessoa e montar o próprio
+     têm que se sentir como o mesmo objeto. */
+  const turn = useSheetTurn(sheets.length, safeSheet, setSheetIndex);
+  const { go } = turn;
+
   useEffect(() => {
     const fit = () => {
       const node = viewportRef.current;
@@ -97,17 +104,19 @@ export function AlbumViewer({
   useEffect(() => {
     if (view !== 'pages') return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowRight') setSheetIndex((i) => clamp(i + 1, 0, sheets.length - 1));
-      if (event.key === 'ArrowLeft') setSheetIndex((i) => clamp(i - 1, 0, sheets.length - 1));
+      // Pelo `turn`, e não direto no índice: a seta do teclado vira a folha
+      // com a mesma animação do arraste, em vez de trocar a página num corte.
+      if (event.key === 'ArrowRight') go('next');
+      if (event.key === 'ArrowLeft') go('prev');
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [view, sheets.length]);
+  }, [view, go]);
 
   const named = { ...album, name: album.name || title };
 
   return (
-    <div className="ae" style={{ '--ae-accent': accentFor(color) } as React.CSSProperties}>
+    <div className="ae is-read" style={{ '--ae-accent': accentFor(color) } as React.CSSProperties}>
       <div className="ae-top">
         <div className="ae-tabs">
           <button
@@ -137,68 +146,29 @@ export function AlbumViewer({
             {view === 'book' ? (
               <Book3D album={named} spine={spine} ppm={ppm} hint={copy.orbitHint} />
             ) : (
-              <div className="ae-sheet">
-                {/* A sombra projetada mora fora da folha — ver `.ae-sheet-cast`. */}
-                <div className="ae-sheet-cast" aria-hidden />
-                {([['left', leftIndex], ['right', rightIndex]] as const).map(([hand, index]) => {
-                  const page = album.pages[index];
-                  if (!page) return null;
-                  return (
-                    <span
-                      key={page.id}
-                      style={{
-                        display: 'block',
-                        position: 'relative',
-                        marginLeft: hand === 'right' ? -SPEC.bleed * 2 * ppm : 0,
-                      }}
-                    >
-                      <PageView
-                        page={page}
-                        index={index}
-                        ppm={ppm}
-                        hand={hand}
-                        guides={false}
-                        ink={color.ink}
-                        resolve={resolve}
-                        hideNumber={!album.showPageNumbers}
-                      />
-                    </span>
-                  );
-                })}
-                <div className="ae-gutter" />
-              </div>
+              album.pages[leftIndex] &&
+              album.pages[rightIndex] && (
+                /* A mesma folha da bancada, só que sem alça nenhuma: em
+                   `readOnly` a metade inteira pega o arraste de virar, porque
+                   aqui não há enquadramento de foto para disputar o gesto. */
+                <SheetStage
+                  album={named}
+                  sheets={sheets}
+                  sheetIndex={safeSheet}
+                  turn={turn}
+                  ppm={ppm}
+                  guides={false}
+                  ink={color.ink}
+                  resolve={resolve}
+                  readOnly
+                  hideNumber={!album.showPageNumbers}
+                  hint={copy.flipHintRead}
+                />
+              )
             )}
           </div>
           <ZoomControls zoom={zoom} copy={copy} />
         </div>
-
-        {view === 'pages' && (
-          <div className="ae-strip" style={{ justifyContent: 'center' }}>
-            <button
-              type="button"
-              className="ae-btn"
-              style={{ padding: 7 }}
-              aria-label={copy.prevSheet}
-              disabled={safeSheet === 0}
-              onClick={() => setSheetIndex((i) => clamp(i - 1, 0, sheets.length - 1))}
-            >
-              <IconChevronLeft size={14} />
-            </button>
-            <span className="ae-meta">
-              {safeSheet + 1} / {sheets.length}
-            </span>
-            <button
-              type="button"
-              className="ae-btn"
-              style={{ padding: 7 }}
-              aria-label={copy.nextSheet}
-              disabled={safeSheet >= sheets.length - 1}
-              onClick={() => setSheetIndex((i) => clamp(i + 1, 0, sheets.length - 1))}
-            >
-              <IconChevronRight size={14} />
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
