@@ -56,7 +56,11 @@ function MoonIcon() {
   );
 }
 
-export function ThemeToggle() {
+/**
+ * `className` troca a roupa do botão (a landing usa um ícone solto no canto);
+ * sem ele, é o botão de contorno de sempre.
+ */
+export function ThemeToggle({ className }: { className?: string } = {}) {
   const { lang } = useLang();
   const t = COMMON[lang];
 
@@ -66,7 +70,7 @@ export function ThemeToggle() {
         type="button"
         onClick={toggleTheme}
         aria-label={t.themeAria}
-        className="btn btn-secondary btn-icon"
+        className={className ?? 'btn btn-secondary btn-icon'}
       >
         <SunIcon />
         <MoonIcon />

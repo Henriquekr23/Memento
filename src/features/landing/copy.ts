@@ -1,21 +1,18 @@
 /**
- * Textos da landing, nos dois idiomas do design original.
+ * Textos da landing, nos dois idiomas.
  *
- * O que também aparece em "Sobre", na barra e no rodapé (rótulo do botão de
- * montar, dicas, navegação) vive em `features/i18n/common.ts` — aqui fica só o
- * que é desta página.
+ * O que também aparece em "Sobre", na barra das outras telas e no rodapé
+ * (rótulo do botão de montar, dicas, conta) vive em `features/i18n/common.ts`
+ * — aqui fica só o que é desta página.
+ *
+ * Nomes de lugar ("Valparaíso", "Torres del Paine") não traduzem e vêm da
+ * viagem de exemplo (`sampleTrip.ts`); o que muda de idioma é a moldura em
+ * volta deles.
  */
 
 import type { Lang } from '@/features/i18n/lang';
 
 export type { Lang };
-
-export interface LandingStep {
-  title: string;
-  body: string;
-  /** Linha miúda embaixo do passo, com o detalhe que não cabe no resumo. */
-  detail: string;
-}
 
 /** Um dos dois lados da seção "Antes e depois". */
 export interface BeforeAfterPanel {
@@ -24,99 +21,156 @@ export interface BeforeAfterPanel {
   body: string;
 }
 
+/** Uma página esquerda do livro do herói: rótulo, título e corpo. */
+export interface HeroPage {
+  kicker: string;
+  title: string;
+  body: string;
+}
+
+/** As âncoras da página, na ordem em que as seções aparecem. */
+export type LandingSectionId = 'como-funciona' | 'organizar' | 'antes-e-depois' | 'perguntas';
+
+export const LANDING_SECTIONS: readonly LandingSectionId[] = [
+  'como-funciona',
+  'organizar',
+  'antes-e-depois',
+  'perguntas',
+];
+
 export interface LandingCopy {
-  tagline: string;
-  heroLine1: string;
-  /** Pedaço da segunda linha antes da palavra que troca. */
-  heroLine2Before: string;
-  /**
-   * As palavras que se revezam no herói. Cada uma já vem com o artigo, porque
-   * o gênero muda ("a viagem", "o casamento") e concatenar artigo fixo daria
-   * frase errada em português.
-   */
-  heroWords: string[];
-  /** A terceira linha, depois da palavra que troca — sempre em linha própria. */
-  heroLine2After: string;
-  heroSub: string;
-  heroSecondary: string;
-  heroNote: string;
-  /** Texto alternativo da foto de fundo do herói. */
-  heroPhotoAlt: string;
-  comoKicker: string;
-  steps: LandingStep[];
-  recursosKicker: string;
-  recursosTitle: string;
-  features: { title: string; body: string }[];
+  /** Dias da semana abreviados, de domingo a sábado — para "sáb 14". */
+  weekdays: readonly string[];
+  nav: {
+    label: string;
+    links: Record<LandingSectionId, string>;
+    menu: string;
+    close: string;
+    /** Rótulo do diálogo da gaveta, para leitor de tela. */
+    drawerLabel: string;
+  };
+  hero: {
+    /** Rótulo da seção para leitor de tela: o livro é o herói inteiro. */
+    bookLabel: string;
+    coverKicker: string;
+    /** O h1 da página. */
+    coverTitle: string;
+    /** As quatro páginas da esquerda, uma por abertura. */
+    pages: readonly [HeroPage, HeroPage, HeroPage, HeroPage];
+    exifDateLabel: string;
+    exifPlaceLabel: string;
+    /** "dom, 15 de março de 2026, 11:20" — a data por extenso da foto da página 3. */
+    exifDate: string;
+    /** O título que a pessoa deu ao álbum de exemplo. */
+    albumTitle: string;
+    secondaryCta: string;
+    mosaicCaption: (photos: number, days: number) => string;
+    /** Pontos cardeais abreviados, para as coordenadas ("33.046° S, 71.619° O"). */
+    compass: { north: string; south: string; east: string; west: string };
+  };
+  organize: {
+    title: string;
+    /** O corpo do primeiro bloco muda conforme o aparelho: mouse ou toque. */
+    bodyPointer: string;
+    bodyTouch: string;
+    /** "de 12 no lugar" — o número vem antes, em destaque. */
+    counter: (total: number) => string;
+    arrange: string;
+    scramble: string;
+    albumTitle: string;
+    body: string;
+    albumCounter: string;
+    /** Cabeçalho da página direita do livro. */
+    albumMonth: string;
+    albumFoot: (count: number) => string;
+    emptyPointer: string;
+    emptyTouch: string;
+  };
   beforeAfter: {
     kicker: string;
     title: string;
     lead: string;
-    /** Legenda da ilustração da página montada, no painel "Depois". */
-    afterCaption: string;
     before: BeforeAfterPanel;
     after: BeforeAfterPanel;
+    /** Rótulo do controle de comparação, para leitor de tela e teclado. */
+    compareLabel: string;
+    dragHint: string;
+    /** A tela da galeria do celular, no lado "antes". */
+    galleryTitle: string;
+    galleryCount: string;
+    gallerySelect: string;
   };
   faqTitle: string;
-  closingTitle: string;
-  closingBody: string;
 }
 
 export const COPY: Record<Lang, LandingCopy> = {
   pt: {
-    tagline: 'Guarde a memória',
-    heroLine1: 'Clique.',
-    heroLine2Before: 'E ',
-    heroWords: ['a viagem', 'o casamento', 'a formatura', 'o ano', 'a memória'],
-    heroLine2After: 'virou álbum.',
-    heroSub:
-      'Cada foto carrega a data em que foi tirada. O Memento usa isso pra montar a ordem, e o resto do álbum é você quem escreve.',
-    heroSecondary: 'Ver antes e depois',
-    heroNote: 'Sem cadastro pra começar. Suas fotos ficam no seu navegador.',
-    heroPhotoAlt: '',
-    comoKicker: 'Como funciona',
-    steps: [
-      {
-        title: 'Enviar',
-        body: 'Arraste quantas fotos quiser, do computador ou do celular.',
-        detail: 'A leitura acontece na sua máquina: a espera é só o tempo de abrir os arquivos.',
+    weekdays: ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'],
+    nav: {
+      label: 'Principal',
+      links: {
+        'como-funciona': 'Como funciona',
+        organizar: 'Organizar',
+        'antes-e-depois': 'Antes e depois',
+        perguntas: 'Perguntas',
       },
-      {
-        title: 'Ordenar',
-        body: 'O Memento lê a data de cada foto e monta a linha do tempo sozinho.',
-        detail: 'Foto sem data entra pela data do arquivo e recebe um selo, pra você conferir.',
-      },
-      {
-        title: 'Montar',
-        body: 'Escolha o layout de cada página, troque fotos de lugar e escreva as legendas.',
-        detail: 'O que você tira do álbum vai pro depósito em vez de sumir — dá pra voltar atrás.',
-      },
-      {
-        title: 'Guardar',
-        body: 'Baixe o álbum pronto em PDF: capa, miolo e contracapa.',
-        detail: 'Gerado do arquivo original, em resolução cheia, sem passar por servidor nenhum.',
-      },
-    ],
-    recursosKicker: 'Recursos',
-    recursosTitle: 'O que o Memento faz — e o que ele deixa pra você.',
-    features: [
-      {
-        title: 'Sem inteligência artificial',
-        body: 'Nenhuma legenda, título ou narrativa é inventada pelo sistema. Ele organiza o material; o que a memória significa continua sendo você quem conta.',
-      },
-      {
-        title: 'Tudo no seu navegador',
-        body: 'As fotos são lidas na sua máquina, e nada sobe sem você mandar. Salvar na nuvem é um botão, não o caminho padrão — e o que sobe é uma cópia reduzida, sem os metadados do arquivo.',
-      },
-      {
-        title: 'Metadados a seu favor',
-        body: 'Data, hora e, quando existem, coordenadas são lidas do próprio arquivo — o bastante para acertar a ordem sem trabalho manual.',
-      },
-    ],
+      menu: 'Menu',
+      close: 'Fechar',
+      drawerLabel: 'Menu',
+    },
+    hero: {
+      bookLabel: 'Como funciona o Memento',
+      coverKicker: 'Keep the Journey',
+      coverTitle: 'Suas fotos viram um álbum.',
+      pages: [
+        {
+          kicker: 'Como funciona',
+          title: 'Solte as fotos da viagem.',
+          body: 'Do jeito que saíram da câmera: fora de ordem, com nomes que não dizem nada.',
+        },
+        {
+          kicker: 'Como funciona',
+          title: 'O Memento lê a data e o lugar de cada uma.',
+          body: 'E monta a viagem na ordem em que aconteceu. Sem inteligência artificial: só o que a própria foto já guarda.',
+        },
+        {
+          kicker: 'Como funciona',
+          title: 'Você escolhe o que fica e dá o nome.',
+          body: 'No fim, baixe em PDF ou mande o link para quem estava junto.',
+        },
+        {
+          kicker: 'Sua vez',
+          title: 'Agora, com as suas fotos.',
+          body: 'Comece pela pasta da última viagem.',
+        },
+      ],
+      exifDateLabel: 'Data',
+      exifPlaceLabel: 'Lugar',
+      exifDate: 'dom, 15 de março de 2026, 11:20',
+      albumTitle: 'Chile de ponta a ponta',
+      secondaryCta: 'Ver um exemplo',
+      mosaicCaption: (photos, days) => `${photos} fotos, ${days} dias, em ordem`,
+      compass: { north: 'N', south: 'S', east: 'L', west: 'O' },
+    },
+    organize: {
+      title: 'Da bagunça ao álbum.',
+      bodyPointer: 'Passe o mouse pelas fotos. Cada uma vai para o dia em que foi tirada.',
+      bodyTouch: 'Toque nas fotos. Cada uma vai para o dia em que foi tirada.',
+      counter: (total) => `de ${total} no lugar`,
+      arrange: 'Arrumar tudo',
+      scramble: 'Bagunçar de novo',
+      albumTitle: 'E vira um álbum.',
+      body: 'As fotos que você organizou entram no livro, na ordem certa. Com as suas, é igual.',
+      albumCounter: 'fotos no álbum',
+      albumMonth: 'março de 2026',
+      albumFoot: (count) => (count === 1 ? '1 foto, em ordem' : `${count} fotos, em ordem`),
+      emptyPointer: 'Nenhuma foto organizada ainda. Volte um pouco e passe o mouse nelas.',
+      emptyTouch: 'Nenhuma foto organizada ainda. Volte um pouco e toque nelas.',
+    },
     beforeAfter: {
       kicker: 'Antes e depois',
       title: 'A mesma viagem, guardada de dois jeitos.',
       lead: 'De um lado, milhares de fotos soltas na galeria do celular. Do outro, um álbum com começo, meio e fim.',
-      afterCaption: 'Uma página do álbum montado',
       before: {
         badge: 'Antes',
         title: 'Um rolo sem fim',
@@ -127,66 +181,81 @@ export const COPY: Record<Lang, LandingCopy> = {
         title: 'Um álbum com páginas',
         body: 'A foto que importa fica grande, a data dá a ordem, e a legenda guarda o resto.',
       },
+      compareLabel: 'Comparar a galeria do celular com o álbum',
+      dragHint: 'Arraste para comparar',
+      galleryTitle: 'Recentes',
+      galleryCount: '2.418 itens',
+      gallerySelect: 'Selecionar',
     },
     faqTitle: 'Perguntas frequentes',
-    closingTitle: 'Comece pelas fotos que você já tem.',
-    closingBody: 'Leva o tempo de escolher as fotos.',
   },
   en: {
-    tagline: 'Keep the Memory',
-    heroLine1: 'Click.',
-    heroLine2Before: 'And the ',
-    heroWords: ['trip', 'wedding', 'graduation', 'year', 'memory'],
-    heroLine2After: 'became an album.',
-    heroSub:
-      'Every photo carries the date it was taken. Memento uses that to sort them out, and the rest of the album is yours to write.',
-    heroSecondary: 'See before and after',
-    heroNote: 'No sign-up to start. Your photos stay in your browser.',
-    heroPhotoAlt: '',
-    comoKicker: 'How it works',
-    steps: [
-      {
-        title: 'Upload',
-        body: 'Drag in as many photos as you like, from your computer or phone.',
-        detail: 'Reading happens on your own machine: the only wait is opening the files.',
+    weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    nav: {
+      label: 'Main',
+      links: {
+        'como-funciona': 'How it works',
+        organizar: 'Organize',
+        'antes-e-depois': 'Before and after',
+        perguntas: 'Questions',
       },
-      {
-        title: 'Sort',
-        body: 'Memento reads the date on each photo and builds the timeline on its own.',
-        detail: 'A photo with no date comes in by file date and gets a badge, so you can check it.',
-      },
-      {
-        title: 'Build',
-        body: "Choose each page's layout, move photos around, write the captions.",
-        detail: 'Anything you take out goes to the tray instead of disappearing — you can undo it.',
-      },
-      {
-        title: 'Keep',
-        body: 'Download the finished album as a PDF: cover, body and back cover.',
-        detail: 'Built from the original file, at full resolution, without touching a server.',
-      },
-    ],
-    recursosKicker: 'Features',
-    recursosTitle: 'What Memento does — and what it leaves to you.',
-    features: [
-      {
-        title: 'No artificial intelligence',
-        body: 'No caption, title or narrative is invented by the system. It organizes the material; what the memory means is still yours to tell.',
-      },
-      {
-        title: 'Runs in your browser',
-        body: 'Photos are read on your machine, and nothing goes up unless you say so. Saving to the cloud is a button, not the default path — and what goes up is a reduced copy, without the file metadata.',
-      },
-      {
-        title: 'Metadata working for you',
-        body: 'Date, time and, when present, coordinates are read from the file itself — enough to get the order right with no manual work.',
-      },
-    ],
+      menu: 'Menu',
+      close: 'Close',
+      drawerLabel: 'Menu',
+    },
+    hero: {
+      bookLabel: 'How Memento works',
+      coverKicker: 'Keep the Journey',
+      coverTitle: 'Your photos become an album.',
+      pages: [
+        {
+          kicker: 'How it works',
+          title: 'Drop in the trip photos.',
+          body: 'Just as they came off the camera: out of order, with names that say nothing.',
+        },
+        {
+          kicker: 'How it works',
+          title: 'Memento reads the date and place of each one.',
+          body: 'And lays the trip out in the order it happened. No artificial intelligence: only what the photo itself already keeps.',
+        },
+        {
+          kicker: 'How it works',
+          title: 'You choose what stays and give it a name.',
+          body: 'At the end, download a PDF or send the link to whoever was there.',
+        },
+        {
+          kicker: 'Your turn',
+          title: 'Now, with your own photos.',
+          body: 'Start with the folder from your last trip.',
+        },
+      ],
+      exifDateLabel: 'Date',
+      exifPlaceLabel: 'Place',
+      exifDate: 'Sun, March 15, 2026, 11:20',
+      albumTitle: 'Chile end to end',
+      secondaryCta: 'See an example',
+      mosaicCaption: (photos, days) => `${photos} photos, ${days} days, in order`,
+      compass: { north: 'N', south: 'S', east: 'E', west: 'W' },
+    },
+    organize: {
+      title: 'From mess to album.',
+      bodyPointer: 'Move the mouse over the photos. Each one goes to the day it was taken.',
+      bodyTouch: 'Tap the photos. Each one goes to the day it was taken.',
+      counter: (total) => `of ${total} in place`,
+      arrange: 'Sort them all',
+      scramble: 'Mess them up again',
+      albumTitle: 'And it becomes an album.',
+      body: 'The photos you sorted go into the book, in the right order. With yours, it works the same.',
+      albumCounter: 'photos in the album',
+      albumMonth: 'March 2026',
+      albumFoot: (count) => (count === 1 ? '1 photo, in order' : `${count} photos, in order`),
+      emptyPointer: 'No photos sorted yet. Scroll back a little and move the mouse over them.',
+      emptyTouch: 'No photos sorted yet. Scroll back a little and tap them.',
+    },
     beforeAfter: {
       kicker: 'Before and after',
       title: 'The same trip, kept two different ways.',
       lead: 'On one side, thousands of loose photos in your phone gallery. On the other, an album with a beginning, a middle and an end.',
-      afterCaption: 'A page from the finished album',
       before: {
         badge: 'Before',
         title: 'An endless roll',
@@ -197,9 +266,12 @@ export const COPY: Record<Lang, LandingCopy> = {
         title: 'An album with pages',
         body: 'The photo that matters is the big one, the date gives the order, and the caption keeps the rest.',
       },
+      compareLabel: 'Compare the phone gallery with the album',
+      dragHint: 'Drag to compare',
+      galleryTitle: 'Recents',
+      galleryCount: '2,418 items',
+      gallerySelect: 'Select',
     },
     faqTitle: 'Frequently asked questions',
-    closingTitle: 'Start with the photos you already have.',
-    closingBody: 'It takes as long as picking the photos.',
   },
 };

@@ -37,6 +37,7 @@ npx tsx scripts/checkComposition.mts     # ida/volta da composição por JSON, e
 npx tsx scripts/checkPrintSpec.mts       # geometria de impressão: formato, sangria, lombada, corpo do texto
 npx tsx scripts/checkFrameCrop.mts       # enquadramento da foto (encaixe, zoom, limite do arraste) e margens da página
 npx tsx scripts/checkAlbumEdit.mts       # replanejamento das fotos ao reeditar: o que sobe, o que fica, o que sai do bucket
+npx tsx scripts/checkLanding.mts         # landing: folhas do herói, tons do fundo, pilha → dia → álbum, seção ativa do menu
 
 # Supabase (exige conta de verdade; apaga o álbum de teste no fim):
 MEMENTO_EMAIL=... MEMENTO_PASSWORD=... npx tsx scripts/checkSupabaseSave.mts
@@ -44,7 +45,7 @@ MEMENTO_EMAIL=... MEMENTO_PASSWORD=... npx tsx scripts/checkSupabaseSave.mts
 
 O checklist de verificação antes de considerar algo pronto: `npx tsc --noEmit`
 → `npm run lint` → `npm run build` → os scripts acima quando a mudança tocar
-geometria de impressão, composição ou PDF.
+geometria de impressão, composição, PDF ou a rolagem da landing.
 
 ## Arquitetura
 
@@ -131,14 +132,15 @@ leitura de EXIF.
    arredondada — `5.72 - 2` em ponto flutuante vira teto de controle e limiar
    de aviso na tela.
 7. **Zero requisição a terceiros, em execução e no build.** As fontes
-   (`Bricolage Grotesque` e `Figtree` para a interface; `Anton`,
-   `Archivo Black`, `Bebas Neue`, `Instrument Serif`, `Space Grotesk` e
-   `DM Sans` para a capa) são `.woff2` versionados em `src/app/fonts/`,
-   carregados por `next/font/local` — **nunca voltar para `next/font/google`**,
-   que baixa arquivos durante o build e quebra sem rede, nem para o `@import`
-   do Google Fonts. Vale para imagem: a foto do herói é `public/hero.jpg`,
-   versionada. A CSP (`connect-src 'self'`, `font-src 'self'`, `img-src
-   'self'`) faz o navegador garantir isso.
+   (`Bricolage Grotesque` e `Figtree` para a interface; `Schibsted Grotesk` e
+   `JetBrains Mono` só na landing, declaradas em `features/landing/fonts.ts`;
+   `Anton`, `Archivo Black`, `Bebas Neue`, `Instrument Serif`,
+   `Space Grotesk` e `DM Sans` para a capa) são `.woff2` versionados em
+   `src/app/fonts/`, carregados por `next/font/local` — **nunca voltar para
+   `next/font/google`**, que baixa arquivos durante o build e quebra sem rede,
+   nem para o `@import` do Google Fonts. Vale para imagem: as fotos da
+   viagem de exemplo em `public/landing/` são versionadas. A CSP (`connect-src 'self'`,
+   `font-src 'self'`, `img-src 'self'`) faz o navegador garantir isso.
 8. **O PDF redesenha a página num canvas, em milímetros.** Em
    `album-export/pdf/drawPrintPage.ts` a régua é `mm()`, não pixel de tela: o
    arquivo tem que bater com o gabarito, e gabarito é medido em mm. O arquivo
@@ -160,8 +162,13 @@ leitura de EXIF.
 12. **`useIsNarrow` (`max-width: 767px`) ≠ `useIsTouch` (`hover: none`).**
     Toque não é largura: controle que só aparece no hover usa `useIsTouch`, não
     breakpoint — um laptop touch é largo e ainda precisa das alças visíveis.
-13. **Movimento de mouse não passa pelo React na landing** — variáveis CSS
-    escritas via ref dentro de `requestAnimationFrame` (`usePointerVars`).
+13. **Rolagem e mouse não passam pelo React na landing** — variáveis CSS
+    escritas via ref dentro de `requestAnimationFrame`. É um padrão só:
+    `useScrollFrame` (rolagem, com `measure` no redimensionamento e `paint`
+    por quadro, que só escreve); ponteiro (inclinação do livro, alça do "Antes
+    e depois", pílula do menu) também escreve variável direto no nó.
+    `setState` só para o que muda raramente (seção ativa do menu, foto
+    organizada). Ver a seção "Landing" abaixo.
 14. **Sem persistência de conteúdo fora da Fase 2.** Recarregar `/album` (modo
     local) perde o álbum — intencional. Exceções que não são conteúdo: idioma
     (`localStorage`) e a ponte para `/obrigado` (`sessionStorage`, consumida na
@@ -238,6 +245,54 @@ leitura de EXIF.
     usado pelo segmentado do inspetor e pelas abas do editor. O nó do trilho é
     criado por quem chama: uma referência devolvida de dentro de um hook e lida
     na renderização é o que a regra `react-hooks/refs` proíbe.
+
+### Landing — "o álbum é a página" (`features/landing/`)
+
+- **Herói** (`hero-album/`): contêiner alto (`--hero-pin` no CSS) com filho
+  `sticky`; o fotolivro vira 4 folhas pela rolagem. `heroScroll.ts` é a conta
+  pura (folhas, `z-index`, camadas de tom, `finished`), `useHeroAlbumVars` só
+  escreve `--f*`, `--z*`, `--tint-*`, `--mx/--my` e o `data-nav` do wrapper.
+  Desktop gira em `rotateY`, celular em `rotateX` — **mesmo DOM**, só o CSS
+  muda; o livro é desenhado em px fixos e escalado por `--book-scale`. O
+  livro não pula para onde a rolagem está: persegue esse ponto com teto de
+  velocidade (`followProgress`), então rolar rápido vira virada rápida.
+- **"Da bagunça ao álbum"** (`organize/`): pilha → dia é estado do React com
+  `transition`; dia → álbum é `--q`, pela rolagem. As poses dos dois layouts
+  vão juntas como variáveis CSS (`--pose-d`/`--pose-m`…) e a media query
+  escolhe — o HTML do servidor já vem certo para qualquer largura. Dia e vaga
+  de cada foto saem de `groupPhotosByDay`, o mesmo agrupamento do álbum.
+- **Barra** (`nav/LandingNav`): fechada (só a marca, no centro) até o álbum
+  abrir; `:focus-within` abre pelo teclado. A opção acesa é uma pílula só
+  (`useSlidingPill`, três peças movidas por `transform`) que dá para segurar e
+  arrastar — a seção só muda ao soltar. O idioma (`LangSwitch`, globo + código)
+  fica ao lado de "Entrar". O tema é um ícone solto no canto superior direito
+  enquanto a barra está fechada (`.lp-theme-corner`, fora do `<header>`), e
+  depois só na gaveta. "Entrar" e idioma têm o mesmo botão (`.lp-navbtn`).
+  Abaixo de 1200 px opções e
+  idioma vão para a gaveta. A
+  marca aqui é só a palavra "memento", na Bricolage com `opsz`
+  (`--font-landing-brand`). `SiteNav` ficou só para as telas internas.
+- **Rolagem de âncora é nossa** (`smoothScroll.ts`): todo `href="#…"` da
+  landing passa por `scrollToAnchor`, com duração pela distância (até 1,6 s)
+  e a curva `--ease-in-out`. O passo usa `behavior: 'instant'` — o
+  `scroll-behavior: smooth` do `<html>` brigaria com ele.
+- **Guia de rolagem** (`.lp-scrollhint`) na borda direita do herói e da seção
+  escura, sem texto: traços verticais que enchem com o progresso (`--fN`,
+  `--q`) e o gesto embaixo; some quando a parte animada termina.
+- **Escuro da landing é azul-noite**, não preto: tons do herói, faixas e barra
+  saem do mesmo azul da seção escura e da capa, mais fundo.
+- **"Antes e depois"**: texto à esquerda, comparação arrastável à direita
+  (galeria do celular × álbum), divisória em `--split`; o teclado usa o
+  `<input type="range">` escondido por baixo.
+- **Tema claro por padrão:** `<html data-theme="light">` em `app/layout.tsx`.
+  As regras `prefers-color-scheme` continuam no CSS, mas só valeriam sem o
+  atributo; o interruptor de tema troca o atributo.
+- **Tokens escopados em `.landing`** (`--landing-*`, mais o Organic remapeado
+  para as seções antigas). Nada disso vale fora da página inicial.
+- **Duas portas fora de camada em `globals.css`**: `a { color: inherit }` e
+  `h1…h6 {…}` estão fora de `@layer` e venceriam qualquer classe. Na landing,
+  link com classe pega cor de `--lp-ink`, e título com `.lp-h` pega peso,
+  entrelinha e espaçamento de `--lp-h-*`. Não usar `!important` no lugar.
 
 ### Fase 2 — Supabase (auth + persistência)
 

@@ -31,7 +31,8 @@ export function LandingFaq() {
 
   return (
     <section
-      id="faq"
+      id="perguntas"
+      data-lp-section="perguntas"
       className="mx-auto w-full max-w-[860px] px-[clamp(20px,5vw,56px)] pb-[clamp(56px,7vw,96px)] pt-[clamp(24px,4vw,48px)]"
     >
       <h2 className="text-[clamp(28px,3.4vw,40px)]">{t.faqTitle}</h2>

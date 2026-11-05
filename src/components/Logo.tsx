@@ -61,13 +61,17 @@ export function LogoMark({
 /**
  * Marca + nome, sempre clicável para o início. É o único caminho de volta na
  * tela do álbum — daí o `aria-label`, já que visualmente só se lê "Memento".
+ *
+ * O nome usa `--font-brand` (a Bricolage, fixada no `:root`), e não
+ * `--font-heading`: a landing troca a fonte dos títulos pela Schibsted
+ * Grotesk, e a marca não pode trocar junto.
  */
 export function Wordmark({ tagline }: { tagline?: string }) {
   return (
     <Link href="/" aria-label="Memento — voltar ao início" className="wordmark">
       <LogoMark className="wordmark-glyph" />
       <span className="flex items-baseline gap-3.5">
-        <span className="font-[family-name:var(--font-heading)] text-[19px] font-extrabold tracking-[-0.02em]">
+        <span className="font-[family-name:var(--font-brand)] text-[19px] font-extrabold tracking-[-0.02em]">
           Memento
         </span>
         {tagline && (

@@ -93,6 +93,11 @@
   /* Controle pequeno é pílula no Organic — `.btn`, `.input`, `.tag`, `.seg`. */
   --radius-pill: 999px;
 
+  /* A fonte da marca ("Memento" no `Wordmark`). Resolvida aqui, no :root, ela
+     guarda a Bricolage mesmo onde `--font-heading` é trocada — a landing
+     troca a fonte dos títulos, e a marca não pode trocar junto. */
+  --font-brand: var(--font-heading);
+
   /* Elevação — derivada do chão: sombra tingida de tinta no tema claro,
      escuridão ambiente no escuro. */
   --shadow-sm: 0 1px 2px color-mix(in srgb, #2e2b25 14%, transparent);
@@ -142,6 +147,180 @@
   --hero-veil-tint: #120d0a;
   --hero-accent: var(--color-accent-300);
   --hero-photo-filter: saturate(0.95) brightness(0.9);
+}
+
+/* ── Landing: "o álbum é a página" ─────────────────────────────────────────
+   Tokens escopados ao wrapper `.landing` da página inicial — nada daqui vale
+   em `/album`, `/albums`, `/conta` ou `/sobre`.
+
+   São de dois tipos. Os `--landing-*` são o visual novo: tinta grafite, papel
+   quase branco, laranja de ação, azul-noite da seção escura e os cinco tons do
+   fundo do herói (mesma luminosidade, matiz diferente — a troca é sutil de
+   propósito). E logo abaixo, os tokens do Organic **remapeados** para esses
+   valores: "Antes e depois", as perguntas, o rodapé e os controles de idioma e
+   tema continuam com as mesmas classes de sempre, só que lendo a paleta nova
+   enquanto estão dentro da landing.
+
+   A cor da seção escura (que também é o tecido da capa do livro) é um token
+   só: `--landing-section`. Alternativas aprovadas: verde mata `#23453a` e
+   terracota `#93452a`. */
+.landing {
+  --landing-ink: #17181b;
+  --landing-ink-2: #43454b;
+  --landing-muted: #5b5d63;
+  --landing-muted-2: #6b6d72;
+  --landing-paper: #fbfbf8;
+  /* As duas lâminas de papel que dão espessura ao bloco de páginas. */
+  --landing-paper-edge-1: #e2e2dc;
+  --landing-paper-edge-2: #d6d6cf;
+  /* A moldura branca das fotos soltas. */
+  --landing-frame: #ffffff;
+  /* Branco sobre o laranja: ≈ 4,8:1. */
+  --landing-cta: #c4500f;
+  --landing-cta-hover: #a8430b;
+  --landing-on-cta: #ffffff;
+  --landing-ghost-line: rgb(23 24 27 / 0.3);
+  --landing-pill: #fbe1d0;
+  --landing-pill-ink: #8a3207;
+  /* O fundinho claro mesmo no escuro: etiquetas que moram dentro de uma
+     ilustração (o quadro do "Antes e depois"), que não muda com o tema. */
+  --landing-pill-paper: #fbe1d0;
+  --landing-pill-paper-ink: #8a3207;
+  --landing-section: #1f2d4d;
+  --landing-on-section: #f6f6f3;
+  --landing-on-section-2: rgb(246 246 243 / 0.82);
+  --landing-on-section-line: rgb(246 246 243 / 0.4);
+  --landing-on-section-accent: #ffb27a;
+  /* O carimbo de data das câmeras de filme: laranja aceso, com brilho. */
+  --landing-stamp: #ff8a3d;
+  --landing-stamp-glow: rgb(255 90 20 / 0.8);
+  --landing-stub-1: #eeeeea;
+  --landing-stub-2: #e6e6e1;
+  /* Texto fora do livro (barra, faixas de baixo). O de dentro do livro é
+     `--landing-ink` e não muda com o tema: o livro é um objeto. */
+  --landing-text: #17181b;
+  --landing-bar: rgb(250 250 248 / 0.84);
+  /* A cor da barra sem transparência: o texto da casa marcada do idioma. */
+  --landing-bar-solid: #fafaf8;
+  --landing-bar-shadow: 0 1px 0 rgb(23 24 27 / 0.05), 0 10px 30px rgb(23 24 27 / 0.1);
+  --landing-surface: #fafaf8;
+  /* A tela de aplicativo de fotos do "Antes e depois" — clara nos dois
+     temas, como o livro: é a ilustração de um objeto, não interface. */
+  --landing-app-bg: #ffffff;
+  --landing-app-tile: #ececef;
+  --landing-app-chat: #f1f1f4;
+  --landing-app-bubble: #dcdce2;
+  --landing-app-bubble-2: #9cc1f2;
+  --landing-app-doc: #fbfbf8;
+  --landing-app-line: #d6d6db;
+  --landing-surface-2: #e9e9e5;
+  --landing-drawer-shadow: 0 24px 60px rgb(23 24 27 / 0.25);
+
+  --landing-tint-0: #efedf3;
+  --landing-tint-1: #f3ece7;
+  --landing-tint-2: #e9eef2;
+  --landing-tint-3: #ecf0ea;
+  --landing-tint-4: #f1ebee;
+
+  /* Sombras: tingidas da tinta, nunca preto puro — exceto sobre a seção
+     escura, onde a sombra é o próprio escuro. */
+  --landing-gutter-shade: rgb(23 24 27 / 0.05);
+  --landing-fold-shade: rgb(23 24 27 / 0.2);
+  --landing-fold-shade-back: rgb(23 24 27 / 0.18);
+  --landing-book-shadow: rgb(23 24 27 / 0.16);
+  --landing-floor-shadow: rgb(23 24 27 / 0.18);
+  --landing-photo-shadow: 0 1px 2px rgb(23 24 27 / 0.12), 0 10px 24px rgb(23 24 27 / 0.16);
+  --landing-photo-shadow-dark: 0 1px 2px rgb(0 0 0 / 0.18), 0 12px 30px rgb(0 0 0 / 0.25);
+  --landing-album-shadow: rgb(0 0 0 / 0.3);
+
+  --landing-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --landing-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  /* O Organic, relido com a paleta nova (ver o comentário do bloco). */
+  --color-bg: var(--landing-stub-1);
+  --color-surface: #e3e3de;
+  --color-surface-2: #fbfbf8;
+  --color-text: var(--landing-text);
+  --color-accent: var(--landing-cta);
+  --color-accent-700: var(--landing-pill-ink);
+  --color-divider: rgb(23 24 27 / 0.13);
+  --color-cta: var(--landing-cta);
+  --color-cta-hover: var(--landing-cta-hover);
+  --color-on-cta: var(--landing-on-cta);
+  --color-neutral-100: var(--landing-paper);
+  --color-neutral-300: #dcdcd6;
+  --color-neutral-600: var(--landing-muted-2);
+  --color-neutral-800: var(--landing-ink-2);
+  --shadow-sm: 0 1px 2px rgb(23 24 27 / 0.12);
+  --shadow-md: 0 3px 10px rgb(23 24 27 / 0.14);
+  --shadow-lg: 0 12px 32px rgb(23 24 27 / 0.18);
+  /* Títulos e corpo em Schibsted Grotesk; a marca segue na Bricolage
+     (`--font-brand`, fixada no :root antes desta troca). */
+  --font-heading: var(--font-landing-sans);
+  --font-body: var(--font-landing-sans);
+}
+
+/* Modo escuro da landing: o fundo, a barra e as faixas escurecem; o livro e as
+   fotos não — papel continua papel. O escuro não é preto: é o mesmo azul-noite
+   da seção "Da bagunça ao álbum" e da capa, mais fundo — assim a seção azul
+   aparece como uma faixa mais clara do mesmo tecido, e não como um bloco
+   colado num fundo neutro. Contraste conferido: tinta clara sobre os tons do
+   herói ≥ 14:1, pêssego da opção ativa sobre o fundinho ≈ 7:1. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .landing {
+    --landing-text: #eef1f6;
+    --landing-bar: rgb(24 33 52 / 0.84);
+    --landing-bar-solid: #18213a;
+    --landing-bar-shadow: 0 1px 0 rgb(0 0 0 / 0.2), 0 10px 30px rgb(0 0 0 / 0.35);
+    --landing-surface: #18213a;
+    --landing-surface-2: #27324d;
+    --landing-drawer-shadow: 0 24px 60px rgb(0 0 0 / 0.5);
+    --landing-pill: #2c3a5c;
+    --landing-pill-ink: #ffc6a5;
+    --landing-stub-1: #121a2b;
+    --landing-stub-2: #0f1626;
+    --landing-tint-0: #131a2b;
+    --landing-tint-1: #19192c;
+    --landing-tint-2: #121d2d;
+    --landing-tint-3: #111e27;
+    --landing-tint-4: #1a172a;
+    --landing-book-shadow: rgb(0 0 0 / 0.45);
+    --landing-floor-shadow: rgb(0 0 0 / 0.55);
+    --color-surface: #1a2337;
+    --color-surface-2: #212b42;
+    --color-accent-700: #ffb27a;
+    --color-divider: rgb(225 232 255 / 0.12);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 3px 10px rgb(0 0 0 / 0.35);
+    --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.45);
+  }
+}
+:root[data-theme='dark'] .landing {
+  --landing-text: #eef1f6;
+  --landing-bar: rgb(24 33 52 / 0.84);
+  --landing-bar-solid: #18213a;
+  --landing-bar-shadow: 0 1px 0 rgb(0 0 0 / 0.2), 0 10px 30px rgb(0 0 0 / 0.35);
+  --landing-surface: #18213a;
+  --landing-surface-2: #27324d;
+  --landing-drawer-shadow: 0 24px 60px rgb(0 0 0 / 0.5);
+  --landing-pill: #2c3a5c;
+  --landing-pill-ink: #ffc6a5;
+  --landing-stub-1: #121a2b;
+  --landing-stub-2: #0f1626;
+  --landing-tint-0: #131a2b;
+  --landing-tint-1: #19192c;
+  --landing-tint-2: #121d2d;
+  --landing-tint-3: #111e27;
+  --landing-tint-4: #1a172a;
+  --landing-book-shadow: rgb(0 0 0 / 0.45);
+  --landing-floor-shadow: rgb(0 0 0 / 0.55);
+  --color-surface: #1a2337;
+  --color-surface-2: #212b42;
+  --color-accent-700: #ffb27a;
+  --color-divider: rgb(225 232 255 / 0.12);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 3px 10px rgb(0 0 0 / 0.35);
+  --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.45);
 }
 
 @theme inline {
@@ -214,7 +393,34 @@ html {
 /* A barra do topo é grudenta: sem isto, uma âncora (#como-funciona) para com
    o título escondido atrás dela. */
 :target {
-  scroll-margin-top: 88px;
+  scroll-margin-top: var(--anchor-offset, 88px);
+}
+
+/* Landing: duas portas nas regras globais acima, que estão fora de camada e
+   por isso vencem qualquer classe de dentro de `@layer components`, por mais
+   específica que seja.
+
+   1. `a { color: inherit }`: um link com classe na landing pode trocar a
+      própria cor por `--lp-ink` (o botão laranja precisa de texto branco, a
+      opção ativa do menu de texto ferrugem). Sem a variável, herda como em
+      todo o site. `inherits: false` impede que a cor de um link vaze para
+      outro dentro dele.
+   2. `h1…h6 { font-weight; line-height; letter-spacing; margin }`: os títulos
+      da landing (`.lp-h`) usam peso 800 e entrelinha/espaçamento próprios,
+      ajustáveis por variável a partir das classes normais. */
+@property --lp-ink {
+  syntax: '*';
+  inherits: false;
+}
+.landing a[class] {
+  color: var(--lp-ink, inherit);
+}
+.lp-h {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: var(--lp-h-weight, 800);
+  line-height: var(--lp-h-leading, 1);
+  letter-spacing: var(--lp-h-tracking, -0.04em);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1550,216 +1756,1974 @@ html {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Landing — Organic
-   As classes daqui para baixo existem só na página inicial. Elas moram nesta
-   camada como todo o resto: fora dela, `position: sticky` do `.nav-bar`
-   venceria um `relative` utilitário aplicado pontualmente no JSX.
+   Landing — "o álbum é a página"
+   As classes daqui até "Etiqueta de seção" existem só na página inicial
+   (`features/landing/`), todas com prefixo `lp-`. Leem os tokens `--landing-*`
+   do wrapper `.landing` e as variáveis que o JavaScript escreve a cada quadro:
+
+     herói      --f0..3, --z0..3, --tint-0..4, --mx, --my, --book-scale
+     organizar  --q, --qa, --qt, --org-scale   (+ data-album na seção)
+     barra      data-nav="open" no `.landing`, --nav-w e --logo-w
+
+   Regra do movimento: só `transform` e `opacity` mudam por quadro. Largura e
+   altura que dependem de variável (`--book-scale`, `--org-scale`) mudam só no
+   redimensionamento da janela. A troca de cor do fundo do herói é opacidade
+   de camadas de cor sólida, nunca `background-color` animado.
+
+   `prefers-reduced-motion` já zera toda transição no topo do arquivo; aqui o
+   JavaScript cuida do resto — folhas e fotos trocam em degrau.
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* Barra do topo: transparente sobre o herói e opaca depois dele. O fundo é
-   pintado só quando `data-solid` liga — assim a marca clara do herói não
-   precisa de uma segunda cor de texto. */
-/* `fixed`, e não `sticky`: grudenta, a barra ocupa lugar no fluxo e o herói
-   começa 80px abaixo do topo da janela — sobrava uma faixa de papel acima da
-   foto. Fora do fluxo, o herói nasce no pixel zero e a barra flutua sobre ele. */
-.nav-bar {
+.landing {
+  min-height: 100vh;
+  /* `clip`, não `hidden`: não cria contêiner de rolagem, e os `sticky` de
+     dentro continuam grudando na janela. */
+  overflow-x: clip;
+  background: var(--landing-stub-1);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+.lp-mono {
+  font-family: var(--font-landing-mono), ui-monospace, monospace;
+}
+
+/* As âncoras do herói e da seção escura param exatamente no topo: as duas são
+   contêineres altos com conteúdo grudento, e os 88 px de folga do `:target`
+   global mostrariam o fim da seção anterior. */
+.lp-anchor {
+  --anchor-offset: 0px;
+}
+
+/* ── Botões ─────────────────────────────────────────────────────────────── */
+.lp-btn {
+  --lp-ink: var(--landing-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 22px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--lp-ink);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 160ms var(--landing-ease-out),
+    background-color 200ms ease;
+}
+.lp-btn:active {
+  transform: scale(0.97);
+}
+.lp-btn-solid {
+  --lp-ink: var(--landing-on-cta);
+  background: var(--landing-cta);
+}
+.lp-btn-ghost {
+  border-color: var(--landing-ghost-line);
+}
+.lp-btn-light {
+  background: var(--landing-on-section);
+}
+.lp-btn-outline-light {
+  --lp-ink: var(--landing-on-section);
+  border-color: var(--landing-on-section-line);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lp-btn-solid:hover {
+    background: var(--landing-cta-hover);
+  }
+  .lp-btn-ghost:hover,
+  .lp-btn-outline-light:hover {
+    background: color-mix(in srgb, currentColor 8%, transparent);
+  }
+}
+
+/* ── Barra ──────────────────────────────────────────────────────────────── */
+/* Fechada (durante o álbum): só a marca, no centro, 30% maior. A marca mora
+   sempre em `left: --logo-left`; o centro é um `translateX` calculado pela
+   largura da barra e da própria marca, medidas em `LandingNav`. Abrir é tirar
+   o deslocamento — a marca desliza para casa. */
+.lp-nav {
+  --logo-left: 40px;
+  --logo-scale: 1.3;
+  --logo-shift: calc(
+    var(--nav-w, 100vw) / 2 - var(--logo-left) - var(--logo-w, 150px) * var(--logo-scale) / 2
+  );
   position: fixed;
   inset-inline: 0;
   top: 0;
   z-index: 40;
+  height: 76px;
+  color: var(--color-text);
+  pointer-events: none;
+}
+.lp-nav-bar {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 10px;
+  height: 56px;
+  border-radius: var(--radius-pill);
+  background: var(--landing-bar);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--landing-bar-shadow);
+  opacity: 0;
+  transform: scale(0.985);
   transition:
-    background-color 0.25s ease,
-    box-shadow 0.25s ease;
-  background-color: transparent;
+    opacity 320ms var(--landing-ease-out),
+    transform 320ms var(--landing-ease-out);
 }
-.nav-bar[data-solid='true'] {
-  background-color: color-mix(in srgb, var(--color-bg) 92%, transparent);
-  box-shadow: 0 1px 2px color-mix(in srgb, #17130f 14%, transparent);
-  backdrop-filter: blur(8px);
-}
-/* Sobre a foto do herói, a barra inteira usa a tinta do véu — inclusive o que
-   herda cor do tema (marca, links, ícones de idioma e tema). Como
-   `--color-on-photo` vira com o tema, a barra clareia no escuro e escurece no
-   claro sem uma segunda regra. */
-.nav-bar[data-solid='false'] {
-  color: var(--color-on-photo);
-  /* Uma faixa da tinta do véu descendo do topo: à direita da barra o véu do
-     herói é fraco (é onde a paisagem aparece), e os controles ficavam sobre
-     céu puro. A faixa garante o contraste dos ícones sem apagar a foto. */
-  background-image: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--hero-veil-tint) 52%, transparent),
-    transparent
-  );
-}
-.nav-bar[data-solid='false'] .btn-secondary {
-  border-color: color-mix(in srgb, var(--color-on-photo) 45%, transparent);
-  color: var(--color-on-photo);
-}
-.nav-bar[data-solid='false'] .btn-secondary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-on-photo) 14%, transparent);
-}
-.nav-bar .nav-link {
-  white-space: nowrap;
-}
-.nav-bar[data-solid='false'] .wordmark,
-.nav-bar[data-solid='false'] .nav-link {
-  color: var(--color-on-photo);
-}
-.nav-bar[data-solid='false'] .wordmark:hover,
-.nav-bar[data-solid='false'] .nav-link:hover {
-  color: var(--hero-accent);
-}
-
-/* ── Herói ────────────────────────────────────────────────────────────────
-   Uma fotografia de fundo, um véu escuro por cima e o texto por cima dele.
-
-   O véu não é enfeite: é o que garante contraste do texto sem depender de
-   como é a foto. Com ele, `--color-on-photo` fica em ~14:1 contra o fundo —
-   e trocar `public/hero.jpg` por outra imagem não quebra a legibilidade.
-
-   Tudo aqui é pintado a partir de `--hero-veil-tint`, `--color-on-photo` e
-   `--hero-accent`, que viram no tema: no claro o véu é papel e a tinta é
-   escura, no escuro é o inverso. Nenhuma cor literal nestas regras — foi o
-   que fazia o herói ficar igual nos dois temas. */
-.hero {
-  position: relative;
+.lp-logo {
+  position: absolute;
+  left: var(--logo-left);
+  top: 14px;
+  height: 48px;
   display: flex;
   align-items: center;
-  min-height: min(86vh, 780px);
-  /* espaço da barra flutuante */
-  padding-top: 84px;
-  overflow: hidden;
-  color: var(--color-on-photo);
+  pointer-events: auto;
+  transform-origin: left center;
+  transform: translateX(var(--logo-shift)) scale(var(--logo-scale));
+  transition: transform 560ms var(--landing-ease-in-out);
 }
-/* A moldura da foto sangra 90px para cima e para baixo: é a folga que o
-   deslocamento do parallax consome sem descobrir o topo nem o rodapé. */
-.hero-photo {
+/* Opções e controles: entram por último, com atraso, depois que a marca já
+   começou a andar. */
+/* A marca da landing: só a palavra, como no protótipo — Bricolage 800 com
+   tamanho óptico, `-0.04em`. */
+.lp-wordmark {
+  font-family: var(--font-landing-brand), var(--font-brand), sans-serif;
+  font-optical-sizing: auto;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 34px;
+  letter-spacing: -0.04em;
+}
+.lp-drawer .lp-wordmark {
+  font-size: 23px;
+  line-height: 30px;
+}
+.lp-reveal {
+  opacity: 0;
+  transform: translateX(14px);
+  pointer-events: none;
+  transition:
+    opacity 240ms var(--landing-ease-out),
+    transform 240ms var(--landing-ease-out);
+}
+/* Aberta: no fim do álbum (`data-nav`), ou com o foco dentro da barra — quem
+   navega pelo teclado alcança o menu antes de ele aparecer. */
+.landing[data-nav='open'] .lp-nav-bar,
+.lp-nav:focus-within .lp-nav-bar {
+  opacity: 1;
+  transform: none;
+}
+.landing[data-nav='open'] .lp-logo,
+.lp-nav:focus-within .lp-logo {
+  transform: none;
+}
+.landing[data-nav='open'] .lp-reveal,
+.lp-nav:focus-within .lp-reveal {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  transition-delay: 180ms;
+}
+
+.lp-links-wrap {
   position: absolute;
-  inset: -90px 0;
-  z-index: 0;
-  /* `--parallax` é escrito fora do React, dentro de um requestAnimationFrame
-     (`useHeroScroll`). Sem estado, sem re-render por pixel rolado. */
-  transform: translate3d(0, calc(var(--parallax, 0) * 1px), 0) scale(1.06);
-  will-change: transform;
+  inset-inline: 0;
+  top: 14px;
+  height: 48px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
 }
-.hero-photo img {
-  object-fit: cover;
-  filter: var(--hero-photo-filter);
+.lp-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
-.hero-veil {
+/* Os botões de texto da direita da barra — idioma e "Entrar" — são o mesmo
+   botão: mesma altura, mesma fonte, sem contorno, fundinho no hover. O
+   idioma só acrescenta o globo. */
+.lp-navbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 200ms ease,
+    transform 160ms var(--landing-ease-out);
+}
+.lp-navbtn svg {
+  flex: none;
+  opacity: 0.75;
+}
+.lp-navbtn:active {
+  transform: scale(0.96);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lp-navbtn:hover {
+    background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  }
+}
+
+/* O tema enquanto a barra está fechada: só o ícone, no canto superior
+   direito, sem contorno nem fundo. Some quando a barra chega (ou quando o
+   teclado a abre), porque ali o canto passa a ser do botão. */
+.lp-theme-corner {
+  position: fixed;
+  top: 20px;
+  right: 22px;
+  z-index: 41;
+  transition:
+    opacity 240ms var(--landing-ease-out),
+    visibility 0s linear 0s;
+}
+.landing[data-nav='open'] .lp-theme-corner,
+.lp-nav:focus-within + .lp-theme-corner {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 200ms var(--landing-ease-out),
+    visibility 0s linear 200ms;
+}
+.lp-theme-corner .tip-bubble {
+  /* Ícone solto na borda: a dica sairia da tela, e o `aria-label` já diz. */
+  display: none;
+}
+.lp-theme-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text);
+  opacity: 0.6;
+  cursor: pointer;
+  transition:
+    opacity 200ms ease,
+    background-color 200ms ease;
+}
+.lp-theme-btn svg {
+  width: 17px;
+  height: 17px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lp-theme-btn:hover {
+    opacity: 1;
+    background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  }
+}
+@media (max-width: 767px) {
+  .lp-theme-corner {
+    top: 14px;
+    right: 12px;
+  }
+}
+
+.lp-link,
+.lp-drawer-link {
+  --lp-ink: var(--color-text);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  transition: color 220ms ease;
+}
+.lp-link {
+  height: 40px;
+  padding: 0 15px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.lp-link[data-lit='true'],
+.lp-drawer-link[aria-current='true'] {
+  --lp-ink: var(--landing-pill-ink);
+}
+/* O fundinho da opção ativa: opacidade e escala, nunca largura. */
+.lp-link-pill {
   position: absolute;
   inset: 0;
-  z-index: 1;
-  /* Duas camadas: uma vertical, que assenta a paisagem, e uma horizontal mais
-     forte à esquerda, onde o texto pousa. Escurecer a foto inteira até o
-     contraste do texto apagava a paisagem; escurecer só o lado do texto deixa
-     o pôr do sol aparecer à direita e ainda dá ~10:1 no parágrafo. */
-  background:
-    linear-gradient(
-      100deg,
-      color-mix(in srgb, var(--hero-veil-tint) 90%, transparent) 0%,
-      color-mix(in srgb, var(--hero-veil-tint) 76%, transparent) 45%,
-      color-mix(in srgb, var(--hero-veil-tint) 48%, transparent) 100%
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--hero-veil-tint) 32%, transparent) 0%,
-      color-mix(in srgb, var(--hero-veil-tint) 58%, transparent) 100%
-    );
+  border-radius: inherit;
+  background: var(--landing-pill);
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    opacity 220ms ease,
+    transform 220ms var(--landing-ease-out);
 }
-.hero-body {
+.lp-drawer-link[aria-current='true'] > .lp-link-pill {
+  opacity: 1;
+  transform: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lp-links:not([data-dragging]) .lp-link:not([data-lit='true']):hover .lp-link-pill,
+  .lp-drawer-link:not([aria-current='true']):hover .lp-link-pill {
+    opacity: 0.5;
+    transform: none;
+  }
+}
+.lp-link-text {
   position: relative;
-  z-index: 2;
-  width: 100%;
-  padding-block: clamp(72px, 10vw, 132px);
 }
-.hero-title {
-  margin: 0;
-  max-width: 18ch;
-  font-size: clamp(38px, 6.4vw, 74px);
-  line-height: 1.04;
-  letter-spacing: -0.03em;
-  color: var(--color-on-photo);
-}
-/* A palavra que troca ("a viagem", "o casamento", …): rolo vertical — a nova
-   desce de cima enquanto a anterior cai para baixo, as duas atravessando uma
-   janela que corta o que sai. O `overflow: hidden` é o que faz o corte; o
-   respiro em `padding-block` existe para o acento de "álbum" não ser cortado
-   junto, e o `vertical-align: bottom` mantém a palavra na linha de base do
-   resto do título (uma caixa com overflow alinha pela borda, não pela base).
-   A palavra que sai é absoluta: assim a largura da janela é sempre a da
-   palavra que fica. */
-.hero-roll {
+
+/* A pílula da opção acesa na barra: uma peça só, que desliza entre as opções
+   e que dá para arrastar (`useSlidingPill`). É montada em três partes —
+   ponta, miolo, ponta — para mudar de largura só com `transform`: as pontas
+   andam, o miolo de 1 px estica em `scaleX`, e o arredondado nunca deforma.
+   `--px` (posição) e `--pw` (largura, sem unidade) são escritos pelo
+   JavaScript. Parada, ela viaja com a curva de saída; segurada, segue o dedo
+   com só um respiro de atraso. */
+.lp-links {
   position: relative;
-  display: inline-block;
-  overflow: hidden;
-  padding-block: 0.08em;
-  margin-block: -0.08em;
-  vertical-align: bottom;
-  color: var(--hero-accent);
+  user-select: none;
+  -webkit-user-select: none;
 }
-.hero-word {
-  display: inline-block;
-  animation: heroWordIn 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-.hero-word-out {
+.lp-slider {
   position: absolute;
-  inset-block-start: 0;
-  inset-inline-start: 0;
-  animation: heroWordOut 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  left: 0;
+  top: 4px;
+  height: 40px;
+  pointer-events: none;
+  visibility: hidden;
 }
-@keyframes heroWordIn {
-  from {
-    opacity: 0;
-    transform: translateY(-105%);
+.lp-slider[data-ready='true'] {
+  visibility: visible;
+}
+.lp-slider > span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 40px;
+  background: var(--landing-pill);
+  transition: transform 320ms var(--landing-ease-out);
+}
+.lp-slider:not([data-ready='true']) > span {
+  transition-duration: 0ms;
+}
+.lp-links[data-dragging] .lp-slider > span {
+  transition-duration: 110ms;
+}
+.lp-slider-l {
+  width: 20px;
+  border-radius: 20px 0 0 20px;
+  transform: translateX(var(--px, 0px));
+}
+.lp-slider-m {
+  width: 1px;
+  transform-origin: 0 0;
+  transform: translateX(calc(var(--px, 0px) + 19px)) scaleX(calc(var(--pw, 40) - 38));
+}
+.lp-slider-r {
+  width: 20px;
+  border-radius: 0 20px 20px 0;
+  transform: translateX(calc(var(--px, 0px) + var(--pw, 40) * 1px - 20px));
+}
+/* A opção acesa é a alça: cursor de pegar, e o dedo arrasta em vez de rolar. */
+.lp-link[data-lit='true'] {
+  cursor: grab;
+  touch-action: none;
+}
+.lp-links[data-dragging],
+.lp-links[data-dragging] .lp-link {
+  cursor: grabbing;
+}
+
+.lp-tools {
+  position: absolute;
+  right: 26px;
+  top: 14px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.lp-tools .lp-tool-cta {
+  margin-left: 8px;
+}
+.lp-tool-wide {
+  display: inline-flex;
+  align-items: center;
+}
+.lp-tools .lp-btn {
+  min-height: 42px;
+  padding: 0 20px;
+}
+.lp-menu-btn {
+  display: none;
+  align-items: center;
+  height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--landing-cta);
+  color: var(--landing-on-cta);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 160ms var(--landing-ease-out),
+    background-color 200ms ease;
+}
+.lp-menu-btn:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lp-menu-btn:hover {
+    background: var(--landing-cta-hover);
   }
 }
-@keyframes heroWordOut {
-  to {
-    opacity: 0;
-    transform: translateY(105%);
+
+/* Abaixo de 1200 px as quatro opções, o idioma e "Entrar" não cabem junto da
+   marca e do botão: vão para a gaveta, e a barra fica com marca + "Montar meu
+   álbum" + "Menu". */
+@media (max-width: 1199px) {
+  .lp-links-wrap,
+  .lp-tool-wide {
+    display: none;
+  }
+  .lp-menu-btn {
+    display: inline-flex;
+  }
+  .lp-tools {
+    right: 22px;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .hero-word,
-  .hero-word-out {
-    animation: none;
+@media (max-width: 767px) {
+  .lp-nav {
+    --logo-left: 26px;
+    --logo-scale: 1.2;
+    height: 64px;
   }
-  .hero-word-out {
+  .lp-logo .lp-wordmark {
+    font-size: 23px;
+    line-height: 30px;
+  }
+  .lp-nav-bar {
+    left: 10px;
+    right: 10px;
+    top: 8px;
+    height: 52px;
+  }
+  .lp-logo {
+    top: 10px;
+  }
+  .lp-tools {
+    right: 14px;
+    top: 12px;
+    height: 44px;
+  }
+  .lp-tools .lp-tool-cta {
     display: none;
   }
 }
 
-.hero-sub {
-  margin: 22px 0 0;
-  max-width: 52ch;
-  font-size: 18px;
-  line-height: 1.6;
-  color: color-mix(in srgb, var(--color-on-photo) 88%, transparent);
+/* A gaveta: cartão claro que nasce do canto do botão "Menu". */
+.lp-drawer {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 8px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px 18px;
+  border-radius: 26px;
+  background: var(--landing-surface);
+  color: var(--color-text);
+  box-shadow: var(--landing-drawer-shadow);
+  pointer-events: auto;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px) scale(0.97);
+  transform-origin: top right;
+  /* Fechando, `visibility` espera a saída terminar; abrindo, vira na hora —
+     senão o foco que a gaveta recebe ao abrir cairia num elemento ainda
+     invisível, e o navegador o recusaria. */
+  transition:
+    opacity 220ms var(--landing-ease-out),
+    transform 220ms var(--landing-ease-out),
+    visibility 0s linear 220ms;
 }
-.hero-note {
-  margin: 18px 0 0;
-  font-size: 13px;
+.lp-drawer[data-open='true'] {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
+}
+@media (min-width: 768px) {
+  .lp-drawer {
+    left: auto;
+    right: 16px;
+    top: 10px;
+    width: 380px;
+  }
+}
+.lp-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  padding-left: 16px;
+}
+.lp-drawer-close {
+  height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--landing-surface-2);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lp-drawer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 8px;
+}
+.lp-drawer-link {
+  display: flex;
+  height: 52px;
+  padding: 0 16px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.lp-drawer .lp-drawer-cta {
+  margin-top: 14px;
+  min-height: 52px;
+  font-size: 16px;
+}
+.lp-drawer-prefs {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-left: 16px;
+}
+
+/* ── Herói ──────────────────────────────────────────────────────────────── */
+/* Contêiner alto + filho grudento: os `--hero-pin` px a mais são o trecho em
+   que o livro fica preso e as folhas viram. O JavaScript lê esse comprimento
+   medindo o contêiner, então ele só existe aqui. */
+.lp-hero {
+  --hero-pin: 2800px;
+  position: relative;
+  height: calc(100svh + var(--hero-pin));
+}
+/* `#como-funciona` é a primeira abertura parada (25% do trecho — ver
+   `spreadProgress` em `heroScroll.ts`), não o livro fechado. */
+.lp-hero-anchor {
+  position: absolute;
+  left: 0;
+  top: calc(var(--hero-pin) * 0.25);
+  width: 1px;
+  height: 1px;
+}
+.lp-hero-stick {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 56px;
+  color: var(--landing-ink);
+}
+.lp-tints,
+.lp-tint {
+  position: absolute;
+  inset: 0;
+}
+.lp-tint:nth-child(1) {
+  background: var(--landing-tint-0);
+}
+.lp-tint:nth-child(2) {
+  background: var(--landing-tint-1);
+  opacity: var(--tint-1, 0);
+}
+.lp-tint:nth-child(3) {
+  background: var(--landing-tint-2);
+  opacity: var(--tint-2, 0);
+}
+.lp-tint:nth-child(4) {
+  background: var(--landing-tint-3);
+  opacity: var(--tint-3, 0);
+}
+.lp-tint:nth-child(5) {
+  background: var(--landing-tint-4);
+  opacity: var(--tint-4, 0);
+}
+
+/* O livro é desenhado em px fixos (aberto: 760×500 no desktop) e escalado
+   inteiro por `--book-scale`. A "vaga" tem o tamanho já escalado, para o resto do
+   layout enxergar o tamanho real. */
+.lp-book-slot {
+  position: relative;
+  flex: none;
+  width: calc(760px * var(--book-scale, 1));
+  height: calc(500px * var(--book-scale, 1));
+}
+.lp-book-frame {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 760px;
+  height: 500px;
+  transform: scale(var(--book-scale, 1));
+  transform-origin: 0 0;
+  perspective: 2600px;
+}
+/* A sombra no chão: irmã plana do livro, fora de qualquer `preserve-3d`
+   (decisão 16 do CLAUDE.md), acompanhando o deslocamento da capa. */
+.lp-book-floor {
+  position: absolute;
+  left: 60px;
+  right: 60px;
+  bottom: -48px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--landing-floor-shadow), transparent);
+  filter: blur(10px);
+  transform: translateX(calc((var(--f0, 0) - 1) * 190px));
+}
+/* Fechado, só a capa (metade direita) aparece, centralizada: o livro inteiro
+   anda meia página para a esquerda e volta enquanto a capa abre. A inclinação
+   base é 7°; o mouse soma até ±3° e ±4°. */
+.lp-book {
+  position: absolute;
+  inset: 0;
+  perspective: 2200px;
+  transform: translateX(calc((var(--f0, 0) - 1) * 190px))
+    rotateX(calc(7deg - var(--my, 0) * 3deg)) rotateY(calc(var(--mx, 0) * 4deg));
+}
+
+/* Folha: gira em torno da lombada. Quem traz `--fl` é o `style` da folha
+   (`var(--fN)`); `z-index` idem (`var(--zN)`). Nada aqui recebe opacidade ou
+   filtro — `preserve-3d` achataria (decisão 16). */
+.lp-leaf {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  transform: rotateY(calc(var(--fl, 0) * -180deg));
+}
+.lp-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 0 8px 8px 0;
+  background: var(--landing-paper);
+  color: var(--landing-ink);
+}
+.lp-face-front {
+  box-shadow: inset 10px 0 14px var(--landing-gutter-shade);
+}
+.lp-face-back {
+  transform: rotateY(180deg);
+  border-radius: 8px 0 0 8px;
+  box-shadow: inset -10px 0 14px var(--landing-gutter-shade);
+}
+/* Sombra da virada: nasce e morre em zero (decisão 19). A frente escurece
+   enquanto sai; o verso clareia enquanto chega. */
+.lp-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, var(--landing-fold-shade), transparent);
+  opacity: calc(var(--fl, 0) * 0.9);
+}
+.lp-face-back .lp-shade {
+  background: linear-gradient(270deg, var(--landing-fold-shade-back), transparent);
+  opacity: calc((1 - var(--fl, 0)) * 0.9);
+}
+
+.lp-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.lp-stamp {
+  font-family: var(--font-landing-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  white-space: pre;
+  color: var(--landing-stamp);
+  text-shadow: 0 0 6px var(--landing-stamp-glow);
+}
+
+/* Capa em tecido, na cor da seção escura. */
+.lp-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 44px 40px 40px 48px;
+  color: var(--landing-on-section);
+  background-color: var(--landing-section);
+  background-image:
+    linear-gradient(105deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0) 42%, rgb(0 0 0 / 0.14)),
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 0.03) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgb(0 0 0 / 0.05) 0 1px, transparent 1px 3px);
+  box-shadow: inset 8px 0 12px rgb(0 0 0 / 0.3);
+}
+.lp-cover-kicker {
+  font-family: var(--font-landing-mono), ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+.lp-cover-title {
+  --lp-h-leading: 0.98;
+  --lp-h-tracking: -0.045em;
+  font-size: 50px;
+}
+
+/* Página 1: as fotos soltas, como saíram da câmera. */
+.lp-pile {
+  position: absolute;
+  inset: 0;
+}
+.lp-snap {
+  position: absolute;
+  width: 210px;
+  height: 158px;
+  padding: 6px;
+  background: var(--landing-frame);
+  box-shadow: var(--landing-photo-shadow);
+}
+.lp-snap:nth-child(1) {
+  left: 46px;
+  top: 70px;
+  transform: rotate(-9deg);
+}
+.lp-snap:nth-child(2) {
+  left: 130px;
+  top: 150px;
+  transform: rotate(7deg);
+}
+.lp-snap:nth-child(3) {
+  left: 60px;
+  top: 262px;
+  transform: rotate(-3deg);
+}
+.lp-pile-names {
+  position: absolute;
+  left: 36px;
+  right: 24px;
+  bottom: 30px;
+  font-size: 11px;
+  color: var(--landing-muted);
+}
+
+/* Páginas 2 e 3: uma foto grande e o que ela diz de si mesma. */
+.lp-page-pad {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 40px 36px;
+}
+.lp-page-photo {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.lp-photo-stamp {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+}
+.lp-exif-lines {
+  font-size: 11.5px;
+  line-height: 1.75;
+  color: var(--landing-ink-2);
+}
+.lp-exif-key {
+  display: inline-block;
+  min-width: 7ch;
+}
+.lp-named {
+  gap: 14px;
+}
+.lp-named-title {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+.lp-named-caption {
+  font-size: 11px;
+  color: var(--landing-muted);
+}
+
+/* Páginas da esquerda: o texto que explica cada abertura. */
+.lp-text-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 44px 40px 40px 44px;
+}
+.lp-kicker {
+  font-size: 11px;
+  color: var(--landing-muted-2);
+}
+.lp-text-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.lp-page-title {
+  --lp-h-leading: 1.02;
+  font-size: 36px;
+}
+.lp-page-copy {
+  font-size: 16.5px;
   line-height: 1.5;
-  color: color-mix(in srgb, var(--color-on-photo) 72%, transparent);
+  color: var(--landing-ink-2);
 }
-/* Ação secundária do herói: um sublinhado, não um segundo botão. Dois botões
-   sólidos lado a lado tiram o destaque do primeiro. */
-.link-onphoto {
+.lp-page-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+/* A página-base da direita: o álbum pronto, com a espessura do bloco. */
+.lp-base {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 40px 36px;
+  border-radius: 0 8px 8px 0;
+  background: var(--landing-paper);
+  color: var(--landing-ink);
+  box-shadow:
+    3px 3px 0 var(--landing-paper-edge-1),
+    6px 6px 0 var(--landing-paper-edge-2),
+    0 34px 70px var(--landing-book-shadow),
+    inset 10px 0 14px var(--landing-gutter-shade);
+}
+.lp-mosaic {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.lp-mosaic-cell {
+  position: relative;
+  overflow: hidden;
+}
+.lp-mosaic-stamp {
+  position: absolute;
+  right: 7px;
+  bottom: 6px;
+  font-size: 9.5px;
+}
+.lp-base-caption {
+  font-size: 11px;
+  color: var(--landing-muted);
+}
+
+/* Botão de largura total embaixo do livro: só no celular. */
+.lp-endcta {
+  display: none;
+}
+
+/* Celular: o livro vira de baixo para cima, como caderno de espiral, para o
+   texto caber grande. Página 342×270; aberto, 342×540. Mesmo DOM. */
+@media (max-width: 767px) {
+  .lp-hero {
+    --hero-pin: 2400px;
+  }
+  .lp-hero-stick {
+    gap: 28px;
+    padding-top: 48px;
+  }
+  .lp-book-slot {
+    width: calc(342px * var(--book-scale, 1));
+    height: calc(540px * var(--book-scale, 1));
+  }
+  .lp-book-frame {
+    width: 342px;
+    height: 540px;
+    perspective: 1800px;
+  }
+  .lp-book-floor {
+    display: none;
+  }
+  .lp-book {
+    perspective: 1500px;
+    transform: translateY(calc((var(--f0, 0) - 1) * 135px)) rotateX(-4deg);
+  }
+  .lp-leaf {
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 50%;
+    transform-origin: center top;
+    transform: rotateX(calc(var(--fl, 0) * 180deg));
+  }
+  .lp-face {
+    border-radius: 0 0 8px 8px;
+  }
+  .lp-face-front {
+    box-shadow: none;
+  }
+  .lp-face-back {
+    transform: rotateX(180deg);
+    border-radius: 8px 8px 0 0;
+    box-shadow: none;
+  }
+  .lp-shade {
+    background: linear-gradient(180deg, var(--landing-fold-shade), transparent);
+  }
+  .lp-face-back .lp-shade {
+    background: linear-gradient(0deg, var(--landing-fold-shade-back), transparent);
+  }
+  .lp-cover {
+    padding: 26px 24px 22px;
+    background-image:
+      linear-gradient(170deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0) 45%, rgb(0 0 0 / 0.14)),
+      repeating-linear-gradient(0deg, rgb(255 255 255 / 0.03) 0 1px, transparent 1px 3px);
+    box-shadow: inset 0 8px 12px rgb(0 0 0 / 0.3);
+  }
+  .lp-cover-kicker {
+    font-size: 11px;
+  }
+  .lp-cover-title {
+    font-size: 38px;
+  }
+  .lp-snap {
+    width: 150px;
+    height: 112px;
+    padding: 5px;
+  }
+  .lp-snap:nth-child(1) {
+    left: 30px;
+    top: 26px;
+  }
+  .lp-snap:nth-child(2) {
+    left: 160px;
+    top: 40px;
+  }
+  .lp-snap:nth-child(3) {
+    left: 96px;
+    top: 112px;
+  }
+  .lp-pile-names {
+    left: 20px;
+    bottom: 14px;
+    font-size: 9.5px;
+  }
+  .lp-page-pad {
+    gap: 10px;
+    padding: 18px;
+  }
+  .lp-exif-lines {
+    font-size: 10px;
+    line-height: 1.6;
+  }
+  .lp-named {
+    gap: 8px;
+  }
+  .lp-named-title {
+    font-size: 19px;
+  }
+  .lp-named-caption {
+    display: none;
+  }
+  .lp-photo-stamp {
+    right: 8px;
+    bottom: 6px;
+    font-size: 10px;
+  }
+  .lp-text-page {
+    padding: 22px 22px 18px;
+  }
+  .lp-text-page .lp-stamp,
+  .lp-kicker {
+    font-size: 10px;
+  }
+  .lp-text-body {
+    gap: 10px;
+  }
+  .lp-page-title {
+    font-size: 27px;
+  }
+  .lp-page-copy {
+    font-size: 14.5px;
+    line-height: 1.45;
+  }
+  .lp-page-ctas {
+    display: none;
+  }
+  .lp-base {
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 50%;
+    gap: 10px;
+    padding: 18px;
+    border-radius: 0 0 8px 8px;
+    box-shadow:
+      2px 3px 0 var(--landing-paper-edge-1),
+      3px 6px 0 var(--landing-paper-edge-2),
+      0 24px 50px var(--landing-book-shadow);
+  }
+  .lp-mosaic {
+    gap: 8px;
+  }
+  .lp-mosaic-stamp {
+    display: none;
+  }
+  .lp-base-caption {
+    font-size: 10px;
+  }
+  .lp-endcta {
+    display: block;
+    position: relative;
+    width: calc(342px * var(--book-scale, 1));
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+    transition:
+      opacity 240ms var(--landing-ease-out),
+      transform 240ms var(--landing-ease-out);
+  }
+  .lp-endcta .lp-btn {
+    width: 100%;
+    min-height: 52px;
+    font-size: 16px;
+  }
+  .landing[data-nav='open'] .lp-endcta,
+  .lp-endcta:focus-within {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    transition-delay: 160ms;
+  }
+}
+
+/* ── Da bagunça ao álbum ────────────────────────────────────────────────── */
+.lp-org {
+  --org-pin: 1500px;
+  --org-stage-w: 700px;
+  --org-stage-h: 680px;
+  /* O anel de foco laranja some no azul-noite; aqui ele é pêssego. */
+  --color-accent: var(--landing-on-section-accent);
+  position: relative;
+  height: calc(100svh + var(--org-pin));
+  background: var(--landing-section);
+  color: var(--landing-on-section);
+}
+.lp-org-stick {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 76px 48px 24px;
+}
+@media (min-width: 1024px) {
+  .lp-org-stick {
+    flex-direction: row;
+    gap: 72px;
+    padding: 76px 64px 24px;
+  }
+}
+/* Palco em px fixos, escalado inteiro por `--org-scale` (ver `useOrganizeVars`). */
+.lp-org-slot {
+  position: relative;
+  flex: none;
+  width: calc(var(--org-stage-w) * var(--org-scale, 1));
+  height: calc(var(--org-stage-h) * var(--org-scale, 1));
+}
+.lp-org-stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--org-stage-w);
+  height: var(--org-stage-h);
+  transform: scale(var(--org-scale, 1));
+  transform-origin: 0 0;
+}
+
+/* O livro aberto do fim, que aparece por baixo das fotos. */
+.lp-org-album {
+  position: absolute;
+  left: 30px;
+  top: 110px;
+  width: 640px;
+  height: 430px;
+  pointer-events: none;
+  opacity: var(--qa, 0);
+  transform: translateY(calc((1 - var(--qa, 0)) * 18px)) scale(calc(0.96 + 0.04 * var(--qa, 0)));
+}
+.lp-org-page {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  background: var(--landing-paper);
+}
+.lp-org-page-left {
+  left: 0;
+  border-radius: 6px 0 0 6px;
+  box-shadow:
+    -3px 3px 0 var(--landing-paper-edge-1),
+    0 30px 70px var(--landing-album-shadow),
+    inset -10px 0 14px var(--landing-gutter-shade);
+}
+.lp-org-page-right {
+  left: 50%;
+  border-radius: 0 6px 6px 0;
+  box-shadow:
+    3px 3px 0 var(--landing-paper-edge-1),
+    0 30px 70px var(--landing-album-shadow),
+    inset 10px 0 14px var(--landing-gutter-shade);
+}
+.lp-org-album-head,
+.lp-org-album-foot {
+  position: absolute;
+  font-size: 10.5px;
+  color: var(--landing-muted-2);
+}
+.lp-org-album-head {
+  top: 22px;
+}
+.lp-org-album-head-left {
+  left: 24px;
+}
+.lp-org-album-head-right {
+  right: 24px;
+}
+.lp-org-album-foot {
+  right: 24px;
+  bottom: 20px;
+}
+.lp-org-empty {
+  position: absolute;
+  left: 40px;
+  right: 360px;
+  top: 170px;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--landing-ink-2);
+}
+
+/* Rótulo do dia: aparece quando o dia está completo (`--vis`) e some quando
+   as fotos vão para o álbum. */
+.lp-org-day {
+  position: absolute;
+  left: var(--lx-d);
+  top: var(--ly-d);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: calc(var(--vis, 0) * (1 - var(--q, 0)));
+  transition: opacity 300ms ease;
+}
+
+/* Uma foto: o elemento externo vai da pilha ao dia por `transition` (o
+   `transform` vem pronto de `poseTransform`, um por layout); o interno vai do
+   dia ao álbum pela rolagem, sem transição. `left/top` negativos fazem o
+   `translate` apontar o centro da foto. */
+.lp-ph {
+  position: absolute;
+  left: -110px;
+  top: -82.5px;
+  width: 220px;
+  height: 165px;
+  transform: var(--pose-d);
+  transition: transform 720ms var(--landing-ease-in-out);
+  cursor: pointer;
+}
+.lp-ph[data-placed='true'] {
+  cursor: default;
+}
+/* Na fase do álbum as fotos não organizadas já sumiram — e não podem ser
+   organizadas "às cegas" por um mouse que passa por ali. */
+.lp-org[data-album='true'] .lp-ph[data-placed='false'] {
+  pointer-events: none;
+}
+.lp-ph-card {
+  position: absolute;
+  inset: 0;
+  padding: 7px;
+  background: var(--landing-frame);
+  box-shadow: var(--landing-photo-shadow-dark);
+  transform: translate(calc(var(--q, 0) * var(--ax-d, 0px)), calc(var(--q, 0) * var(--ay-d, 0px)))
+    scale(calc(1 + var(--ak-d, 0) * var(--q, 0)));
+}
+.lp-ph[data-placed='false'] .lp-ph-card {
+  opacity: calc(1 - var(--q, 0));
+}
+.lp-ph-stamp {
+  position: absolute;
+  right: 16px;
+  bottom: 13px;
+  font-size: 13px;
+}
+
+/* O texto: dois blocos no mesmo lugar, trocando por `--qt`. Só o visível
+   recebe cliques (`data-album`, escrito pela rolagem). */
+.lp-org-copy {
+  display: grid;
+  flex: none;
+  width: calc(var(--org-stage-w) * var(--org-scale, 1));
+}
+@media (min-width: 1024px) {
+  .lp-org-copy {
+    flex: 0 1 540px;
+    width: auto;
+    min-width: 0;
+  }
+}
+.lp-org-blk {
+  grid-area: 1 / 1;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.lp-org-blk-1 {
+  opacity: calc(1 - var(--qt, 0));
+  transform: translateY(calc(var(--qt, 0) * -16px));
+}
+.lp-org-blk-2 {
+  opacity: var(--qt, 0);
+  transform: translateY(calc((1 - var(--qt, 0)) * 16px));
+}
+.lp-org[data-album='true'] .lp-org-blk-1,
+.lp-org:not([data-album='true']) .lp-org-blk-2 {
+  pointer-events: none;
+}
+.lp-org-title {
+  --lp-h-leading: 0.98;
+  --lp-h-tracking: -0.045em;
+  font-size: clamp(40px, 4.45vw, 64px);
+}
+.lp-org-body {
+  max-width: 30ch;
+  font-size: clamp(17px, 1.4vw, 20px);
+  line-height: 1.5;
+  color: var(--landing-on-section-2);
+}
+.lp-org-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  padding-top: 4px;
+}
+.lp-org-count {
+  font-size: 15px;
+}
+.lp-org-num {
+  font-weight: 500;
+  color: var(--landing-on-section-accent);
+}
+
+/* Mouse ou toque — o texto que fala do gesto acompanha o aparelho. */
+.lp-when-touch {
+  display: none;
+}
+@media (hover: none) {
+  .lp-when-pointer {
+    display: none;
+  }
+  .lp-when-touch {
+    display: inline;
+  }
+}
+
+@media (max-width: 767px) {
+  .lp-org {
+    --org-pin: 1400px;
+    --org-stage-w: 342px;
+    --org-stage-h: 400px;
+  }
+  .lp-org-stick {
+    gap: 24px;
+    padding: 72px 24px 24px;
+  }
+  .lp-org-album {
+    left: 6px;
+    top: 90px;
+    width: 330px;
+    height: 222px;
+    transform: translateY(calc((1 - var(--qa, 0)) * 12px));
+  }
+  .lp-org-page-left {
+    border-radius: 4px 0 0 4px;
+    box-shadow:
+      0 18px 40px var(--landing-album-shadow),
+      inset -6px 0 10px var(--landing-gutter-shade);
+  }
+  .lp-org-page-right {
+    border-radius: 0 4px 4px 0;
+    box-shadow:
+      0 18px 40px var(--landing-album-shadow),
+      inset 6px 0 10px var(--landing-gutter-shade);
+  }
+  .lp-org-album-head,
+  .lp-org-album-foot {
+    font-size: 7.5px;
+  }
+  .lp-org-album-head {
+    top: 10px;
+  }
+  .lp-org-album-head-left {
+    left: 12px;
+  }
+  .lp-org-album-head-right {
+    display: none;
+  }
+  .lp-org-album-foot {
+    right: 12px;
+    bottom: 8px;
+  }
+  .lp-org-empty {
+    left: 16px;
+    right: 180px;
+    top: 80px;
+    font-size: 12px;
+  }
+  .lp-org-day {
+    left: var(--lx-m);
+    top: var(--ly-m);
+    font-size: 10px;
+  }
+  .lp-ph {
+    left: -75px;
+    top: -56.5px;
+    width: 150px;
+    height: 113px;
+    transform: var(--pose-m);
+  }
+  .lp-ph-card {
+    padding: 5px;
+    transform: translate(calc(var(--q, 0) * var(--ax-m, 0px)), calc(var(--q, 0) * var(--ay-m, 0px)))
+      scale(calc(1 + var(--ak-m, 0) * var(--q, 0)));
+  }
+  .lp-ph-stamp {
+    right: 10px;
+    bottom: 8px;
+    font-size: 9px;
+  }
+  .lp-org-blk {
+    gap: 12px;
+  }
+  .lp-org-title {
+    --lp-h-leading: 1;
+    font-size: 36px;
+  }
+  .lp-org-body {
+    max-width: none;
+    font-size: 15px;
+  }
+  .lp-org-row {
+    justify-content: space-between;
+  }
+  .lp-org-count {
+    font-size: 13px;
+  }
+  .lp-org-row-album .lp-btn {
+    width: 100%;
+    min-height: 52px;
+    font-size: 16px;
+  }
+  .lp-org-row-album .lp-org-count {
+    display: none;
+  }
+}
+
+/* ── Faixas das seções de antes ─────────────────────────────────────────── */
+/* "Antes e depois", perguntas e rodapé: conteúdo e comportamento de sempre;
+   muda o fundo (faixa de largura total) e o respiro em volta. */
+.lp-band {
+  color: var(--color-text);
+}
+.lp-band-1 {
+  background: var(--landing-stub-1);
+  padding-block: clamp(32px, 5vw, 64px) clamp(8px, 2vw, 24px);
+}
+.lp-band-2 {
+  background: var(--landing-stub-2);
+  padding-top: clamp(32px, 5vw, 64px);
+}
+.lp-band-2.lp-band-foot {
+  padding-top: 0;
+}
+
+/* ── Guia de rolagem ────────────────────────────────────────────────────── */
+/* Embaixo das duas partes que andam com a rolagem: um ponto que desce num
+   trilho curto (o gesto), o convite em mono e o quanto já andou. Decorativo
+   (`aria-hidden`): a página se lê inteira sem rolar animação nenhuma. */
+.lp-scrollhint {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+.lp-hint-cue {
+  position: relative;
+  width: 16px;
+  height: 24px;
+  border: 1.5px solid currentColor;
+  border-radius: 9px;
+  opacity: 0.55;
+}
+.lp-hint-dot {
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  width: 3px;
+  height: 6px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: currentColor;
+  animation: lp-hint-drop 1.8s var(--landing-ease-in-out) infinite;
+}
+@keyframes lp-hint-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  25% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+/* Um traço por folha do livro, enchendo conforme ela vira. */
+.lp-hint-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.lp-hint-step,
+.lp-hint-bar {
+  position: relative;
+  overflow: hidden;
+  width: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+.lp-hint-step {
+  height: 16px;
+}
+.lp-hint-bar {
+  height: 72px;
+}
+.lp-hint-step > span,
+.lp-hint-bar > span {
+  position: absolute;
+  inset: 0;
+  background: var(--landing-cta);
+  transform-origin: center top;
+  transform: scaleY(var(--fl, 0));
+}
+.lp-scrollhint .lp-hint-cue {
+  order: 2;
+}
+.lp-hero-hint {
+  color: var(--landing-ink);
+  /* Some com a última folha: aí a barra e o botão tomam o lugar. */
+  opacity: calc(1 - var(--f3, 0));
+}
+.lp-org-hint {
+  color: var(--landing-on-section);
+  opacity: calc(1 - var(--qt, 0));
+}
+.lp-org-hint .lp-hint-bar > span {
+  background: var(--landing-on-section-accent);
+  transform: scaleY(var(--q, 0));
+}
+:root[data-theme='dark'] .lp-hero-hint {
+  color: var(--landing-text);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .lp-hero-hint {
+    color: var(--landing-text);
+  }
+}
+/* No toque não há rodinha: o desenho vira uma seta que sobe — o gesto de
+   arrastar a página. */
+@media (hover: none) {
+  .lp-hint-cue {
+    width: 14px;
+    height: 18px;
+    border: 0;
+    border-radius: 0;
+  }
+  .lp-hint-dot {
+    top: 8px;
+    width: 8px;
+    height: 8px;
+    margin-left: -4px;
+    border-radius: 0;
+    border-left: 1.5px solid currentColor;
+    border-top: 1.5px solid currentColor;
+    background: none;
+    animation-name: lp-hint-swipe;
+  }
+}
+@keyframes lp-hint-swipe {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) rotate(45deg);
+  }
+  25% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: translateY(-6px) rotate(45deg);
+  }
+}
+@media (max-width: 767px) {
+  .lp-scrollhint {
+    right: 8px;
+    gap: 10px;
+  }
+  .lp-hint-step {
+    height: 12px;
+  }
+  .lp-hint-bar {
+    height: 52px;
+  }
+}
+@media (max-height: 640px) {
+  .lp-scrollhint {
+    display: none;
+  }
+}
+
+/* ── Antes e depois ─────────────────────────────────────────────────────── */
+/* Texto à esquerda; à direita, um quadro que se arrasta entre a galeria do
+   celular e o álbum. A divisória é `--split`, escrita no quadro pelo
+   ponteiro ou pelo `<input type="range">` (teclado). Só `clip-path` e
+   `transform` mudam com o gesto. */
+.lp-ba {
+  display: grid;
+  gap: clamp(32px, 5vw, 72px);
+  align-items: center;
+  padding-block: clamp(56px, 8vw, 112px);
+}
+@media (min-width: 1024px) {
+  .lp-ba {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  }
+}
+.lp-ba-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.lp-ba-title {
+  --lp-h-leading: 1;
+  --lp-h-tracking: -0.045em;
+  max-width: 16ch;
+  font-size: clamp(32px, 3.2vw, 46px);
+}
+.lp-ba-lead {
+  max-width: 42ch;
+  font-size: 17px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+/* Os dois pontos: etiqueta e título na mesma linha de 24 px — a etiqueta
+   tem altura igual à entrelinha do título, então as duas assentam juntas —
+   e o corpo embaixo, alinhado com o título. */
+.lp-ba-points {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 10px;
+  padding-top: 26px;
+  border-top: 1px solid var(--color-divider);
+}
+.lp-ba-point {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 4px;
+  align-items: start;
+}
+.lp-ba-point > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lp-ba-tag,
+.lp-ba-badge {
   display: inline-flex;
   align-items: center;
-  padding-bottom: 2px;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-on-photo) 55%, transparent);
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--color-on-photo);
-  transition: border-color 0.2s ease;
+  justify-content: center;
+  width: 72px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
-.link-onphoto:hover {
-  border-bottom-color: var(--color-on-photo);
+.lp-ba-tag {
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
 }
+.lp-ba-tag[data-tone='after'] {
+  background: var(--landing-pill);
+  color: var(--landing-pill-ink);
+}
+.lp-ba-point-title {
+  --lp-h-tracking: -0.02em;
+  --lp-h-leading: 24px;
+  --lp-h-weight: 700;
+  font-size: 18px;
+}
+.lp-ba-point-body {
+  max-width: 40ch;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--color-text) 65%, transparent);
+}
+
+.lp-ba-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.lp-ba-frame {
+  --split: 50%;
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 22px;
+  background: var(--landing-app-bg);
+  box-shadow:
+    0 1px 2px rgb(23 24 27 / 0.1),
+    0 24px 60px rgb(23 24 27 / 0.16);
+  cursor: ew-resize;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.lp-ba-layer {
+  position: absolute;
+  inset: 0;
+}
+
+/* Antes: a galeria — uma tela de aplicativo de fotos, clara nos dois temas. */
+.lp-ba-gallery {
+  display: flex;
+  flex-direction: column;
+  background: var(--landing-app-bg);
+  color: var(--landing-ink);
+}
+.lp-ba-appbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 18px 18px 12px;
+}
+.lp-ba-apptitle {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.lp-ba-appcount {
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--landing-muted);
+}
+.lp-ba-appbtn {
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--landing-app-tile);
+  font-size: 12px;
+  font-weight: 600;
+}
+.lp-ba-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+}
+.lp-ba-tile {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--landing-app-tile);
+}
+.lp-ba-tile[data-kind='blur'] .lp-img {
+  filter: blur(3px) saturate(0.8);
+  transform: scale(1.12) rotate(4deg);
+}
+/* Print de conversa: balões cinza e azuis. */
+.lp-ba-tile[data-kind='chat'] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6%;
+  padding: 10%;
+  background: var(--landing-app-chat);
+}
+.lp-ba-tile[data-kind='chat'] > span {
+  height: 14%;
+  width: 62%;
+  border-radius: 6px;
+  background: var(--landing-app-bubble);
+}
+.lp-ba-tile[data-kind='chat'] > span:nth-child(2) {
+  align-self: flex-end;
+  width: 52%;
+  background: var(--landing-app-bubble-2);
+}
+/* Documento: linhas de texto. */
+.lp-ba-tile[data-kind='doc'] {
+  display: flex;
+  flex-direction: column;
+  gap: 8%;
+  padding: 16% 18%;
+  background: var(--landing-app-doc);
+}
+.lp-ba-tile[data-kind='doc'] > span {
+  height: 6%;
+  border-radius: 2px;
+  background: var(--landing-app-line);
+}
+.lp-ba-tile[data-kind='doc'] > span:nth-child(3) {
+  width: 60%;
+}
+
+/* Depois: o álbum aberto sobre o tecido azul da capa do herói. */
+.lp-ba-album {
+  display: grid;
+  place-items: center;
+  clip-path: inset(0 0 0 var(--split));
+  background-color: var(--landing-section);
+  background-image:
+    linear-gradient(160deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0) 45%, rgb(0 0 0 / 0.16)),
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 0.03) 0 1px, transparent 1px 3px);
+}
+.lp-ba-spread {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 86%;
+  aspect-ratio: 3 / 2;
+  border-radius: 6px;
+  background: var(--landing-paper);
+  color: var(--landing-ink);
+  box-shadow:
+    3px 3px 0 var(--landing-paper-edge-1),
+    0 24px 50px rgb(0 0 0 / 0.35);
+}
+.lp-ba-page {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  padding: 7% 7% 8%;
+  box-shadow: inset -10px 0 14px var(--landing-gutter-shade);
+}
+.lp-ba-page-right {
+  gap: 10px;
+  box-shadow: inset 10px 0 14px var(--landing-gutter-shade);
+}
+.lp-ba-page-kicker,
+.lp-ba-caption {
+  font-size: clamp(7px, 0.7vw, 10px);
+  color: var(--landing-muted);
+}
+.lp-ba-page-title {
+  font-size: clamp(13px, 1.4vw, 20px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+.lp-ba-photo {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+}
+.lp-ba-photo-big {
+  flex: 1;
+  min-height: 0;
+  aspect-ratio: auto;
+  margin-top: 4px;
+}
+.lp-ba-side {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+}
+.lp-ba-side .lp-ba-photo {
+  flex: 1;
+  min-height: 0;
+  aspect-ratio: auto;
+}
+.lp-ba-stamp {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  font-size: clamp(7px, 0.65vw, 9.5px);
+}
+
+/* As etiquetas de cada lado e a alça. */
+.lp-ba-badge {
+  position: absolute;
+  bottom: 14px;
+  z-index: 2;
+  pointer-events: none;
+}
+.lp-ba-badge[data-side='before'] {
+  left: 14px;
+  background: rgb(23 24 27 / 0.72);
+  color: #f6f6f3;
+}
+.lp-ba-badge[data-side='after'] {
+  right: 14px;
+  background: var(--landing-pill-paper);
+  color: var(--landing-pill-paper-ink);
+}
+.lp-ba-handle {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  transform: translateX(var(--split));
+}
+.lp-ba-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1px;
+  width: 2px;
+  background: #ffffff;
+  box-shadow: 0 0 12px rgb(0 0 0 / 0.25);
+}
+.lp-ba-knob {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--landing-ink);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.25);
+  transform: translate(-50%, -50%);
+  transition: transform 160ms var(--landing-ease-out);
+}
+.lp-ba-frame:active .lp-ba-knob {
+  transform: translate(-50%, -50%) scale(0.94);
+}
+/* O range fica por baixo, invisível: é ele que recebe o Tab e as setas; o
+   anel de foco aparece na alça. */
+.lp-ba-range {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.lp-ba-range:focus-visible ~ .lp-ba-handle .lp-ba-knob {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 3px;
+}
+.lp-ba-hint {
+  align-self: center;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+@media (max-width: 767px) {
+  .lp-ba-appbar {
+    padding: 12px 12px 8px;
+  }
+  .lp-ba-apptitle {
+    font-size: 16px;
+  }
+  .lp-ba-frame {
+    border-radius: 16px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Seções de antes da landing (Antes e depois, perguntas)
+   ══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Etiqueta de seção ────────────────────────────────────────────────── */
 .chip {
@@ -1774,100 +3738,6 @@ html {
 }
 .chip-accent {
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
-  color: var(--color-accent-700);
-}
-
-/* ── Antes e depois ───────────────────────────────────────────────────── */
-/* Os dois painéis têm a mesma altura (a grade estica), então a ilustração de
-   cada um encosta no rodapé do cartão em vez de deixar um vazio embaixo. */
-.ba-card {
-  display: flex;
-  flex-direction: column;
-  padding: clamp(22px, 3vw, 30px);
-  border-radius: calc(var(--radius-lg) * 1.15);
-  background: var(--color-surface);
-  transition: box-shadow 0.25s ease;
-}
-.ba-card[data-tone='after'] {
-  background: var(--color-surface-2);
-}
-.ba-card:hover {
-  box-shadow: var(--shadow-md);
-}
-.ba-card-title {
-  margin: 14px 0 6px;
-  font-size: 21px;
-}
-.ba-card-body {
-  margin: 0 0 18px;
-  font-size: 14.5px;
-  line-height: 1.6;
-  color: color-mix(in srgb, var(--color-text) 65%, transparent);
-}
-/* A grade do "Antes": seis quadrados iguais, com o mesmo peso — é justamente
-   isso que a seção critica, então a ilustração não pode ter hierarquia. */
-.ba-grid {
-  margin-top: auto;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-.ba-cell {
-  position: relative;
-  aspect-ratio: 1;
-  overflow: hidden;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--color-text) 8%, transparent);
-}
-.ba-cell::before,
-.ba-cell::after {
-  content: '';
-  position: absolute;
-}
-.ba-cell::before {
-  left: 8%;
-  bottom: 16%;
-  width: 0;
-  height: 0;
-  border-left: 15px solid transparent;
-  border-right: 15px solid transparent;
-  border-bottom: 17px solid color-mix(in srgb, var(--color-text) 20%, transparent);
-}
-.ba-cell::after {
-  right: 18%;
-  top: 18%;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--color-text) 20%, transparent);
-}
-
-/* A página do álbum desenhada dentro do painel "Depois". A inclinação vem das
-   variáveis do ponteiro (`usePointerVars`), escritas fora do React. */
-.album-plate {
-  margin: auto 0 0;
-  padding: 7%;
-  border-radius: var(--radius-md);
-  background: var(--color-neutral-100);
-  box-shadow: var(--shadow-sm);
-  transform: perspective(900px) rotateX(calc(var(--my, 0) * -4deg))
-    rotateY(calc(var(--mx, 0) * 6deg));
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.25s ease;
-}
-.album-plate:hover {
-  box-shadow: var(--shadow-lg);
-}
-
-/* ── Passos ───────────────────────────────────────────────────────────── */
-.step-num {
-  display: block;
-  margin-bottom: 14px;
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 15px;
-  font-feature-settings: 'tnum' 1;
   color: var(--color-accent-700);
 }
 

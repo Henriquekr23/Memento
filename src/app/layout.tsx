@@ -109,7 +109,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" className={fontVars}>
+    // `data-theme="light"`: o site abre no claro, qualquer que seja o tema do
+    // sistema. Sem o atributo, as regras `prefers-color-scheme` do
+    // `globals.css` escureciam tudo para quem usa o sistema no escuro. O
+    // interruptor de tema troca o atributo, como antes.
+    <html lang="pt-BR" data-theme="light" className={fontVars}>
       {/* O idioma escolhido vale para todas as telas (barra, rodapé, "Sobre"),
           então o provider fica na raiz — e não dentro de uma página. */}
       <body className="antialiased">

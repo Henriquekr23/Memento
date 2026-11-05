@@ -48,7 +48,7 @@ function MailIcon() {
  * Um componente só, e não um bloco copiado em cada página, porque os links
  * vêm de `lib/author.ts` — mudar o LinkedIn é mudar uma linha, em um arquivo.
  */
-export function SiteFooter() {
+export function SiteFooter({ showMark = true }: { showMark?: boolean } = {}) {
   const { lang } = useLang();
   const t = COMMON[lang];
 
@@ -79,7 +79,8 @@ export function SiteFooter() {
       <div className="flex flex-col gap-7 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <span className="inline-flex items-center gap-2.5">
-            <LogoMark size={20} className="text-[var(--color-accent)]" />
+            {/* A landing mostra a marca só como palavra, sem o ícone. */}
+            {showMark && <LogoMark size={20} className="text-[var(--color-accent)]" />}
             <span className="font-[family-name:var(--font-heading)] text-[17px] font-bold">
               {t.footerMadeBy} {AUTHOR.name}
             </span>
