@@ -164,7 +164,10 @@
    A cor da seção escura (que também é o tecido da capa do livro) é um token
    só: `--landing-section`. Alternativas aprovadas: verde mata `#23453a` e
    terracota `#93452a`. */
-.landing {
+/* Tokens da landing, compartilhados com a /album (`.lp-theme`). Valem só
+   dentro desses dois wrappers: as outras telas seguem no Organic. */
+.landing,
+.lp-theme {
   --landing-ink: #17181b;
   --landing-ink-2: #43454b;
   --landing-muted: #5b5d63;
@@ -236,6 +239,39 @@
   --landing-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --landing-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 
+  /* /album (`.af-*`): o fundo de cada etapa, a mesa, a capa. Os dois
+     primeiros tons são os do herói; o terceiro, um cinza-azulado frio para a
+     bancada. A capa é o tecido da seção escura; no escuro ela vira papel. */
+  --album-step-1: var(--landing-tint-0);
+  --album-step-2: var(--landing-tint-1);
+  --album-step-3: #eceef1;
+  --album-ink: var(--landing-text);
+  --album-ink-2: var(--landing-ink-2);
+  --album-muted: var(--landing-muted);
+  --album-line: rgb(23 24 27 / 0.1);
+  --album-line-2: rgb(23 24 27 / 0.18);
+  --album-mesa: rgb(255 255 255 / 0.5);
+  --album-shadow: rgb(23 24 27 / 0.14);
+  --album-cover: var(--landing-section);
+  --album-cover-ink: var(--landing-on-section);
+  --album-cover-focus: var(--landing-stamp);
+  --album-paper: var(--landing-paper);
+  --album-empty: rgb(23 24 27 / 0.04);
+  --album-empty-line: rgb(23 24 27 / 0.2);
+  --album-drop-line: rgb(196 80 15 / 0.55);
+  --album-drop-bg: rgb(196 80 15 / 0.06);
+  --album-ghost-line: rgb(196 80 15 / 0.45);
+  --album-tool: rgb(23 24 27 / 0.78);
+  --album-bottombar: rgb(239 237 243 / 0.82);
+  /* Laranja como tinta (ícone, erro): no escuro, o pêssego legível. */
+  --album-accent-ink: var(--landing-cta);
+}
+
+/* O Organic relido com a paleta nova: a landing inteira e, na /album, só a
+   moldura da página (`.lp-remap`: topo, etapas 1 e 2, rodapé). A bancada do
+   editor fica de fora e continua no Organic. */
+.landing,
+.lp-remap {
   /* O Organic, relido com a paleta nova (ver o comentário do bloco). */
   --color-bg: var(--landing-stub-1);
   --color-surface: #e3e3de;
@@ -267,7 +303,8 @@
    colado num fundo neutro. Contraste conferido: tinta clara sobre os tons do
    herói ≥ 14:1, pêssego da opção ativa sobre o fundinho ≈ 7:1. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .landing {
+  :root:not([data-theme='light']) .landing,
+  :root:not([data-theme='light']) .lp-theme {
     --landing-text: #eef1f6;
     --landing-bar: rgb(24 33 52 / 0.84);
     --landing-bar-solid: #18213a;
@@ -286,6 +323,24 @@
     --landing-tint-4: #1a172a;
     --landing-book-shadow: rgb(0 0 0 / 0.45);
     --landing-floor-shadow: rgb(0 0 0 / 0.55);
+    --album-step-1: var(--landing-stub-1);
+    --album-step-2: #161d30;
+    --album-step-3: #111827;
+    --album-ink-2: #c9cad0;
+    --album-muted: #a3a5ab;
+    --album-line: rgb(243 243 239 / 0.1);
+    --album-line-2: rgb(243 243 239 / 0.22);
+    --album-mesa: rgb(255 255 255 / 0.04);
+    --album-shadow: rgb(0 0 0 / 0.4);
+    --album-cover: #ebe7df;
+    --album-cover-ink: #17181b;
+    --album-cover-focus: var(--landing-cta);
+    --album-empty: rgb(23 24 27 / 0.05);
+    --album-bottombar: rgb(18 26 43 / 0.82);
+    --album-accent-ink: var(--landing-pill-ink);
+  }
+  :root:not([data-theme='light']) .landing,
+  :root:not([data-theme='light']) .lp-remap {
     --color-surface: #1a2337;
     --color-surface-2: #212b42;
     --color-accent-700: #ffb27a;
@@ -295,7 +350,8 @@
     --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.45);
   }
 }
-:root[data-theme='dark'] .landing {
+:root[data-theme='dark'] .landing,
+:root[data-theme='dark'] .lp-theme {
   --landing-text: #eef1f6;
   --landing-bar: rgb(24 33 52 / 0.84);
   --landing-bar-solid: #18213a;
@@ -314,6 +370,24 @@
   --landing-tint-4: #1a172a;
   --landing-book-shadow: rgb(0 0 0 / 0.45);
   --landing-floor-shadow: rgb(0 0 0 / 0.55);
+  --album-step-1: var(--landing-stub-1);
+  --album-step-2: #161d30;
+  --album-step-3: #111827;
+  --album-ink-2: #c9cad0;
+  --album-muted: #a3a5ab;
+  --album-line: rgb(243 243 239 / 0.1);
+  --album-line-2: rgb(243 243 239 / 0.22);
+  --album-mesa: rgb(255 255 255 / 0.04);
+  --album-shadow: rgb(0 0 0 / 0.4);
+  --album-cover: #ebe7df;
+  --album-cover-ink: #17181b;
+  --album-cover-focus: var(--landing-cta);
+  --album-empty: rgb(23 24 27 / 0.05);
+  --album-bottombar: rgb(18 26 43 / 0.82);
+  --album-accent-ink: var(--landing-pill-ink);
+}
+:root[data-theme='dark'] .landing,
+:root[data-theme='dark'] .lp-remap {
   --color-surface: #1a2337;
   --color-surface-2: #212b42;
   --color-accent-700: #ffb27a;
@@ -412,7 +486,8 @@ html {
   syntax: '*';
   inherits: false;
 }
-.landing a[class] {
+.landing a[class],
+.lp-theme a[class] {
   color: var(--lp-ink, inherit);
 }
 .lp-h {
@@ -421,6 +496,21 @@ html {
   font-weight: var(--lp-h-weight, 800);
   line-height: var(--lp-h-leading, 1);
   letter-spacing: var(--lp-h-tracking, -0.04em);
+}
+
+/* /album: a mesma porta para o foco. `:focus-visible` logo acima está fora de
+   camada e venceria as regras de `.af-*`: o nome escrito na capa mostra o foco
+   pelo tracejado que fica laranja (sem o retângulo por cima), e a foto da
+   página desenha o contorno por dentro — por fora, o quadro o cortaria. */
+.af-cover-title:focus-visible {
+  outline: none;
+}
+.af-slot-hit:focus-visible {
+  outline: 3px solid var(--landing-cta);
+  outline-offset: -3px;
+}
+.af-tl-item:focus-visible {
+  outline-offset: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1482,84 +1572,187 @@ html {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 10px;
+  gap: 12px;
 }
 
+/* O botão: pílula de tinta com o "?" num círculo de acento e a palavra ao
+   lado — um convite, não um ícone perdido no canto. No celular, só o círculo. */
 .faq-fab {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 46px;
+  gap: 8px;
   height: 46px;
-  border: 1px solid var(--color-accent);
+  padding: 0 18px 0 6px;
+  border: 0;
   border-radius: 999px;
-  background: var(--color-bg);
-  color: var(--color-accent-700);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-family: var(--font-heading);
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1;
   cursor: pointer;
-  box-shadow: var(--shadow-md);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--color-text) 18%, transparent),
+    0 10px 28px color-mix(in srgb, var(--color-text) 22%, transparent);
   transition:
-    background-color 0.18s ease,
-    color 0.18s ease,
-    transform 0.2s cubic-bezier(0.22, 0.61, 0.36, 1),
-    box-shadow 0.2s ease;
+    transform 200ms cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 200ms ease;
 }
-.faq-fab:hover {
-  background: var(--color-accent);
-  color: var(--color-neutral-100);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+.faq-fab-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--color-cta);
+  color: var(--color-on-cta);
+  transition: transform 260ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-.faq-fab[aria-expanded='true'] {
-  background: var(--color-accent);
-  color: var(--color-neutral-100);
+.faq-fab[aria-expanded='true'] .faq-fab-icon {
+  transform: rotate(90deg);
+}
+@media (hover: hover) and (pointer: fine) {
+  .faq-fab:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 1px 2px color-mix(in srgb, var(--color-text) 18%, transparent),
+      0 16px 36px color-mix(in srgb, var(--color-text) 26%, transparent);
+  }
+}
+.faq-fab:active {
+  transform: scale(0.97);
+}
+@media (max-width: 639px) {
+  .faq-fab {
+    width: 46px;
+    padding: 0;
+    justify-content: center;
+  }
+  .faq-fab-label {
+    display: none;
+  }
+}
+
+/* O botão já diz "Dúvidas" (e tem `aria-label`): a bolha de dica só repetiria,
+   e nasceria por cima do painel aberto. */
+.faq-root .tip-bubble {
+  display: none;
 }
 
 .faq-panel {
   display: flex;
   flex-direction: column;
-  width: min(392px, calc(100vw - 28px));
-  max-height: min(70vh, 560px);
+  width: min(400px, calc(100vw - 28px));
+  max-height: min(72vh, 580px);
   overflow: hidden;
   border: 1px solid var(--color-divider);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg);
-  box-shadow: var(--shadow-lg);
-  animation: faq-in 0.2s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  border-radius: 24px;
+  background: var(--color-surface-2);
+  box-shadow:
+    0 2px 6px color-mix(in srgb, var(--color-text) 8%, transparent),
+    0 24px 60px color-mix(in srgb, var(--color-text) 22%, transparent);
+  transform-origin: bottom right;
+  animation: faq-in 240ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 @keyframes faq-in {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.985);
+    transform: translateY(10px) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: none;
   }
+}
+
+.faq-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 16px 14px 18px;
+}
+.faq-head-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  color: var(--color-accent-700);
+}
+.faq-head-text {
+  min-width: 0;
+  flex: 1;
+}
+.faq-title {
+  --lp-h-weight: 800;
+  --lp-h-leading: 1.2;
+  --lp-h-tracking: -0.02em;
+  font-size: 18px;
+}
+.faq-subtitle {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--color-text) 58%, transparent);
+}
+.faq-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  transition:
+    opacity 160ms ease,
+    background-color 160ms ease;
+}
+.faq-close:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 /* A rolagem é do miolo, não do painel: cabeçalho e o link do rodapé ficam
    sempre à vista, mesmo com oito perguntas na lista. */
 .faq-list {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 8px 8px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.faq-item + .faq-item {
-  border-top: 1px solid var(--color-divider);
+/* A pergunta aberta vira um cartão: o fundo agrupa pergunta e resposta. */
+.faq-item {
+  border-radius: 16px;
+  transition: background-color 200ms ease;
+}
+.faq-item[data-open] {
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 .faq-question {
   display: flex;
   width: 100%;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px 10px 12px 12px;
   border: 0;
+  border-radius: 16px;
   background: transparent;
   color: inherit;
   font-family: var(--font-heading);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14.5px;
+  font-weight: 600;
   line-height: 1.35;
   text-align: left;
   cursor: pointer;
@@ -1567,22 +1760,30 @@ html {
     background-color 0.16s ease,
     color 0.16s ease;
 }
-.faq-question:hover {
-  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+.faq-item:not([data-open]) .faq-question:hover {
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 .faq-question[aria-expanded='true'] {
   color: var(--color-accent-700);
 }
+.faq-question:focus-visible {
+  outline-offset: -2px;
+}
 .faq-chevron {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
   flex: none;
-  font-family: var(--font-heading);
-  font-size: 18px;
-  line-height: 1.1;
-  color: var(--color-accent);
-  transition: transform 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  transition:
+    transform 0.24s cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 0.2s ease;
 }
 .faq-question[aria-expanded='true'] .faq-chevron {
-  transform: rotate(45deg);
+  transform: rotate(180deg);
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
 }
 .faq-answer {
   display: grid;
@@ -1595,6 +1796,41 @@ html {
 .faq-question[aria-expanded='true'] + .faq-answer {
   grid-template-rows: 1fr;
   opacity: 1;
+}
+.faq-answer-text {
+  display: block;
+  padding: 0 14px 14px 12px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--color-text) 74%, transparent);
+}
+
+.faq-foot {
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--color-divider);
+}
+.faq-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.faq-more-text,
+.faq-more-arrow {
+  color: var(--color-accent-700);
+}
+.faq-more-arrow {
+  display: inline-grid;
+  transform: rotate(-90deg);
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.faq-more:hover .faq-more-text {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.faq-more:hover .faq-more-arrow {
+  transform: rotate(-90deg) translateY(2px);
 }
 
 /* ── Links do rodapé ───────────────────────────────────────────────────
@@ -5337,6 +5573,1391 @@ textarea.ae-input {
   }
   .ae-name {
     display: none;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   /album — três etapas no visual da landing (`features/album-flow/`).
+
+   Os tokens são os `--landing-*` (escopo `.lp-theme`, compartilhado com a
+   home) e os `--album-*` declarados junto deles no topo do arquivo. A moldura
+   da página (topo, etapas 1 e 2, rodapé) mora em `.lp-remap`, que relê o
+   Organic com a paleta nova; a bancada do editor fica de fora e não muda.
+
+   Títulos usam `.lp-h` (fora de camada) para vencer a regra global de `h1…h6`;
+   aqui só ajustam as variáveis dela. Movimento: só `transform` e `opacity`, e
+   a troca de fundo entre as etapas é opacidade de camadas sólidas.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.af-root {
+  /* A largura das etapas 1 e 2 — o rodapé usa a mesma, para que conteúdo,
+     botão e linha do rodapé terminem no mesmo ponto. */
+  --af-width: 1184px;
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  overflow-x: clip;
+  color: var(--album-ink);
+  /* Embaixo das camadas: o que aparece além da janela (rolagem elástica). */
+  background: var(--album-step-1);
+}
+.af-root[data-step='2'] {
+  --af-width: 1376px;
+  background: var(--album-step-2);
+}
+.af-root[data-step='3'] {
+  background: var(--album-step-3);
+}
+.af-root .lp-remap {
+  font-family: var(--font-body);
+  color: var(--color-text);
+}
+
+.af-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--album-step-1);
+}
+.af-bg > span {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+.af-bg > [data-tone='1'] {
+  background: var(--album-step-1);
+}
+.af-bg > [data-tone='2'] {
+  background: var(--album-step-2);
+}
+.af-bg > [data-tone='3'] {
+  background: var(--album-step-3);
+}
+.af-root[data-step='1'] .af-bg > [data-tone='1'],
+.af-root[data-step='2'] .af-bg > [data-tone='2'],
+.af-root[data-step='3'] .af-bg > [data-tone='3'] {
+  opacity: 1;
+}
+
+.af-footer-inner {
+  max-width: var(--af-width);
+  margin-inline: auto;
+  padding-inline: 32px;
+}
+.af-footer-inner footer {
+  padding-top: 8px;
+}
+
+.af-mono {
+  font-family: var(--font-landing-mono), ui-monospace, monospace;
+  font-size: 12.5px;
+}
+.af-muted {
+  color: var(--album-muted);
+}
+
+/* ── topo ──────────────────────────────────────────────────────────────── */
+.af-top {
+  position: relative;
+  height: 88px;
+}
+/* No centro de verdade: posicionada, e não empurrada pelos botões. */
+.af-brand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 30px;
+  line-height: 1;
+  color: var(--album-ink);
+}
+.af-top-tools {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+/* A dica do tema nasceria fora da tela, no canto; o `aria-label` já diz. */
+.af-top-tools .tip-bubble {
+  display: none;
+}
+.af-signin {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  margin-left: 8px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--landing-cta);
+  color: var(--landing-on-cta);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 160ms var(--landing-ease-out),
+    background-color 200ms ease;
+}
+.af-signin:active {
+  transform: scale(0.97);
+}
+.af-signin:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .af-signin:hover {
+    background: var(--landing-cta-hover);
+  }
+}
+.af-account-wait {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+}
+
+/* ── etapas ────────────────────────────────────────────────────────────── */
+.af-steps {
+  width: max-content;
+  margin-inline: auto;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 4px;
+}
+.af-step {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 16px 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--album-muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 220ms ease,
+    color 220ms ease,
+    transform 160ms var(--landing-ease-out);
+}
+/* O fundinho da etapa é a pílula deslizante (`.lp-slider`, `useSlidingPill`);
+   a etapa acesa é a alça: segurar e arrastar escolhe outra. */
+.af-step[data-lit='true'] {
+  color: var(--landing-pill-ink);
+  cursor: grab;
+  touch-action: none;
+}
+.af-steps[data-dragging],
+.af-steps[data-dragging] .af-step {
+  cursor: grabbing;
+}
+.af-step:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.af-step:active:not(:disabled):not([data-lit='true']) {
+  transform: scale(0.97);
+}
+.af-step:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .af-steps:not([data-dragging]) .af-step:not(:disabled):not([data-lit='true']):hover {
+    background: var(--album-line);
+    color: var(--album-ink);
+  }
+}
+.af-step-n {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  font-family: var(--font-landing-mono), ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── seções ────────────────────────────────────────────────────────────── */
+.af-section {
+  max-width: var(--af-width);
+  margin-inline: auto;
+  padding: 36px 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+.af-section-order {
+  max-width: var(--af-width);
+}
+.af-section-build {
+  max-width: none;
+  padding-bottom: 24px;
+  gap: 12px;
+}
+/* A troca de etapa: o conteúdo novo sobe 10 px e aparece. Nos filhos, e não
+   na seção, para que a barra fixa e o aviso de desfazer não ganhem um
+   `transform` de contêiner durante a entrada. */
+.af-section > :not(.af-bottombar):not(.af-toast) {
+  animation: af-fadeup 380ms var(--landing-ease-out) both;
+}
+@keyframes af-fadeup {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .af-section > :not(.af-bottombar):not(.af-toast) {
+    animation: none;
+  }
+}
+
+.af-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.af-title {
+  --lp-h-weight: 800;
+  --lp-h-leading: 0.98;
+  --lp-h-tracking: -0.045em;
+  font-size: 64px;
+  text-align: center;
+  color: var(--album-ink);
+}
+.af-h2 {
+  --lp-h-weight: 800;
+  --lp-h-leading: 1.15;
+  --lp-h-tracking: -0.02em;
+  font-size: 22px;
+  color: var(--album-ink);
+}
+.af-lead {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--album-muted);
+}
+.af-help {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--album-muted);
+}
+.af-note {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--album-ink-2);
+}
+.af-note.is-error {
+  color: var(--album-accent-ink);
+}
+.af-build-notes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.af-build-notes:empty {
+  display: none;
+}
+
+/* ── botões ────────────────────────────────────────────────────────────── */
+.af-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 160ms var(--landing-ease-out),
+    background-color 200ms ease;
+}
+.af-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.af-btn:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+.af-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.af-btn-primary {
+  background: var(--landing-cta);
+  color: var(--landing-on-cta);
+}
+.af-btn-ghost {
+  background: transparent;
+  color: var(--landing-pill-ink);
+  border: 1.5px solid var(--album-ghost-line);
+}
+@media (hover: hover) and (pointer: fine) {
+  .af-btn-primary:hover:not(:disabled) {
+    background: var(--landing-cta-hover);
+  }
+  .af-btn-ghost:hover:not(:disabled) {
+    background: var(--landing-pill);
+  }
+}
+.af-btn-lg {
+  height: 52px;
+  padding: 0 28px;
+  font-size: 16px;
+}
+.af-btn-xl {
+  height: 56px;
+  padding: 0 32px;
+  font-size: 17px;
+}
+.af-btn-block {
+  width: 100%;
+  height: 54px;
+  font-size: 16px;
+}
+.af-link {
+  align-self: center;
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  color: var(--album-muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.af-link:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .af-link:hover {
+    color: var(--album-ink);
+  }
+}
+.af-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid var(--album-line-2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--album-ink);
+  cursor: pointer;
+  transition:
+    transform 160ms var(--landing-ease-out),
+    background-color 200ms ease;
+}
+.af-icon-btn:active {
+  transform: scale(0.97);
+}
+.af-icon-btn:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .af-icon-btn:hover {
+    background: var(--album-line);
+  }
+}
+
+/* ── a mesa (cartão das etapas) ────────────────────────────────────────── */
+.af-mesa {
+  border-radius: 32px;
+  background: var(--album-mesa);
+  box-shadow: 0 0 0 1px var(--album-line);
+}
+
+/* ── etapa 1 ───────────────────────────────────────────────────────────── */
+.af-mesa-start {
+  width: 100%;
+  min-height: 500px;
+  display: grid;
+  grid-template-columns: 420px minmax(0, 1fr);
+  align-items: center;
+  gap: 32px;
+  padding: 40px;
+}
+.af-mesa-start[data-drag] {
+  box-shadow: 0 0 0 1.5px var(--landing-cta);
+}
+.af-cover-stage {
+  display: flex;
+  justify-content: center;
+  perspective: 1600px;
+}
+
+.af-cover {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  flex: none;
+  color: var(--album-cover-ink);
+  background-color: var(--album-cover);
+  background-image:
+    linear-gradient(105deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0) 42%, rgb(0 0 0 / 0.16)),
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 0.03) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgb(0 0 0 / 0.05) 0 1px, transparent 1px 3px);
+}
+.af-cover.is-hero {
+  width: 300px;
+  height: 412px;
+  padding: 36px 30px 30px 38px;
+  border-radius: 4px 10px 10px 4px;
+  box-shadow:
+    inset 8px 0 12px rgb(0 0 0 / 0.3),
+    14px 24px 50px var(--album-shadow);
+  transition: transform 420ms var(--landing-ease-out);
+}
+/* Arquivos por cima da mesa: a capa levanta, como quem abre espaço. */
+.af-mesa-start[data-drag] .af-cover.is-hero {
+  transform: translateY(-10px) scale(1.02);
+}
+.af-cover.is-aside {
+  width: 210px;
+  height: 288px;
+  align-self: center;
+  padding: 24px 20px 20px 26px;
+  border-radius: 3px 8px 8px 3px;
+  box-shadow:
+    inset 6px 0 10px rgb(0 0 0 / 0.3),
+    10px 18px 40px var(--album-shadow);
+}
+.af-cover-edit {
+  border-bottom: 1.5px dashed color-mix(in srgb, var(--album-cover-ink) 35%, transparent);
+  transition: border-color 200ms ease;
+}
+.af-cover-edit:focus-within {
+  border-bottom-color: var(--album-cover-focus);
+}
+.af-cover-title {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 4px;
+  border: 0;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  color: var(--album-cover-ink);
+  caret-color: var(--album-cover-focus);
+  font-family: var(--font-landing-sans), sans-serif;
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  /* Palavra sem espaço maior que a capa quebra em vez de vazar; o corpo
+     encolhe para caber em três linhas (`fitText`, em `AlbumCover`). */
+  overflow-wrap: anywhere;
+}
+.af-cover-title::placeholder {
+  color: var(--album-cover-ink);
+  opacity: 0.45;
+}
+/* O foco é o tracejado que fica laranja (`.af-cover-edit:focus-within`). */
+.af-cover-title:focus,
+.af-cover-title:focus-visible {
+  outline: none;
+}
+.af-cover-title.is-static {
+  padding: 0;
+  font-size: 26px;
+  overflow-wrap: anywhere;
+}
+.af-cover-title.is-static[data-empty='true'] {
+  opacity: 0.5;
+}
+
+.af-drop {
+  height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 32px;
+  border: 2.5px dashed var(--album-drop-line);
+  border-radius: 26px;
+  background: var(--album-drop-bg);
+  color: var(--album-ink);
+  text-align: center;
+  transition:
+    transform 260ms var(--landing-ease-out),
+    border-color 200ms ease,
+    background-color 200ms ease;
+}
+.af-mesa-start[data-drag] .af-drop {
+  border-style: solid;
+  border-color: var(--landing-cta);
+  background: var(--landing-pill);
+  transform: scale(1.02);
+}
+.af-drop-icon {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--landing-pill);
+  color: var(--album-accent-ink);
+  transition: transform 260ms var(--landing-ease-out);
+}
+.af-mesa-start[data-drag] .af-drop-icon {
+  transform: translateY(-6px);
+}
+.af-drop-title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+.af-drop-or {
+  font-size: 14px;
+  color: var(--album-muted);
+}
+.af-drop-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(320px, 100%);
+}
+.af-bar {
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--album-line-2);
+}
+.af-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--landing-cta);
+  transform-origin: left center;
+  transition: transform 200ms var(--landing-ease-out);
+}
+.af-drop-touch {
+  display: none;
+}
+
+.af-fan {
+  position: relative;
+  display: block;
+  width: 260px;
+  height: 120px;
+  flex: none;
+}
+.af-fan.is-small {
+  width: 220px;
+  height: 104px;
+}
+.af-fan-photo {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 110px;
+  height: 82px;
+  padding: 4px;
+  background: var(--landing-frame);
+  box-shadow: 0 6px 16px var(--album-shadow);
+  transform: rotate(var(--r));
+}
+.af-fan.is-small .af-fan-photo {
+  width: 92px;
+  height: 70px;
+  left: calc(var(--x) * 0.84);
+}
+.af-fan-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.af-start-continue.is-pointer {
+  margin-top: -12px;
+}
+.af-start-continue {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+.af-start-continue.is-touch {
+  display: none;
+}
+
+.af-pill-solid,
+.af-pill-ghost {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.af-pill-solid {
+  background: var(--landing-cta);
+  color: var(--landing-on-cta);
+}
+.af-pill-ghost {
+  color: var(--landing-pill-ink);
+  border: 1.5px solid var(--album-ghost-line);
+}
+
+/* ── etapa 2 ───────────────────────────────────────────────────────────── */
+.af-order {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 48px;
+  align-items: start;
+}
+.af-order-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+}
+.af-order-aside {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px 24px 18px;
+  border-radius: 28px;
+}
+.af-restart-touch {
+  display: none;
+}
+
+.af-timeline-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.af-timeline-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+.af-timeline-arrows {
+  display: flex;
+  gap: 6px;
+}
+.af-tl-strip {
+  /* 6 px de folga em volta, devolvidos pela margem: a foto sobe no hover e o
+     foco tem contorno, e a faixa rolável cortaria os dois rente à borda. */
+  margin: 14px -6px 0;
+  padding: 6px 6px 10px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-padding-left: 6px;
+  scrollbar-width: thin;
+}
+.af-tl-track {
+  --tl-head: 22px;
+  --tl-gap: 12px;
+  --tl-frame-h: 112px;
+  --tl-stem: 16px;
+  position: relative;
+  display: flex;
+  gap: 40px;
+  width: max-content;
+}
+/* A linha passa pelo centro dos pontos: cabeçalho + respiro + moldura + haste
+   + meio ponto. */
+.af-tl-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--tl-head) + var(--tl-gap) + var(--tl-frame-h) + var(--tl-stem) + 5px);
+  height: 2px;
+  background: var(--album-line-2);
+}
+.af-tl-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tl-gap);
+}
+.af-tl-day-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  height: var(--tl-head);
+  white-space: nowrap;
+}
+.af-tl-day-label {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: var(--tl-head);
+}
+.af-tl-short {
+  display: none;
+}
+.af-tl-count,
+.af-tl-time {
+  font-size: 11.5px;
+}
+.af-tl-photos {
+  display: flex;
+  gap: 14px;
+}
+.af-tl-item {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.af-tl-item:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.af-tl-frame {
+  display: block;
+  width: 150px;
+  height: var(--tl-frame-h);
+  padding: 5px;
+  background: var(--landing-frame);
+  box-shadow:
+    0 1px 2px rgb(23 24 27 / 0.12),
+    0 8px 20px var(--album-shadow);
+  transition:
+    transform 200ms var(--landing-ease-out),
+    opacity 200ms ease;
+}
+.af-tl-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.af-tl-item[data-in='false'] .af-tl-frame {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .af-tl-item:hover .af-tl-frame {
+    transform: translateY(-4px);
+  }
+}
+.af-tl-item:active .af-tl-frame {
+  transform: scale(0.97);
+}
+.af-tl-stem {
+  display: block;
+  width: 2px;
+  height: var(--tl-stem);
+  margin: 0 auto;
+  background: var(--album-line-2);
+}
+/* O anel tem a cor do fundo da etapa: corta a linha em volta do ponto. */
+.af-tl-dot {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 12px;
+  height: 12px;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: var(--landing-cta);
+  box-shadow: 0 0 0 4px var(--album-step-2);
+}
+.af-tl-item[data-in='false'] .af-tl-dot {
+  background: var(--album-step-2);
+  box-shadow:
+    inset 0 0 0 2px var(--album-line-2),
+    0 0 0 4px var(--album-step-2);
+}
+.af-tl-time {
+  display: block;
+  margin-top: 8px;
+}
+.af-timeline-help {
+  margin: 6px 0 0;
+}
+
+.af-pages-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.af-perpage {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--album-line);
+}
+.af-perpage-label {
+  padding: 0 8px 0 10px;
+  color: var(--album-ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+.af-perpage-btn {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--album-muted);
+  font-family: var(--font-landing-mono), ui-monospace, monospace;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: transform 160ms var(--landing-ease-out);
+}
+/* Alvo de toque maior que o desenho: 26 px de círculo, 40 px de dedo. */
+.af-perpage-btn::after {
+  content: '';
+  position: absolute;
+  inset: -7px -3px;
+}
+.af-perpage-btn[aria-pressed='true'] {
+  background: var(--landing-pill);
+  color: var(--landing-pill-ink);
+  font-weight: 700;
+}
+.af-perpage-btn:active {
+  transform: scale(0.94);
+}
+.af-perpage-btn:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+.af-pages-empty {
+  margin-top: 20px;
+}
+
+.af-spreads {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+  margin-top: 20px;
+}
+.af-spread {
+  display: flex;
+  border-radius: 5px;
+  box-shadow: 0 16px 36px var(--album-shadow);
+}
+.af-page {
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 148 / 210;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  gap: 6px;
+  padding: 12px;
+  background: var(--album-paper);
+}
+/* A sombra da lombada, por dentro de cada página. */
+.af-page:first-child {
+  border-radius: 5px 0 0 5px;
+  box-shadow: inset -12px 0 14px -10px rgb(0 0 0 / 0.18);
+}
+.af-page:last-child {
+  border-radius: 0 5px 5px 0;
+  box-shadow: inset 12px 0 14px -10px rgb(0 0 0 / 0.18);
+}
+.af-page[data-per='2'] {
+  grid-template-rows: 1fr 1fr;
+}
+.af-page[data-per='3'] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1.35fr 1fr;
+}
+.af-page[data-per='3'] > :first-child {
+  grid-column: 1 / -1;
+}
+.af-page[data-per='4'] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.af-slot {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  transition: opacity 160ms ease;
+}
+.af-slot.is-empty {
+  background: var(--album-empty);
+  outline: 1.5px dashed var(--album-empty-line);
+  outline-offset: -1.5px;
+}
+.af-slot-hit {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+}
+.af-slot.is-empty .af-slot-hit {
+  cursor: default;
+}
+.af-pages[data-selecting] .af-slot-hit {
+  cursor: pointer;
+}
+.af-slot-hit img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.af-slot-hit:focus-visible {
+  outline: 3px solid var(--landing-cta);
+  outline-offset: -3px;
+}
+/* Alvo do arraste e foto selecionada: contorno de 3 px por dentro, desenhado
+   por cima da foto (sombra interna ficaria embaixo dela). Não muda o tamanho
+   do quadro — só aparece. */
+.af-slot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 3px var(--landing-cta);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+.af-slot[data-over]::after,
+.af-slot[data-sel]::after {
+  opacity: 1;
+}
+.af-slot[data-dragging] {
+  opacity: 0.4;
+}
+.af-slot-x {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--album-tool);
+  color: var(--landing-on-cta);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 160ms ease,
+    transform 160ms var(--landing-ease-out);
+}
+/* Invisível também não clica: no toque, o canto da foto não pode tirá-la do
+   álbum sem a pessoa ter visto o X. */
+.af-slot:hover .af-slot-x,
+.af-slot:focus-within .af-slot-x,
+.af-slot[data-sel] .af-slot-x {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (hover: none) {
+  .af-slot:hover:not([data-sel]) .af-slot-x,
+  .af-slot:focus-within:not([data-sel]) .af-slot-x {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+.af-slot-x:active {
+  transform: scale(0.94);
+}
+.af-slot-x:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+
+.af-bottombar {
+  display: none;
+}
+
+.af-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 8px 8px 18px;
+  border-radius: 999px;
+  background: var(--album-ink);
+  color: var(--album-step-1);
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 12px 30px var(--album-shadow);
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  pointer-events: none;
+  transition:
+    opacity 220ms var(--landing-ease-out),
+    transform 220ms var(--landing-ease-out);
+}
+.af-toast[data-open] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+.af-toast-undo {
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--landing-cta);
+  color: var(--landing-on-cta);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 160ms var(--landing-ease-out);
+}
+.af-toast-undo:active {
+  transform: scale(0.97);
+}
+.af-toast-undo:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+
+/* ── etapa 3: só as cores dos botões do editor ─────────────────────────── */
+.af-editor {
+  padding-bottom: 32px;
+}
+.af-editor .ae-btn.is-primary {
+  background: var(--landing-cta);
+  color: var(--landing-on-cta);
+  border-color: transparent;
+}
+.af-editor .ae-btn.is-primary:hover:not(:disabled) {
+  background: var(--landing-cta-hover);
+}
+.af-editor .ae-btn.af-ae-ghost {
+  background: transparent;
+  color: var(--landing-pill-ink);
+  border: 1.5px solid var(--album-ghost-line);
+}
+.af-editor .ae-btn.af-ae-ghost:hover:not(:disabled) {
+  background: var(--landing-pill);
+}
+.af-editor .ae-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.af-editor .ae-btn:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+
+/* ── celular ───────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .af-top {
+    height: 68px;
+  }
+  .af-brand {
+    font-size: 22px;
+  }
+  .af-top-tools {
+    right: 6px;
+    gap: 0;
+  }
+  /* O globo sozinho: o código do idioma não cabe ao lado da marca. */
+  .af-top-tools .lp-lang {
+    padding: 0 8px;
+  }
+  .af-top-tools .lp-lang span {
+    display: none;
+  }
+  .af-top-tools .lp-theme-btn {
+    width: 34px;
+  }
+  .af-signin {
+    height: 34px;
+    margin-left: 0;
+    padding: 0 12px;
+    font-size: 13.5px;
+  }
+  .af-account-wait {
+    width: 34px;
+    height: 34px;
+  }
+
+  .af-steps {
+    gap: 10px;
+    padding: 2px 0 6px;
+  }
+  .af-step {
+    gap: 8px;
+    padding: 0 8px;
+    font-size: 12.5px;
+  }
+  .af-step[aria-current='step'] {
+    padding: 0 14px 0 8px;
+  }
+  .af-step:not([aria-current]) .af-step-label {
+    display: none;
+  }
+
+  .af-section {
+    padding: 18px 20px 32px;
+    gap: 22px;
+  }
+  .af-footer-inner {
+    padding-inline: 20px;
+  }
+  .af-start-continue.is-pointer {
+    margin-top: 0;
+  }
+  .af-title {
+    font-size: 42px;
+  }
+  .af-lead {
+    display: none;
+  }
+
+  .af-mesa-start {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    min-height: 0;
+    gap: 18px;
+    padding: 26px 16px 16px;
+    border-radius: 28px;
+  }
+  .af-cover.is-hero {
+    width: 220px;
+    height: 302px;
+    padding: 24px 20px 20px 26px;
+    border-radius: 3px 8px 8px 3px;
+    box-shadow:
+      inset 6px 0 10px rgb(0 0 0 / 0.3),
+      10px 18px 40px var(--album-shadow);
+  }
+  .af-cover.is-hero .af-cover-title {
+    font-size: 29px;
+  }
+  .af-drop:not(.af-drop-touch) {
+    display: none;
+  }
+  .af-drop-touch {
+    display: flex;
+    width: 100%;
+    height: auto;
+    gap: 10px;
+    padding: 22px 16px;
+    border-radius: 22px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .af-drop-touch:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .af-drop-touch:focus-visible {
+    outline: 2px solid var(--landing-cta);
+    outline-offset: 2px;
+  }
+  .af-drop-touch .af-drop-icon {
+    width: 60px;
+    height: 60px;
+  }
+  .af-drop-touch .af-drop-title {
+    font-size: 19px;
+    letter-spacing: -0.02em;
+  }
+  .af-start-continue.is-pointer {
+    display: none;
+  }
+  .af-start-continue.is-touch {
+    display: flex;
+  }
+  .af-start-continue.is-touch .af-btn {
+    width: 100%;
+    height: 54px;
+    font-size: 16px;
+  }
+
+  /* Etapa 2: a linha do tempo vai de borda a borda; o resto mantém 20 px. */
+  .af-section-order {
+    padding: 18px 0 120px;
+  }
+  .af-section-order .af-title,
+  .af-section-order .af-pages,
+  .af-section-order .af-note {
+    padding-inline: 20px;
+  }
+  .af-order {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .af-order-main {
+    gap: 32px;
+  }
+  .af-order-aside {
+    display: none;
+  }
+  .af-restart-touch {
+    display: inline-block;
+  }
+  .af-timeline-head {
+    padding: 0 20px;
+  }
+  .af-timeline-arrows {
+    display: none;
+  }
+  .af-h2 {
+    font-size: 19px;
+  }
+  .af-tl-strip {
+    margin: 12px 0 0;
+    padding: 6px 20px 8px;
+    scroll-padding-left: 20px;
+    scroll-snap-type: x proximity;
+  }
+  .af-tl-track {
+    --tl-head: 20px;
+    --tl-gap: 10px;
+    --tl-frame-h: 90px;
+    --tl-stem: 14px;
+    gap: 28px;
+  }
+  .af-tl-day {
+    scroll-snap-align: start;
+  }
+  .af-tl-day-label {
+    font-size: 13px;
+  }
+  .af-tl-long {
+    display: none;
+  }
+  .af-tl-short {
+    display: inline;
+  }
+  .af-tl-count,
+  .af-tl-time {
+    font-size: 10.5px;
+  }
+  .af-tl-photos {
+    gap: 12px;
+  }
+  .af-tl-frame {
+    width: 120px;
+    padding: 4px;
+  }
+  .af-tl-time {
+    margin-top: 6px;
+  }
+  .af-timeline-help {
+    margin: 4px 20px 0;
+  }
+  .af-pages-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .af-spreads {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    margin-top: 16px;
+  }
+  .af-spread {
+    box-shadow: 0 12px 28px var(--album-shadow);
+  }
+  .af-page {
+    gap: 5px;
+    padding: 9px;
+  }
+  .af-slot-x {
+    top: 4px;
+    right: 4px;
+  }
+
+  .af-bottombar {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 40;
+    display: block;
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--album-line);
+    background: var(--album-bottombar);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    backdrop-filter: blur(14px) saturate(1.4);
+  }
+  .af-toast {
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 32px);
+  }
+  /* A bolha de ajuda dividiria o pé da tela com a barra do "Continuar". */
+  .af-root[data-step='2'] .af-faq {
+    display: none;
+  }
+
+  .af-section-build {
+    padding: 18px 14px 14px;
+  }
+  .af-editor {
+    padding-bottom: 20px;
   }
 }
 

@@ -38,6 +38,7 @@ npx tsx scripts/checkPrintSpec.mts       # geometria de impressão: formato, san
 npx tsx scripts/checkFrameCrop.mts       # enquadramento da foto (encaixe, zoom, limite do arraste) e margens da página
 npx tsx scripts/checkAlbumEdit.mts       # replanejamento das fotos ao reeditar: o que sobe, o que fica, o que sai do bucket
 npx tsx scripts/checkLanding.mts         # landing: folhas do herói, tons do fundo, pilha → dia → álbum, seção ativa do menu
+npx tsx scripts/checkAlbumFlow.mts       # /album: fotos fora do álbum, quadros da etapa 2 (mover, buracos, devolver no tempo) → editor
 
 # Supabase (exige conta de verdade; apaga o álbum de teste no fim):
 MEMENTO_EMAIL=... MEMENTO_PASSWORD=... npx tsx scripts/checkSupabaseSave.mts
@@ -67,7 +68,9 @@ src/
 ```
 
 Features relevantes: `exif-reader` (parseExif, nunca lança), `album-builder`
-(`useAlbum` = o **acervo**: importação, EXIF, ordem cronológica),
+(`useAlbum` = o **acervo**: importação, EXIF, ordem cronológica;
+`useAlbumSelection` = quem está fora do álbum), `album-flow` (as etapas 1 e 2
+da `/album` e a ponte para o editor),
 `album-print` (a régua de impressão, em milímetros), `album-editor` (o editor
 inteiro, ver abaixo), `album-export` (contrato `AlbumExporter` + `pdf/`), `auth`
 e `album-save` (Fase 2, ver abaixo), `album-contrib` e `album-edit` (Fase 3,
@@ -173,12 +176,33 @@ leitura de EXIF.
     local) perde o álbum — intencional. Exceções que não são conteúdo: idioma
     (`localStorage`) e a ponte para `/obrigado` (`sessionStorage`, consumida na
     leitura).
-15. **Importar não abre o editor.** `/album` tem duas etapas: a de escolher as
-    fotos (`EditorStart` + `PhotoOrderGrid` — acrescentar, remover, reordenar) e
-    a bancada. A segunda começa no clique de "Confirmar e montar o álbum"
-    (`isEditing` na página), nunca na chegada da primeira foto. Quem manda
+15. **Importar não abre o editor, e a `/album` tem três etapas** (`album-flow/`):
+    1 nome e fotos (o nome se escreve na capa, a área de soltar fica ao lado),
+    2 confira a ordem (linha do tempo + páginas), 3 o editor. Importar nunca
+    avança sozinho; o editor começa no "Continuar" da etapa 2. Quem manda
     duzentas fotos ainda está escolhendo; abrir a composição ali obrigava a
     desmanchá-la para continuar escolhendo.
+    - **Tirar uma foto não a apaga.** O acervo (`useAlbum`) continua com a
+      lista inteira; `useAlbumSelection` guarda o conjunto de **excluídas**. A
+      linha do tempo mostra todas (as de fora em cinza) e devolve com um toque.
+      Editor, PDF e nuvem recebem só as incluídas.
+    - **As páginas da etapa 2 são quadros, não ordem** (`album-flow/cells.ts`,
+      puro): uma lista página após página, com o id da foto ou vazio. Soltar
+      numa foto troca as duas; soltar num quadro vazio leva a foto para lá.
+      Quem sai deixa o quadro vazio (o resto não anda); quem chega entra depois
+      do último ocupado; quem volta pela linha do tempo entra no lugar dela no
+      tempo (`chronologicalSlot` + `insertAt`, que só empurra até o primeiro
+      buraco). A lista guardada é acertada na leitura (`syncCells`), sem
+      efeito. Trocar "fotos por página" reflui sem os buracos.
+    - **A etapa 2 vira o estado inicial do editor** (`composeFromCells`): os
+      quadros, vazios inclusive, montam a composição inteira. Voltar do editor
+      para as fotos e seguir de novo reabre a composição como estava
+      (`pruneComposition` só esvazia o quadro de quem saiu); se os quadros ou o
+      layout mudaram (`planSignature`), a página pergunta antes de refazer as
+      páginas, e a capa fica.
+    - As etapas do topo usam a mesma pílula arrastável do menu da landing
+      (`useSlidingPill`, com `itemSelector`/`canPick`).
+    - "Entrar" no topo da `/album` abre o `InlineAuthDialog`, não navega.
 16. **Nada que carrega `transform-style: preserve-3d` pode receber `filter`,
     `opacity` < 1 ou `mask`.** Qualquer propriedade de agrupamento força o
     `preserve-3d` a virar `flat`, e as faces achatam todas no mesmo plano. Foi
@@ -288,10 +312,14 @@ leitura de EXIF.
   As regras `prefers-color-scheme` continuam no CSS, mas só valeriam sem o
   atributo; o interruptor de tema troca o atributo.
 - **Tokens escopados em `.landing`** (`--landing-*`, mais o Organic remapeado
-  para as seções antigas). Nada disso vale fora da página inicial.
+  para as seções antigas), compartilhados com a `/album` sem duplicar valor:
+  `.lp-theme` recebe os `--landing-*` (e os `--album-*` da página), `.lp-remap`
+  recebe o Organic relido. Na `/album` a bancada do editor fica **fora** da
+  `.lp-remap` e continua no Organic. `/sobre`, `/albums`, `/conta` e
+  `/obrigado` não usam nenhum dos dois.
 - **Duas portas fora de camada em `globals.css`**: `a { color: inherit }` e
   `h1…h6 {…}` estão fora de `@layer` e venceriam qualquer classe. Na landing,
-  link com classe pega cor de `--lp-ink`, e título com `.lp-h` pega peso,
+  link com classe pega cor de `--lp-ink` (também dentro de `.lp-theme`), e título com `.lp-h` pega peso,
   entrelinha e espaçamento de `--lp-h-*`. Não usar `!important` no lugar.
 
 ### Fase 2 — Supabase (auth + persistência)

@@ -39,12 +39,20 @@ interface DragState {
  * Os nós (a faixa das opções e a pílula) são criados por quem chama, como em
  * `useTrackDrag`: ref devolvido de dentro de hook e usado no JSX é o que a
  * regra `react-hooks/refs` proíbe.
+ *
+ * Também serve fora da landing (as etapas da /album): `itemSelector` diz quais
+ * filhos são as opções, e `canPick` deixa de fora as que não podem ser
+ * escolhidas agora — a pílula não para em cima delas.
  */
 export function useSlidingPill(
   navRef: RefObject<HTMLElement | null>,
   pillRef: RefObject<HTMLSpanElement | null>,
   active: number,
   onPick: (index: number) => void,
+  {
+    itemSelector = '.lp-link',
+    canPick,
+  }: { itemSelector?: string; canPick?: (index: number) => boolean } = {},
 ) {
   const dragRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
@@ -57,11 +65,11 @@ export function useSlidingPill(
   const linkBoxes = useCallback(() => {
     const nav = navRef.current;
     if (!nav) return [];
-    return Array.from(nav.querySelectorAll<HTMLElement>('.lp-link')).map((link) => ({
+    return Array.from(nav.querySelectorAll<HTMLElement>(itemSelector)).map((link) => ({
       left: link.offsetLeft,
       width: link.offsetWidth,
     }));
-  }, [navRef]);
+  }, [navRef, itemSelector]);
 
   const place = useCallback((left: number, width: number) => {
     const pill = pillRef.current;
@@ -103,10 +111,10 @@ export function useSlidingPill(
 
   const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
     if (event.button !== 0) return;
-    const link = (event.target as HTMLElement).closest<HTMLElement>('.lp-link');
+    const link = (event.target as HTMLElement).closest<HTMLElement>(itemSelector);
     const nav = navRef.current;
     if (!link || !nav) return;
-    const index = Array.from(nav.querySelectorAll('.lp-link')).indexOf(link);
+    const index = Array.from(nav.querySelectorAll(itemSelector)).indexOf(link);
     if (index !== lit) return;
     const box = linkBoxes()[index];
     const navLeft = nav.getBoundingClientRect().left;
@@ -138,8 +146,9 @@ export function useSlidingPill(
     );
     // A opção embaixo é a de centro mais próximo; a pílula segue o dedo e
     // toma a largura dela.
-    let nearest = 0;
+    let nearest = lit;
     boxes.forEach((box, i) => {
+      if (i !== lit && canPick && !canPick(i)) return;
       const best = boxes[nearest];
       if (Math.abs(box.left + box.width / 2 - center) < Math.abs(best.left + best.width / 2 - center)) {
         nearest = i;

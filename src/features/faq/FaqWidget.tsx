@@ -56,8 +56,10 @@ function CloseIcon() {
  * demais para o que ele é — mas Esc fecha, clique fora fecha, e o foco volta
  * para o botão, que é o que se espera de qualquer coisa que abre e fecha.
  *
- * No celular vira uma folha colada nas bordas (`inset-x-3`), com altura máxima
- * de 70vh e rolagem interna: painel de largura fixa estouraria a tela.
+ * O botão é uma pílula escura com "?" e "Dúvidas" (no celular, só o círculo);
+ * o painel abre ancorado nele, com cabeçalho, perguntas em acordeão e um link
+ * para a página Sobre. No celular o painel ocupa a largura da tela, com altura
+ * máxima e rolagem interna: largura fixa estouraria a tela.
  */
 export function FaqWidget() {
   const { lang } = useLang();
@@ -99,15 +101,16 @@ export function FaqWidget() {
   }, [isOpen]);
 
   return (
-    <div ref={rootRef} className="faq-root">
+    <div ref={rootRef} className="faq-root" data-open={isOpen || undefined}>
       {isOpen && (
         <div id={panelId} role="group" aria-label={t.title} className="faq-panel">
-          <div className="flex items-start justify-between gap-4 border-b border-[var(--color-divider)] px-4 py-3.5">
-            <div>
-              <h2 className="m-0 text-[19px] font-normal leading-6">{t.title}</h2>
-              <p className="mt-1 text-[12.5px] leading-4 text-[color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                {t.subtitle}
-              </p>
+          <div className="faq-head">
+            <span aria-hidden className="faq-head-icon">
+              <QuestionIcon />
+            </span>
+            <div className="faq-head-text">
+              <h2 className="lp-h faq-title">{t.title}</h2>
+              <p className="faq-subtitle">{t.subtitle}</p>
             </div>
             <button
               type="button"
@@ -116,7 +119,7 @@ export function FaqWidget() {
                 buttonRef.current?.focus();
               }}
               aria-label={t.closeAria}
-              className="btn btn-secondary btn-icon h-8 w-8 flex-none"
+              className="faq-close"
             >
               <CloseIcon />
             </button>
@@ -126,7 +129,7 @@ export function FaqWidget() {
             {t.items.map((item, index) => {
               const isItemOpen = index === openItem;
               return (
-                <div key={item.question} className="faq-item">
+                <div key={item.question} className="faq-item" data-open={isItemOpen || undefined}>
                   <button
                     type="button"
                     className="faq-question"
@@ -135,16 +138,14 @@ export function FaqWidget() {
                   >
                     <span>{item.question}</span>
                     <span aria-hidden className="faq-chevron">
-                      +
+                      <ChevronIcon />
                     </span>
                   </button>
                   {/* Mesmo truque do "Como funciona": 0fr → 1fr anima altura
                       automática sem medir nada em JavaScript. */}
                   <span className="faq-answer">
                     <span className="block overflow-hidden">
-                      <span className="block px-4 pb-3.5 text-[13.5px] leading-5 text-[color-mix(in_srgb,var(--color-text)_72%,transparent)]">
-                        {item.answer}
-                      </span>
+                      <span className="faq-answer-text">{item.answer}</span>
                     </span>
                   </span>
                 </div>
@@ -152,13 +153,14 @@ export function FaqWidget() {
             })}
           </div>
 
-          <div className="border-t border-[var(--color-divider)] px-4 py-3">
-            <Link
-              href="/sobre"
-              className="nav-link text-[13px] text-[var(--color-accent-700)]"
-              onClick={() => setIsOpen(false)}
-            >
-              {t.moreLabel}
+          <div className="faq-foot">
+            <Link href="/sobre" className="faq-more" onClick={() => setIsOpen(false)}>
+              {/* Cor no texto, não no link: `a { color: inherit }` está fora de
+                  camada e venceria a classe. */}
+              <span className="faq-more-text">{t.moreLabel}</span>
+              <span aria-hidden className="faq-more-arrow">
+                <ChevronIcon />
+              </span>
             </Link>
           </div>
         </div>
@@ -174,9 +176,33 @@ export function FaqWidget() {
           aria-controls={isOpen ? panelId : undefined}
           className="faq-fab"
         >
-          {isOpen ? <CloseIcon /> : <QuestionIcon />}
+          <span aria-hidden className="faq-fab-icon">
+            {isOpen ? <CloseIcon /> : <QuestionIcon />}
+          </span>
+          <span aria-hidden className="faq-fab-label">
+            {t.fabLabel}
+          </span>
         </button>
       </Tooltip>
     </div>
+  );
+}
+
+/** Seta do acordeão: aponta para baixo fechada, gira meia volta aberta. */
+function ChevronIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
   );
 }
