@@ -18,8 +18,6 @@ export interface FaqCopy {
   openAria: string;
   closeAria: string;
   openTip: string;
-  /** O texto do botão, ao lado do ícone (some no celular). */
-  fabLabel: string;
   title: string;
   subtitle: string;
   items: FaqItem[];
@@ -38,7 +36,6 @@ export const FAQ: Record<Lang, FaqCopy> = {
     openAria: 'Abrir as perguntas frequentes',
     closeAria: 'Fechar as perguntas frequentes',
     openTip: 'Dúvidas? Perguntas frequentes',
-    fabLabel: 'Dúvidas',
     title: 'Perguntas frequentes',
     subtitle: 'O que costuma ser perguntado antes de começar.',
     items: [
@@ -125,7 +122,6 @@ export const FAQ: Record<Lang, FaqCopy> = {
     openAria: 'Open the frequently asked questions',
     closeAria: 'Close the frequently asked questions',
     openTip: 'Questions? Read the FAQ',
-    fabLabel: 'Questions',
     title: 'Frequently asked questions',
     subtitle: 'What people usually ask before starting.',
     items: [

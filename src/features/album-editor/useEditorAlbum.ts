@@ -233,6 +233,37 @@ export function useEditorAlbum(initial?: EditorAlbum) {
     });
   }, []);
 
+  /**
+   * Troca o conteúdo de dois quadros, de qualquer página — foto e
+   * enquadramento juntos: a foto leva o recorte escolhido para ela. Um dos dois
+   * pode estar vazio, e aí a foto só muda de lugar.
+   */
+  const swapFrames = useCallback(
+    (a: { page: number; slot: number }, b: { page: number; slot: number }) => {
+      if (a.page === b.page && a.slot === b.slot) return;
+      setAlbum((current) => {
+        const first = current.pages[a.page]?.slots[a.slot];
+        const second = current.pages[b.page]?.slots[b.slot];
+        if (!first || !second) return current;
+        return {
+          ...current,
+          pages: current.pages.map((page, i) => {
+            if (i !== a.page && i !== b.page) return page;
+            return {
+              ...page,
+              slots: page.slots.map((slot, k) => {
+                if (i === a.page && k === a.slot) return { ...second };
+                if (i === b.page && k === b.slot) return { ...first };
+                return slot;
+              }),
+            };
+          }),
+        };
+      });
+    },
+    [],
+  );
+
   /** Tira uma foto de todos os quadros em que ela apareça. */
   const dropPhoto = useCallback((photoId: string) => {
     setAlbum((current) => ({
@@ -291,6 +322,7 @@ export function useEditorAlbum(initial?: EditorAlbum) {
     addSheet,
     removeSheet,
     fillChronologically,
+    swapFrames,
     dropPhoto,
     maxSlots: MAX_SLOTS,
     minPages: MIN_PAGES,

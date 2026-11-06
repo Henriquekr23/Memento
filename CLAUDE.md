@@ -38,7 +38,7 @@ npx tsx scripts/checkPrintSpec.mts       # geometria de impressão: formato, san
 npx tsx scripts/checkFrameCrop.mts       # enquadramento da foto (encaixe, zoom, limite do arraste) e margens da página
 npx tsx scripts/checkAlbumEdit.mts       # replanejamento das fotos ao reeditar: o que sobe, o que fica, o que sai do bucket
 npx tsx scripts/checkLanding.mts         # landing: folhas do herói, tons do fundo, pilha → dia → álbum, seção ativa do menu
-npx tsx scripts/checkAlbumFlow.mts       # /album: fotos fora do álbum, quadros da etapa 2 (mover, buracos, devolver no tempo) → editor
+npx tsx scripts/checkAlbumFlow.mts       # /album: fotos fora do álbum, ordem da etapa 2, composição de partida das páginas
 
 # Supabase (exige conta de verdade; apaga o álbum de teste no fim):
 MEMENTO_EMAIL=... MEMENTO_PASSWORD=... npx tsx scripts/checkSupabaseSave.mts
@@ -176,30 +176,35 @@ leitura de EXIF.
     local) perde o álbum — intencional. Exceções que não são conteúdo: idioma
     (`localStorage`) e a ponte para `/obrigado` (`sessionStorage`, consumida na
     leitura).
-15. **Importar não abre o editor, e a `/album` tem três etapas** (`album-flow/`):
-    1 nome e fotos (o nome se escreve na capa, a área de soltar fica ao lado),
-    2 confira a ordem (linha do tempo + páginas), 3 o editor. Importar nunca
-    avança sozinho; o editor começa no "Continuar" da etapa 2. Quem manda
-    duzentas fotos ainda está escolhendo; abrir a composição ali obrigava a
-    desmanchá-la para continuar escolhendo.
+15. **Importar não abre o editor, e a `/album` tem cinco etapas**
+    (`album-flow/`): 1 nome e fotos (o nome se escreve na capa, a área de
+    soltar fica ao lado), 2 ordem (`PhotoSorter`), 3 páginas, 4 capa e
+    5 finalize (`StepFinish`: o `AlbumViewer` da página pública, "Baixar PDF"
+    e "Salvar na nuvem"). Importar nunca avança sozinho. Quem manda duzentas
+    fotos ainda está escolhendo; abrir a composição ali obrigava a desmanchá-la
+    para continuar escolhendo.
     - **Tirar uma foto não a apaga.** O acervo (`useAlbum`) continua com a
-      lista inteira; `useAlbumSelection` guarda o conjunto de **excluídas**. A
-      linha do tempo mostra todas (as de fora em cinza) e devolve com um toque.
-      Editor, PDF e nuvem recebem só as incluídas.
-    - **As páginas da etapa 2 são quadros, não ordem** (`album-flow/cells.ts`,
-      puro): uma lista página após página, com o id da foto ou vazio. Soltar
-      numa foto troca as duas; soltar num quadro vazio leva a foto para lá.
-      Quem sai deixa o quadro vazio (o resto não anda); quem chega entra depois
-      do último ocupado; quem volta pela linha do tempo entra no lugar dela no
-      tempo (`chronologicalSlot` + `insertAt`, que só empurra até o primeiro
-      buraco). A lista guardada é acertada na leitura (`syncCells`), sem
-      efeito. Trocar "fotos por página" reflui sem os buracos.
-    - **A etapa 2 vira o estado inicial do editor** (`composeFromCells`): os
-      quadros, vazios inclusive, montam a composição inteira. Voltar do editor
-      para as fotos e seguir de novo reabre a composição como estava
-      (`pruneComposition` só esvazia o quadro de quem saiu); se os quadros ou o
-      layout mudaram (`planSignature`), a página pergunta antes de refazer as
-      páginas, e a capa fica.
+      lista inteira; `useAlbumSelection` guarda o conjunto de **excluídas**. Na
+      etapa 2 elas aparecem embaixo, apagadas, e voltam com um toque. Editor,
+      PDF e nuvem recebem só as incluídas.
+    - **Etapa 2 é ordem.** Mexer é **inserir** (`order.ts`, `moveNextTo`), ao
+      vivo: passar a foto arrastada por cima de outra já a põe no lugar dela, e
+      as outras deslizam (`useReorderMotion`, FLIP com a propriedade
+      `translate`, para o giro de cada foto continuar valendo). `lastTarget`
+      impede duas fotos de ficarem trocando sob o ponteiro.
+    - **Etapas 3 e 4 são o mesmo `AlbumEditor`**, montado uma vez e recortado
+      por `mode`: `pages` (a visão geral `PagesOverview`, desenhada pela
+      `/album` via `renderBoard`/`BoardApi`, e a folha aberta; o inspetor de
+      páginas edita a página escolhida — tipo, borda, respiro, texto,
+      enquadramento, zoom) e `cover` (capa e livro). Na visão geral o quadro
+      inteiro é o alvo: soltar troca o conteúdo dos dois quadros
+      (`swapFrames`, foto e enquadramento juntos).
+    - **A composição nasce da ordem** (`composeFromOrder`) ao entrar na etapa
+      3. Ir e voltar entre páginas, capa e finalização não refaz nada; voltar
+      à ordem e seguir de novo reabre a composição como estava
+      (`pruneComposition` só esvazia o quadro de quem saiu); se a ordem ou as
+      fotos mudaram, a página pergunta antes de refazer as páginas, e a capa
+      fica.
     - As etapas do topo usam a mesma pílula arrastável do menu da landing
       (`useSlidingPill`, com `itemSelector`/`canPick`).
     - "Entrar" no topo da `/album` abre o `InlineAuthDialog`, não navega.

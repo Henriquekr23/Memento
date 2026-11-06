@@ -7,12 +7,12 @@ import { useSlidingPill } from '@/features/landing/nav/useSlidingPill';
 
 import { FLOW_COPY } from './copy';
 
-export type Step = 1 | 2 | 3;
+export type Step = 1 | 2 | 3 | 4 | 5;
 
-const STEPS: readonly Step[] = [1, 2, 3];
+const STEPS: readonly Step[] = [1, 2, 3, 4, 5];
 
 /**
- * As três pílulas do alto: onde a pessoa está e para onde pode ir.
+ * As cinco pílulas do alto: onde a pessoa está e para onde pode ir.
  *
  * O fundinho da etapa atual é a mesma pílula do menu da landing
  * (`useSlidingPill`): uma peça só, que desliza entre as etapas e que dá para

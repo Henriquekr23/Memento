@@ -8,51 +8,48 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { FaqWidget } from '@/features/faq/FaqWidget';
 import { buildShareCard } from '@/features/share/shareCard';
 import { saveThankYouHandoff } from '@/features/thank-you/handoff';
-import { AlbumEditor } from '@/features/album-editor/AlbumEditor';
-import { IconChevronLeft, IconCloud, IconTrash } from '@/features/album-editor/icons';
+import { AlbumEditor, type BoardApi } from '@/features/album-editor/AlbumEditor';
 import { AlbumTopBar } from '@/features/album-flow/AlbumTopBar';
-import {
-  chronologicalSlot,
-  compactCells,
-  insertAt,
-  placeAt,
-  syncCells,
-  type Cells,
-} from '@/features/album-flow/cells';
-import { composeFromCells, pruneComposition } from '@/features/album-flow/compose';
+import { composeFromOrder, pruneComposition } from '@/features/album-flow/compose';
 import { FLOW_COPY } from '@/features/album-flow/copy';
-import {
-  DEFAULT_PER_PAGE,
-  planSignature,
-  type PerPage,
-} from '@/features/album-flow/paginate';
+import { moveNextTo, type Side } from '@/features/album-flow/order';
+import { DEFAULT_PER_PAGE } from '@/features/album-flow/paginate';
+import { PagesOverview } from '@/features/album-flow/PagesOverview';
+import { StepFinish } from '@/features/album-flow/StepFinish';
 import { StepNav, type Step } from '@/features/album-flow/StepNav';
 import { StepOrder } from '@/features/album-flow/StepOrder';
-import { StepStart } from '@/features/album-flow/StepStart';
+import { ContinueButton, StepStart } from '@/features/album-flow/StepStart';
+import { UndoToast } from '@/features/album-flow/UndoToast';
 import { useAlbumSave } from '@/features/album-save/useAlbumSave';
 import { InlineAuthDialog } from '@/features/auth/InlineAuthDialog';
 import { landingFontVars } from '@/features/landing/fonts';
-import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { useAlbum } from '@/features/album-builder/useAlbum';
 import { useAlbumSelection } from '@/features/album-builder/useAlbumSelection';
 import { useAlbumExport } from '@/features/album-export/useAlbumExport';
 import { useLang } from '@/features/i18n/LangProvider';
 import type { EditorAlbum } from '@/types/album-editor';
 
+/** As etapas que dependem da composição: páginas, capa e finalização. */
+type BuildStep = 3 | 4 | 5;
+
+/** A visão geral das páginas dentro do editor, na etapa 3. */
+const renderBoard = (api: BoardApi) => <PagesOverview api={api} />;
+
 /**
- * /album em três etapas: **1** nome e fotos, **2** confira a ordem, **3** monte
- * o álbum (o editor).
+ * /album em cinco etapas: **1** nome e fotos, **2** a ordem, **3** as páginas,
+ * **4** a capa e **5** finalize (ver o álbum pronto, baixar o PDF ou salvar na
+ * nuvem).
  *
- * As duas primeiras são desta página; a terceira é a bancada de sempre
- * (`AlbumEditor`), sem mudança por dentro. O acervo (`useAlbum`) é a lista
- * importada; `useAlbumSelection` diz quem foi tirado do álbum — a foto tirada
- * continua na linha do tempo, cinza, e pode voltar. O editor, o PDF e a nuvem
- * recebem só as incluídas, na ordem das páginas.
+ * O acervo (`useAlbum`) é a lista importada e a ordem; `useAlbumSelection` diz
+ * quem foi tirado do álbum — a foto tirada continua na etapa 2, apagada, e
+ * pode voltar. O editor, o PDF e a nuvem recebem só as incluídas.
  *
- * A ponte para o editor é `composeFromOrder`: a ordem e o "fotos por página"
- * da etapa 2 viram a composição de partida. Voltar do editor para as fotos e
- * seguir de novo **não** desmancha o que foi montado — só se a ordem ou as
- * fotos mudaram, e aí a página pergunta antes.
+ * A etapa 2 mexe na **ordem** (inserir). As etapas 3 e 4 são o mesmo editor
+ * (`AlbumEditor`), montado uma vez e recortado por `mode`: na 3 as páginas (a
+ * visão geral `PagesOverview` e a folha aberta, com o inspetor de páginas), na
+ * 4 a capa e o livro. A composição nasce da ordem (`composeFromOrder`) ao
+ * entrar na 3; voltar à ordem e seguir de novo **não** desmancha o que foi
+ * montado — só se a ordem ou as fotos mudaram, e aí a página pergunta antes.
  */
 export default function AlbumPage() {
   const router = useRouter();
@@ -64,31 +61,29 @@ export default function AlbumPage() {
   const cloud = useAlbumSave();
 
   const [step, setStep] = useState<Step>(1);
-  const [perPage, setPerPage] = useState<PerPage>(DEFAULT_PER_PAGE);
-  /**
-   * Os quadros da etapa 2 como a pessoa deixou. Pode estar desatualizado (uma
-   * foto saiu, outra chegou): `syncCells` acerta na leitura, e toda ação grava
-   * a partir da versão acertada.
-   */
-  const [storedCells, setStoredCells] = useState<Cells | null>(null);
+  /** O último X, para o "Desfazer". */
+  const [undoId, setUndoId] = useState<string | null>(null);
+  const clearUndo = useCallback(() => setUndoId(null), []);
 
   /**
    * A composição corrente, espelhada aqui.
    *
-   * O estado mora dentro do editor; esta cópia existe porque salvar na nuvem e
-   * exportar são ações da *página*, e porque o editor sai de cena quando a
-   * pessoa volta para as fotos — é daqui que ele renasce igual.
+   * O estado mora dentro do editor; esta cópia existe porque a finalização
+   * (ver, baixar, salvar) acontece com o editor fora de cena, e porque é daqui
+   * que ele renasce igual quando a pessoa volta.
    */
   const [composition, setComposition] = useState<EditorAlbum | null>(null);
   /** Com que álbum o editor abre na próxima vez que montar. */
   const [editorSeed, setEditorSeed] = useState<EditorAlbum | null>(null);
   const [editorKey, setEditorKey] = useState(0);
   /**
-   * O plano (ordem + fotos + layout) da última vez que a composição e a etapa 2
-   * concordaram. Diferente na volta para o editor = a pessoa mudou alguma coisa
-   * aqui, e refazer as páginas tem de ser pergunta, não surpresa.
+   * A ordem (quem está e em que sequência) da última vez que a composição e a
+   * etapa 2 concordaram. Diferente na volta = a pessoa mudou a ordem, e refazer
+   * as páginas tem de ser pergunta, não surpresa.
    */
   const [builtPlan, setBuiltPlan] = useState<string | null>(null);
+  /** Para onde ir depois de responder "Refazer as páginas?". */
+  const [rebuildTarget, setRebuildTarget] = useState<BuildStep>(3);
 
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [isRebuildOpen, setIsRebuildOpen] = useState(false);
@@ -96,56 +91,73 @@ export default function AlbumPage() {
 
   const included = selection.included;
   const includedIds = useMemo(() => included.map((photo) => photo.id), [included]);
-  const cells = useMemo(
-    () => syncCells(storedCells, includedIds, perPage),
-    [storedCells, includedIds, perPage],
+  const outside = useMemo(
+    () => album.photos.filter((photo) => selection.excluded.has(photo.id)),
+    [album.photos, selection.excluded],
   );
-  const photosById = useMemo(
-    () => new Map(album.photos.map((photo) => [photo.id, photo])),
-    [album.photos],
-  );
-  const plan = planSignature(cells, perPage);
+  const plan = includedIds.join(',');
   const hasPhotos = album.photos.length > 0;
   const canBuild = included.length > 0;
-  const isBuilding = step === 3 && editorSeed !== null;
+  const isEditorStep = step === 3 || step === 4;
+  const isBuilding = isEditorStep && editorSeed !== null;
 
   const { addFiles } = album;
   const handleFiles = useCallback((files: File[]) => void addFiles(files, 'album'), [addFiles]);
 
   /* ── navegação entre etapas ─────────────────────────────────────────── */
 
-  const enterEditor = useCallback((seed: EditorAlbum) => {
-    setEditorSeed(seed);
-    setEditorKey((key) => key + 1);
-    setStep(3);
+  /** Entra nas páginas, na capa ou na finalização com esta composição. */
+  const enter = useCallback((next: EditorAlbum, target: BuildStep) => {
+    setComposition(next);
+    if (target !== 5) {
+      setEditorSeed(next);
+      setEditorKey((key) => key + 1);
+    }
+    setStep(target);
   }, []);
 
-  const openEditor = useCallback(() => {
-    if (!canBuild) return;
-    if (!composition || builtPlan === null) {
-      enterEditor(composeFromCells(cells, perPage, album.name));
-      setBuiltPlan(plan);
-      return;
-    }
-    if (plan === builtPlan) {
-      enterEditor(pruneComposition(composition, new Set(includedIds)));
-      return;
-    }
-    setIsRebuildOpen(true);
-  }, [album.name, builtPlan, canBuild, cells, composition, enterEditor, includedIds, perPage, plan]);
+  const openBuild = useCallback(
+    (target: BuildStep) => {
+      if (!canBuild) return;
+      if (!composition || builtPlan === null) {
+        enter(composeFromOrder(includedIds, DEFAULT_PER_PAGE, album.name), target);
+        setBuiltPlan(plan);
+        return;
+      }
+      if (plan === builtPlan) {
+        enter(pruneComposition(composition, new Set(includedIds)), target);
+        return;
+      }
+      setRebuildTarget(target);
+      setIsRebuildOpen(true);
+    },
+    [album.name, builtPlan, canBuild, composition, enter, includedIds, plan],
+  );
 
   const goTo = useCallback(
     (next: Step) => {
-      if (next === 3) {
-        openEditor();
+      setUndoId(null);
+      // Saindo do editor (ou trocando páginas ⇄ capa): o que está montado lá
+      // corresponde à ordem de agora (fotos da bandeja do editor inclusive).
+      if (isEditorStep) setBuiltPlan(plan);
+      if (next === 1 || next === 2) {
+        setStep(next);
         return;
       }
-      // Saindo do editor: o que está montado lá corresponde ao plano de agora
-      // (fotos acrescentadas pela bandeja do editor inclusive).
-      if (step === 3) setBuiltPlan(plan);
-      setStep(next);
+      // Entre páginas, capa e finalização a composição já está em dia: o
+      // editor continua montado de 3 para 4, e renasce dela vindo da 5.
+      if (isEditorStep && (next === 3 || next === 4)) {
+        setStep(next);
+        return;
+      }
+      if ((isEditorStep || step === 5) && composition) {
+        if (next === 5) setStep(5);
+        else enter(composition, next);
+        return;
+      }
+      openBuild(next);
     },
-    [openEditor, plan, step],
+    [composition, enter, isEditorStep, openBuild, plan, step],
   );
 
   // Trocar de etapa leva ao topo: o conteúdo novo começa pelo título.
@@ -157,50 +169,44 @@ export default function AlbumPage() {
     window.scrollTo({ top: 0, behavior: reduce ? 'instant' : 'smooth' });
   }, [step]);
 
-  /* ── etapa 2: ordem e escolha ───────────────────────────────────────── */
+  /* ── etapa 2: a ordem ─────────────────────────────────────────────── */
 
   const { exclude, include } = selection;
+  const { reorderIncluded, sortByDate } = album;
 
-  const place = useCallback(
-    (id: string, cellIndex: number) => setStoredCells(placeAt(cells, id, cellIndex)),
-    [cells],
-  );
-
-  /** Trocar o layout reflui as fotos na ordem dos quadros, sem os buracos. */
-  const changePerPage = useCallback(
-    (next: PerPage) => {
-      if (next === perPage) return;
-      setStoredCells(compactCells(cells));
-      setPerPage(next);
+  const move = useCallback(
+    (id: string, targetId: string, side: Side) => {
+      const ids = album.photos.map((photo) => photo.id);
+      reorderIncluded(moveNextTo(ids, id, targetId, side));
     },
-    [cells, perPage],
+    [album.photos, reorderIncluded],
   );
 
-  /** Na linha do tempo: tirar deixa o quadro vazio; devolver entra no tempo. */
-  const toggle = useCallback(
+  const backToDateOrder = useCallback(() => {
+    sortByDate();
+  }, [sortByDate]);
+
+  /** O X da etapa 2: tira do álbum, com "Desfazer" (devolve no mesmo lugar). */
+  const remove = useCallback(
     (id: string) => {
-      if (!selection.excluded.has(id)) {
-        exclude(id);
-        return;
-      }
-      const photo = photosById.get(id);
-      if (!photo) return;
-      setStoredCells(insertAt(cells, chronologicalSlot(cells, photo, photosById), id));
-      include(id);
+      exclude(id);
+      setUndoId(id);
     },
-    [cells, exclude, include, photosById, selection.excluded],
+    [exclude],
   );
 
-  /** "Desfazer" do X: a foto volta para o quadro de onde saiu. */
-  const undoRemove = useCallback(
-    (id: string, cellIndex: number) => {
-      setStoredCells(insertAt(cells, cellIndex < 0 ? cells.length : cellIndex, id));
-      include(id);
-    },
-    [cells, include],
+  const toast = (
+    <UndoToast
+      token={undoId}
+      onUndo={() => {
+        if (undoId) include(undoId);
+        setUndoId(null);
+      }}
+      onDone={clearUndo}
+    />
   );
 
-  /* ── etapa 3: exportar ──────────────────────────────────────────────── */
+  /* ── etapa 5: baixar e salvar ───────────────────────────────────────── */
 
   /**
    * Baixar o álbum e, dando certo, ir para o agradecimento.
@@ -242,7 +248,7 @@ export default function AlbumPage() {
   const discard = () => {
     album.clear();
     selection.reset();
-    setStoredCells(null);
+    setUndoId(null);
     setComposition(null);
     setEditorSeed(null);
     setBuiltPlan(null);
@@ -267,12 +273,14 @@ export default function AlbumPage() {
 
   return (
     <div className={`lp-theme af-root ${landingFontVars}`} data-step={step}>
-      {/* O fundo de cada etapa: três camadas de cor sólida, e a troca é
-          opacidade — nunca `background-color` animado. */}
+      {/* O fundo de cada etapa: camadas de cor sólida, e a troca é opacidade —
+          nunca `background-color` animado. */}
       <div aria-hidden className="af-bg">
         <span data-tone="1" />
         <span data-tone="2" />
         <span data-tone="3" />
+        <span data-tone="4" />
+        <span data-tone="5" />
       </div>
 
       <div className="lp-remap af-chrome">
@@ -286,7 +294,7 @@ export default function AlbumPage() {
 
       {/* Entrar sem sair da página: navegar destruiria o álbum, que só existe
           na memória desta aba. Ver `InlineAuthDialog`. Serve ao "Entrar" do
-          topo e ao "Salvar na nuvem" do editor. */}
+          topo e ao "Salvar na nuvem" da finalização. */}
       <InlineAuthDialog
         open={cloud.needsAuth || isAuthOpen}
         onClose={() => {
@@ -318,12 +326,14 @@ export default function AlbumPage() {
         cancelLabel={t.rebuildKeep}
         onConfirm={() => {
           setIsRebuildOpen(false);
-          enterEditor(composeFromCells(cells, perPage, album.name, composition));
+          enter(composeFromOrder(includedIds, DEFAULT_PER_PAGE, album.name, composition), rebuildTarget);
           setBuiltPlan(plan);
         }}
         onCancel={() => {
           setIsRebuildOpen(false);
-          if (composition) enterEditor(pruneComposition(composition, new Set(includedIds)));
+          if (composition) {
+            enter(pruneComposition(composition, new Set(includedIds)), rebuildTarget);
+          }
           setBuiltPlan(plan);
         }}
       />
@@ -345,61 +355,58 @@ export default function AlbumPage() {
 
           {step === 2 && (
             <StepOrder
-              name={album.name}
-              photos={album.photos}
-              photosById={photosById}
-              cells={cells}
-              insideCount={included.length}
-              excluded={selection.excluded}
-              perPage={perPage}
-              onPerPage={changePerPage}
-              onToggle={toggle}
-              onPlace={place}
-              onRemove={exclude}
-              onUndoRemove={undoRemove}
+              photos={included}
+              outside={outside}
+              isManuallyOrdered={album.isManuallyOrdered}
+              onMove={move}
+              onRemove={remove}
+              onRestore={include}
+              onSortByDate={backToDateOrder}
               onFiles={handleFiles}
               onContinue={() => goTo(3)}
               onRestart={() => setIsClearConfirmOpen(true)}
               notes={notes}
+              toast={toast}
             />
           )}
 
           {step === 3 && (
             <section className="af-section af-section-build">
-              <h1 className="lp-h af-title">{t.buildTitle}</h1>
-              <div className="af-build-notes">
-                {isExporting && progress && (
-                  <p className="af-note" role="status">
-                    {t.exporting(progress.processed, progress.total)}
-                  </p>
-                )}
-                {cloud.progress && (
-                  <p className="af-note" role="status">
-                    {t.cloudProgress(cloud.progress.processed, cloud.progress.total)}
-                  </p>
-                )}
-                {error && (
-                  <p className="af-note is-error" role="alert">
-                    {error}
-                  </p>
-                )}
-                {cloud.error && (
-                  <p className="af-note is-error" role="alert">
-                    {cloud.error}
-                  </p>
-                )}
-              </div>
+              <h1 className="lp-h af-title">{t.pagesTitle}</h1>
             </section>
+          )}
+
+          {step === 4 && (
+            <section className="af-section af-section-build">
+              <h1 className="lp-h af-title">{t.coverTitle}</h1>
+            </section>
+          )}
+
+          {step === 5 && composition && (
+            <StepFinish
+              name={album.name}
+              photos={included}
+              album={composition}
+              isExporting={isExporting}
+              exportProgress={progress}
+              exportError={error}
+              cloud={cloud}
+              onDownload={() => void handleExport(composition)}
+              onSave={() =>
+                cloud.save({ title: album.name, photos: included, album: composition })
+              }
+              onBack={() => goTo(4)}
+            />
           )}
         </div>
 
         {isBuilding && editorSeed && (
-          // A bancada fica fora da `.lp-remap`: o editor continua lendo os
-          // tokens do Organic, como antes. Só as cores dos botões principais
-          // mudam (`.af-editor .ae-btn…`). Régua larga (`is-wide`): uma bancada
-          // de 1054 px no meio de 1440 empurrava o inspetor para fora.
-          <div className="page-shell is-wide af-editor">
-            <div className="h-[calc(100dvh-140px)] min-h-[560px] overflow-hidden rounded-[16px] border border-[var(--color-divider)]">
+          // A bancada fica dentro de uma `.lp-remap` própria: lê o Organic
+          // relido com a paleta da página, como o resto da /album. Régua larga
+          // (`is-wide`): uma bancada de 1054 px no meio de 1440 empurrava o
+          // inspetor para fora.
+          <div className="page-shell is-wide af-editor lp-remap">
+            <div className="af-workbench">
               <AlbumEditor
                 key={editorKey}
                 photos={included}
@@ -408,51 +415,16 @@ export default function AlbumPage() {
                 onUpload={(files) => album.addFiles(files, 'tray')}
                 initialAlbum={editorSeed}
                 onChange={setComposition}
-                onExport={handleExport}
-                actions={
-                  <>
-                    <button
-                      type="button"
-                      className="ae-btn af-ae-ghost"
-                      aria-label={t.backToPhotosAria}
-                      title={t.backToPhotosAria}
-                      onClick={() => goTo(2)}
-                    >
-                      <IconChevronLeft size={13} />
-                      <span className="ae-btn-text">{t.backToPhotos}</span>
-                    </button>
-                    {isSupabaseConfigured && composition && (
-                      <button
-                        type="button"
-                        className="ae-btn af-ae-ghost"
-                        aria-label={t.saveCloud}
-                        title={t.saveCloud}
-                        disabled={cloud.isSaving}
-                        onClick={() =>
-                          cloud.save({
-                            title: album.name,
-                            photos: included,
-                            album: composition,
-                          })
-                        }
-                      >
-                        <IconCloud size={13} />
-                        <span className="ae-btn-text">{cloud.isSaving ? t.saving : t.saveCloud}</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="ae-btn"
-                      aria-label={t.discard}
-                      title={t.discard}
-                      onClick={() => setIsClearConfirmOpen(true)}
-                    >
-                      <IconTrash size={13} />
-                      <span className="ae-btn-text">{t.discard}</span>
-                    </button>
-                  </>
-                }
+                mode={step === 3 ? 'pages' : 'cover'}
+                renderBoard={renderBoard}
               />
+            </div>
+            <div className="af-build-foot">
+              {step === 3 ? (
+                <ContinueButton disabled={!composition} onClick={() => goTo(4)} label={t.continue} />
+              ) : (
+                <ContinueButton disabled={!composition} onClick={() => goTo(5)} label={t.finish} />
+              )}
             </div>
           </div>
         )}
@@ -466,8 +438,7 @@ export default function AlbumPage() {
 
       {/* A bolha de ajuda é fixa no canto inferior direito — exatamente onde
           fica o inspetor com o editor aberto. Some enquanto a bancada está em
-          uso; nas etapas 1 e 2 ela continua ali (no celular, na etapa 2, a
-          barra do "Continuar" ocupa o pé da tela e ela sai, ver CSS). */}
+          uso; no celular, nas etapas com a barra do "Continuar", também. */}
       {!isBuilding && (
         <div className="af-faq lp-remap">
           <FaqWidget />

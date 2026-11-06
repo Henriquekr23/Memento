@@ -56,8 +56,7 @@ function CloseIcon() {
  * demais para o que ele é — mas Esc fecha, clique fora fecha, e o foco volta
  * para o botão, que é o que se espera de qualquer coisa que abre e fecha.
  *
- * O botão é uma pílula escura com "?" e "Dúvidas" (no celular, só o círculo);
- * o painel abre ancorado nele, com cabeçalho, perguntas em acordeão e um link
+ * O botão é um círculo discreto com "?"; o painel abre ancorado nele, com cabeçalho, perguntas em acordeão e um link
  * para a página Sobre. No celular o painel ocupa a largura da tela, com altura
  * máxima e rolagem interna: largura fixa estouraria a tela.
  */
@@ -178,9 +177,6 @@ export function FaqWidget() {
         >
           <span aria-hidden className="faq-fab-icon">
             {isOpen ? <CloseIcon /> : <QuestionIcon />}
-          </span>
-          <span aria-hidden className="faq-fab-label">
-            {t.fabLabel}
           </span>
         </button>
       </Tooltip>

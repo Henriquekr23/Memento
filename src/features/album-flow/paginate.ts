@@ -1,10 +1,6 @@
 /**
- * As páginas da etapa "Confira a ordem", antes do editor existir.
- *
- * Módulo puro (sem React): quantas páginas, que layout, e em aberturas. Os
- * quadros em si moram em `cells.ts`; a prévia da etapa 2 e a composição
- * inicial do editor (`compose.ts`) leem os mesmos quadros — é o que garante que
- * o editor abre com as mesmas páginas que a pessoa acabou de conferir.
+ * As contas de página da /album — módulo puro, sem React: o layout de partida
+ * de cada contagem, o piso de páginas e as aberturas.
  */
 
 import type { EditorLayoutId } from '@/types/album-editor';
@@ -13,7 +9,7 @@ export type PerPage = 1 | 2 | 3 | 4;
 
 export const PER_PAGE_OPTIONS: readonly PerPage[] = [1, 2, 3, 4];
 
-/** O ponto de partida: duas por página, como no protótipo aprovado. */
+/** O ponto de partida das páginas: duas fotos por página. */
 export const DEFAULT_PER_PAGE: PerPage = 2;
 
 /**
@@ -33,8 +29,7 @@ export const MIN_PAGES = 4;
 /** Páginas que o álbum precisa: sempre par, nunca menos que o piso. */
 export function pageCountFor(photoCount: number, perPage: PerPage): number {
   const needed = Math.ceil(photoCount / perPage);
-  const even = needed + (needed % 2);
-  return Math.max(MIN_PAGES, even);
+  return Math.max(MIN_PAGES, needed + (needed % 2));
 }
 
 /** Páginas em aberturas (pares esquerda/direita), como a folha é impressa. */
@@ -42,12 +37,4 @@ export function toSpreads<T>(pages: readonly T[]): [T, T][] {
   const out: [T, T][] = [];
   for (let i = 0; i < pages.length; i += 2) out.push([pages[i], pages[i + 1]]);
   return out;
-}
-
-/**
- * A assinatura do plano: muda se mudar a ordem, quem está dentro, um quadro
- * vazio de lugar ou o layout.
- */
-export function planSignature(cells: readonly (string | null)[], perPage: PerPage): string {
-  return `${perPage}|${cells.map((id) => id ?? '').join(',')}`;
 }

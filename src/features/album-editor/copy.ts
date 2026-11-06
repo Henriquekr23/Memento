@@ -13,6 +13,8 @@ export interface EditorCopy {
   tabPages: string;
   tabBook: string;
   tabGrid: string;
+  /** A visão geral das páginas (na `/album`). */
+  tabBoard: string;
   views: string;
   guides: string;
   guidesTip: string;
@@ -224,6 +226,7 @@ const PT: EditorCopy = {
   tabPages: 'Páginas',
   tabBook: 'Livro',
   tabGrid: 'Grade',
+  tabBoard: 'Visão geral',
   views: 'Vista',
   guides: 'Guias',
   guidesTip: 'Sangria, corte, área segura e vinco',
@@ -424,6 +427,7 @@ const EN: EditorCopy = {
   tabPages: 'Pages',
   tabBook: 'Book',
   tabGrid: 'Grid',
+  tabBoard: 'Overview',
   views: 'View',
   guides: 'Guides',
   guidesTip: 'Bleed, trim, safe area and hinge',
