@@ -21,8 +21,19 @@ import { useSessionUser } from './useSessionUser';
  *
  * Enquanto a sessão é lida do cookie, o espaço fica reservado com a largura
  * final: sem isso a barra dá um salto quando o nome aparece.
+ *
+ * `compact` é a barra da landing: deslogado, só "Entrar" em texto — o botão
+ * em destaque ali já é "Montar meu álbum", e dois botões cheios lado a lado
+ * dividiriam a atenção. Logado, é o mesmo menu de sempre.
  */
-export function AccountMenu() {
+export function AccountMenu({
+  compact = false,
+  compactClassName = 'nav-link text-[15px] font-medium',
+}: {
+  compact?: boolean;
+  /** Classe do "Entrar" no modo compacto (a landing usa a do botão de idioma). */
+  compactClassName?: string;
+} = {}) {
   const { user, isLoading } = useSessionUser();
   const { lang } = useLang();
   const t = COMMON[lang];
@@ -57,6 +68,13 @@ export function AccountMenu() {
   if (!user) {
     // `next` traz a pessoa de volta para onde ela estava depois de entrar.
     const next = encodeURIComponent(pathname || '/');
+    if (compact) {
+      return (
+        <Link href={`/entrar?next=${next}`} className={compactClassName}>
+          {t.navSignIn}
+        </Link>
+      );
+    }
     return (
       <div className="flex items-center gap-3">
         {/* No celular os dois não cabem ao lado da marca e do resto da barra —

@@ -1,7 +1,5 @@
 'use client';
 
-import { paperById } from '@/features/album-print/spec';
-import { formatMm } from '@/lib/format';
 import {
   EDITOR_LAYOUTS,
   layoutById,
@@ -14,7 +12,6 @@ import {
   type TextBackdrop,
   type TextBlockPreset,
 } from '@/types/album-editor';
-import type { Photo } from '@/types/photo';
 
 import type { EditorCopy } from './copy';
 import type { EditorAlbumState } from './useEditorAlbum';
@@ -23,12 +20,10 @@ import {
   IconAlignCenter,
   IconAlignLeft,
   IconAlignRight,
-  IconImage,
   IconTrash,
   IconX,
 } from './icons';
 import { LayoutIcon } from './LayoutIcon';
-import { PHOTO_DND_TYPE } from './PageContent';
 import { COVER_FONTS, fontById } from './palette';
 
 const LAYOUT_LABEL: Record<EditorLayoutId, keyof EditorCopy> = {
@@ -57,7 +52,6 @@ function inkChoice(color: string | null): InkChoice {
 interface PagesInspectorProps {
   state: EditorAlbumState;
   copy: EditorCopy;
-  photos: Photo[];
   leftIndex: number;
   rightIndex: number;
   activeSide: 'left' | 'right';
@@ -66,11 +60,10 @@ interface PagesInspectorProps {
   onSelectSlot: (slot: number) => void;
   selectedTextId: string | null;
   onSelectText: (id: string | null) => void;
-  onUpload: (files: File[]) => void;
 }
 
 /**
- * Controles da folha aberta, dos quadros, dos textos e da bandeja de fotos.
+ * Controles da folha aberta, dos quadros e dos textos.
  *
  * A ordem é a da decisão: primeiro *qual página* estou editando, depois *como
  * ela é dividida*, depois *o que entra em cada quadro*, e por fim *o que está
@@ -81,7 +74,6 @@ interface PagesInspectorProps {
 export function PagesInspector({
   state,
   copy,
-  photos,
   leftIndex,
   rightIndex,
   activeSide,
@@ -90,7 +82,6 @@ export function PagesInspector({
   onSelectSlot,
   selectedTextId,
   onSelectText,
-  onUpload,
 }: PagesInspectorProps) {
   const {
     album,
@@ -99,9 +90,6 @@ export function PagesInspector({
     addTextBlock,
     updateTextBlock,
     removeTextBlock,
-    removeSheet,
-    usedPhotoIds,
-    minPages,
   } = state;
 
   const leftPage = album.pages[leftIndex];
@@ -121,12 +109,6 @@ export function PagesInspector({
   const textPage = framePage;
   const blocks = album.pages[textPage].textBlocks;
   const text = blocks.find((block) => block.id === selectedTextId) ?? null;
-
-  const paper = paperById(album.paper);
-
-  /** Onde a foto clicada na bandeja cai. */
-  const place = (photoId: string) =>
-    updateFrame(framePage, frameSlot, { photoId, ...resetFraming(frame.fit) });
 
   const addText = (preset: TextBlockPreset) => {
     const block = makePresetTextBlock(preset);
@@ -153,22 +135,29 @@ export function PagesInspector({
             />
           </Row>
         )}
-        <Row label={copy.sheetSpread} hint={copy.sheetSpreadHint} stack>
-          <Seg<boolean>
-            full
-            label={copy.sheetSpread}
-            value={leftPage.spread}
-            onChange={(spread) => updatePage(leftIndex, { spread })}
-            options={[
-              { value: false, label: copy.no },
-              { value: true, label: copy.yes },
-            ]}
-          />
-        </Row>
+        {/* O espelhado saiu das opções. A chave só aparece em álbum que já o
+            usa (salvo antes), para dar um jeito de desfazer. */}
+        {leftPage.spread && (
+          <Row label={copy.sheetSpread} stack>
+            <Seg<boolean>
+              full
+              label={copy.sheetSpread}
+              value={leftPage.spread}
+              onChange={(spread) => updatePage(leftIndex, { spread })}
+              options={[
+                { value: false, label: copy.no },
+                { value: true, label: copy.yes },
+              ]}
+            />
+          </Row>
+        )}
       </Group>
 
       {!leftPage.spread && (
-        <Group title={copy.pageLabel(activeIndex + 1)}>
+        <Group
+          title={copy.pageLabel(activeIndex + 1)}
+          help={copy.layoutNote(copy[LAYOUT_LABEL[activePage.layout]] as string)}
+        >
           <div className="ae-layouts">
             {EDITOR_LAYOUTS.map((layout) => (
               <button
@@ -187,16 +176,13 @@ export function PagesInspector({
               </button>
             ))}
           </div>
-          <p className="ae-note">
-            {copy.layoutNote(copy[LAYOUT_LABEL[activePage.layout]] as string)}
-          </p>
 
           {/* Preenchimento e respiro só existem onde há quadro para preencher —
               e não em "página inteira" nem em "com margem", que já são as duas
               respostas para uma foto só. */}
           {capacity > 1 && (
             <>
-              <Row label={copy.pageFill} hint={copy.pageFillHint} stack>
+              <Row label={copy.pageFill} help={copy.pageFillHelp} stack>
                 <Seg<boolean>
                   full
                   label={copy.pageFill}
@@ -208,7 +194,7 @@ export function PagesInspector({
                   ]}
                 />
               </Row>
-              <Row label={copy.pageGap} hint={copy.pageGapHint} stack>
+              <Row label={copy.pageGap} stack>
                 <Slider
                   value={activePage.gap}
                   min={0}
@@ -270,7 +256,7 @@ export function PagesInspector({
             </Row>
           )}
 
-          <Row label={copy.fieldFit} stack>
+          <Row label={copy.fieldFit} help={copy.fitNote} stack>
             <Seg<FrameFit>
               full
               label={copy.fieldFit}
@@ -293,7 +279,6 @@ export function PagesInspector({
               onChange={(zoom) => updateFrame(framePage, frameSlot, { zoom })}
             />
           </Row>
-          <p className="ae-note">{copy.fitNote}</p>
           {frame.photoId && (
             <>
               <button
@@ -319,6 +304,7 @@ export function PagesInspector({
 
       <Group
         title={copy.pageTextGroup}
+        help={copy.pageTextNote}
         right={
           <span style={{ display: 'flex', gap: 4 }}>
             <button type="button" className="ae-chip" onClick={() => addText('caption')}>
@@ -353,8 +339,6 @@ export function PagesInspector({
             ))}
           </div>
         )}
-
-        {!text && <p className="ae-note">{copy.pageTextNote}</p>}
 
         {text && (
           <>
@@ -399,7 +383,7 @@ export function PagesInspector({
               />
             </Row>
 
-            <Row label={copy.fieldWidth} hint={copy.fieldWidthHint}>
+            <Row label={copy.fieldWidth} hint="%">
               <Slider
                 value={text.width}
                 min={10}
@@ -495,8 +479,6 @@ export function PagesInspector({
               />
             </Row>
 
-            <p className="ae-note">{copy.pageTextNote}</p>
-
             <button
               type="button"
               className="ae-danger"
@@ -509,67 +491,6 @@ export function PagesInspector({
             </button>
           </>
         )}
-      </Group>
-
-      <Group
-        title={copy.trayGroup}
-        right={
-          <label className="ae-chip is-file">
-            <IconImage size={12} /> {copy.trayUpload}
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              hidden
-              onChange={(event) => {
-                onUpload(Array.from(event.target.files ?? []));
-                event.target.value = '';
-              }}
-            />
-          </label>
-        }
-      >
-        {photos.length === 0 ? (
-          <p className="ae-note">{copy.trayEmpty}</p>
-        ) : (
-          <>
-            <div className="ae-tray">
-              {photos.map((photo) => {
-                const used = usedPhotoIds.has(photo.id);
-                return (
-                  <button
-                    key={photo.id}
-                    type="button"
-                    className={used ? 'is-on' : ''}
-                    title={used ? `${photo.fileName} — ${copy.trayUsed}` : photo.fileName}
-                    onClick={() => place(photo.id)}
-                    draggable
-                    onDragStart={(event) =>
-                      event.dataTransfer.setData(PHOTO_DND_TYPE, photo.id)
-                    }
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photo.previewUrl} alt={photo.fileName} draggable={false} />
-                    {used && <span className="ae-tray-dot" aria-hidden />}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="ae-note">{copy.trayNote}</p>
-          </>
-        )}
-      </Group>
-
-      <Group title={copy.innerGroup}>
-        <button
-          type="button"
-          className="ae-danger"
-          disabled={album.pages.length <= minPages}
-          onClick={() => removeSheet(leftIndex)}
-        >
-          <IconTrash size={12} /> {copy.removeSheet}
-        </button>
-        <p className="ae-note">{copy.innerNote(formatMm(paper.mm, 2))}</p>
       </Group>
     </>
   );

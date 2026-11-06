@@ -131,7 +131,6 @@ export function AlbumEditWorkbench({
           photos={album.photos}
           name={album.name}
           onName={album.setName}
-          onUpload={(files) => album.addFiles(files, 'tray')}
           initialAlbum={composition.album}
           // Qualquer mexida apaga o "Guardado": o rótulo fala do que está no
           // banco, e a partir do primeiro arraste ele deixou de ser verdade.

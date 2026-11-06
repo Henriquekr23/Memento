@@ -13,6 +13,8 @@ export interface EditorCopy {
   tabPages: string;
   tabBook: string;
   tabGrid: string;
+  /** A visão geral das páginas (na `/album`). */
+  tabBoard: string;
   views: string;
   guides: string;
   guidesTip: string;
@@ -56,7 +58,6 @@ export interface EditorCopy {
   fieldTracking: string;
   fieldLeading: string;
   fieldWidth: string;
-  fieldWidthHint: string;
   fieldRotation: string;
   fieldAlign: string;
   alignLeft: string;
@@ -66,7 +67,6 @@ export interface EditorCopy {
   caseUpper: string;
   caseOriginal: string;
   fieldPosition: string;
-  fieldPositionHint: string;
   titleNote: string;
   freeTextNote: (x: number, y: number) => string;
   untitled: string;
@@ -87,7 +87,6 @@ export interface EditorCopy {
   spineAuto: string;
   spineManual: string;
   spineThickness: string;
-  spineThicknessHint: string;
   spineComputed: (mm: string, pages: number, paper: string, min: number) => string;
   spineDirection: string;
   spineAscending: string;
@@ -108,7 +107,6 @@ export interface EditorCopy {
   sheetGroup: string;
   sheetRange: (a: number, b: number) => string;
   sheetSpread: string;
-  sheetSpreadHint: string;
   yes: string;
   no: string;
   sheetEditing: string;
@@ -130,11 +128,10 @@ export interface EditorCopy {
   fieldZoom: string;
   clearFrame: string;
   pageFill: string;
-  pageFillHint: string;
+  pageFillHelp: string;
   fillBleed: string;
   fillMargin: string;
   pageGap: string;
-  pageGapHint: string;
   fieldFit: string;
   fitCover: string;
   fitContain: string;
@@ -159,7 +156,6 @@ export interface EditorCopy {
   depthBehind: string;
   removeText: string;
   pageNumbers: string;
-  pageNumbersHint: string;
   trayGroup: string;
   trayUpload: string;
   trayUsed: string;
@@ -224,6 +220,7 @@ const PT: EditorCopy = {
   tabPages: 'Páginas',
   tabBook: 'Livro',
   tabGrid: 'Grade',
+  tabBoard: 'Visão geral',
   views: 'Vista',
   guides: 'Guias',
   guidesTip: 'Sangria, corte, área segura e vinco',
@@ -266,7 +263,6 @@ const PT: EditorCopy = {
   fieldTracking: 'Entreletra',
   fieldLeading: 'Entrelinha',
   fieldWidth: 'Largura',
-  fieldWidthHint: 'da caixa',
   fieldRotation: 'Rotação',
   fieldAlign: 'Alinhar',
   alignLeft: 'Esquerda',
@@ -276,7 +272,6 @@ const PT: EditorCopy = {
   caseUpper: 'MAIÚSCULAS',
   caseOriginal: 'Original',
   fieldPosition: 'Posição',
-  fieldPositionHint: 'atalhos',
   titleNote:
     'Este é o título do álbum — o que você escrever aqui aparece também na lombada.',
   freeTextNote: (x, y) => `X ${x}% · Y ${y}% — arraste na capa ou use as setas.`,
@@ -296,7 +291,6 @@ const PT: EditorCopy = {
   spineAuto: 'Calcular',
   spineManual: 'Informar',
   spineThickness: 'Espessura',
-  spineThicknessHint: 'da gráfica',
   spineComputed: (mm, pages, paper, min) =>
     `${mm} mm — ${pages} páginas em ${paper}, mais 0,6 mm de capa. Mínimo do gabarito: ${min} mm.`,
   spineDirection: 'Direção',
@@ -317,7 +311,6 @@ const PT: EditorCopy = {
   sheetGroup: 'Folha',
   sheetRange: (a, b) => `páginas ${a}–${b}`,
   sheetSpread: 'Espelhado',
-  sheetSpreadHint: 'a foto atravessa a folha',
   yes: 'Sim',
   no: 'Não',
   sheetEditing: 'Editando',
@@ -340,11 +333,11 @@ const PT: EditorCopy = {
   fieldZoom: 'Zoom',
   clearFrame: 'Tirar foto do quadro',
   pageFill: 'Preenchimento',
-  pageFillHint: 'da página',
+  pageFillHelp:
+    'Até a borda: as fotos vão até o limite do papel. Com margem: sobra uma moldura de papel em volta.',
   fillBleed: 'Até a borda',
   fillMargin: 'Com margem',
   pageGap: 'Respiro',
-  pageGapHint: 'entre quadros',
   fieldFit: 'Encaixe',
   fitCover: 'Preencher',
   fitContain: 'Foto inteira',
@@ -371,7 +364,6 @@ const PT: EditorCopy = {
   depthBehind: 'Atrás',
   removeText: 'Remover texto',
   pageNumbers: 'Número da página',
-  pageNumbersHint: 'no pé, lado externo',
   trayGroup: 'Bandeja',
   trayUpload: 'Enviar',
   trayUsed: 'já está numa página',
@@ -424,6 +416,7 @@ const EN: EditorCopy = {
   tabPages: 'Pages',
   tabBook: 'Book',
   tabGrid: 'Grid',
+  tabBoard: 'Overview',
   views: 'View',
   guides: 'Guides',
   guidesTip: 'Bleed, trim, safe area and hinge',
@@ -466,7 +459,6 @@ const EN: EditorCopy = {
   fieldTracking: 'Tracking',
   fieldLeading: 'Leading',
   fieldWidth: 'Width',
-  fieldWidthHint: 'of the box',
   fieldRotation: 'Rotation',
   fieldAlign: 'Align',
   alignLeft: 'Left',
@@ -476,7 +468,6 @@ const EN: EditorCopy = {
   caseUpper: 'UPPERCASE',
   caseOriginal: 'Original',
   fieldPosition: 'Position',
-  fieldPositionHint: 'shortcuts',
   titleNote:
     'This is the album title — whatever you write here also shows on the spine.',
   freeTextNote: (x, y) => `X ${x}% · Y ${y}% — drag on the cover or use the arrows.`,
@@ -496,7 +487,6 @@ const EN: EditorCopy = {
   spineAuto: 'Calculate',
   spineManual: 'Enter',
   spineThickness: 'Thickness',
-  spineThicknessHint: 'from the printer',
   spineComputed: (mm, pages, paper, min) =>
     `${mm} mm — ${pages} pages on ${paper}, plus 0.6 mm of cover. Template minimum: ${min} mm.`,
   spineDirection: 'Direction',
@@ -517,7 +507,6 @@ const EN: EditorCopy = {
   sheetGroup: 'Sheet',
   sheetRange: (a, b) => `pages ${a}–${b}`,
   sheetSpread: 'Spread',
-  sheetSpreadHint: 'the photo crosses the sheet',
   yes: 'Yes',
   no: 'No',
   sheetEditing: 'Editing',
@@ -540,11 +529,11 @@ const EN: EditorCopy = {
   fieldZoom: 'Zoom',
   clearFrame: 'Remove photo from frame',
   pageFill: 'Fill',
-  pageFillHint: 'of the page',
+  pageFillHelp:
+    'To the edge: photos run to the edge of the paper. With margin: a frame of paper is left around them.',
   fillBleed: 'To the edge',
   fillMargin: 'With margin',
   pageGap: 'Gap',
-  pageGapHint: 'between frames',
   fieldFit: 'Fit',
   fitCover: 'Fill frame',
   fitContain: 'Whole photo',
@@ -571,7 +560,6 @@ const EN: EditorCopy = {
   depthBehind: 'Behind',
   removeText: 'Remove text',
   pageNumbers: 'Page number',
-  pageNumbersHint: 'at the foot, outer side',
   trayGroup: 'Tray',
   trayUpload: 'Upload',
   trayUsed: 'already on a page',

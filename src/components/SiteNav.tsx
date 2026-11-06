@@ -22,32 +22,24 @@ import { Wordmark } from './Logo';
  * (as laterais são `1fr` iguais), então os links não andam quando a conta
  * aparece ou o rótulo do idioma muda de largura.
  *
- * `variant` decide o que são os links do meio: na landing são âncoras das
- * seções da própria página; fora dela, âncoras não existem — o link vira
- * "Início".
+ * A landing não usa esta barra: ela tem a própria (`features/landing/nav/
+ * LandingNav`), com a marca que desliza do centro e as âncoras das seções. Por
+ * isso `variant` só tem um valor hoje — fica como parâmetro para as telas que
+ * já o passam.
  *
- * A barra não repete o botão de montar o álbum: ele já vive grande no herói e
- * de novo no fim da landing, e aqui em cima só disputava espaço com os
- * controles.
+ * A barra não repete o botão de montar o álbum: aqui em cima ele só
+ * disputava espaço com os controles.
  */
 export function SiteNav({
-  variant = 'landing',
   tagline,
 }: {
-  variant?: 'landing' | 'inner';
+  variant?: 'inner';
   tagline?: string;
 }) {
   const { lang } = useLang();
   const t = COMMON[lang];
 
-  const isLanding = variant === 'landing';
-  const links = isLanding
-    ? [
-        { href: '#antes-depois', label: t.navBeforeAfter },
-        { href: '#como-funciona', label: t.navHow },
-        { href: '#recursos', label: t.navFeatures },
-      ]
-    : [{ href: '/', label: t.navHome }];
+  const links = [{ href: '/', label: t.navHome }];
 
   return (
     <nav className="site-nav">
@@ -55,10 +47,8 @@ export function SiteNav({
         <Wordmark tagline={tagline} />
       </Tooltip>
 
-      {/* Os links, na ordem em que as seções aparecem na página. As âncoras
-          somem no celular (não cabem entre a marca e os controles, e a rolagem
-          já entrega as seções na ordem); "Sobre" fica sempre, porque é outra
-          página — antes ela era repetida em dois blocos para isso. */}
+      {/* "Início" some no celular (a marca já leva para lá e não sobra
+          espaço entre ela e os controles); "Sobre" fica sempre. */}
       <div className="site-nav-links">
         {links.map((link) => (
           <a key={link.href} href={link.href} className="nav-link hidden md:inline-block">

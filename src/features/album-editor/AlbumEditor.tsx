@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useLang } from '@/features/i18n/LangProvider';
-import { SPEC, fileSize, PAPERS } from '@/features/album-print/spec';
+import { SPEC } from '@/features/album-print/spec';
 import { formatMm } from '@/lib/format';
 import type {
   CoverElement,
@@ -12,14 +12,13 @@ import type {
   PhotoFrame,
 } from '@/types/album-editor';
 import { resetFraming } from '@/types/album-editor';
-import type { PaperId } from '@/features/album-print/spec';
 import type { Photo } from '@/types/photo';
 
 import { Book3D } from './Book3D';
 import { CoverInspector } from './CoverInspector';
 import { CoverWrap, type SnapState } from './CoverWrap';
 import { EDITOR_COPY } from './copy';
-import { Group, Row, Seg, useTrackDrag } from './controls';
+import { useTrackDrag } from './controls';
 import {
   IconBook,
   IconChevronLeft,
@@ -43,10 +42,49 @@ import { accentFor, colorById } from './palette';
 import { clamp } from './useDrag';
 import { useEditorAlbum } from './useEditorAlbum';
 
-type View = 'cover' | 'pages' | 'book' | 'grid';
+type View = 'cover' | 'pages' | 'book' | 'grid' | 'board';
 
 /** A ordem do trilho das abas — é ela que o arraste percorre. */
 const TAB_IDS: View[] = ['cover', 'pages', 'book', 'grid'];
+
+/**
+ * As abas de cada recorte do editor. A `/album` divide a bancada em duas
+ * etapas: as páginas (a visão geral de quem chama, quando existe, e a folha
+ * aberta) e a capa (capa e livro). A mesma instância atravessa as duas — é a
+ * mesma composição, só muda o que está à mão.
+ */
+export type EditorMode = 'full' | 'pages' | 'cover';
+
+function tabsFor(mode: EditorMode, hasBoard: boolean): View[] {
+  if (mode === 'pages') return hasBoard ? ['board', 'pages'] : ['pages'];
+  if (mode === 'cover') return ['cover', 'book'];
+  return TAB_IDS;
+}
+
+/** O que a visão geral de quem chama (`renderBoard`) pode fazer na composição. */
+export interface BoardApi {
+  album: EditorAlbum;
+  resolve: PhotoResolver;
+  /** Página escolhida: é ela que o inspetor ao lado edita. */
+  activePage: number;
+  onSelectPage: (pageIndex: number) => void;
+  /** Abre a folha da página para o ajuste fino (enquadramento, zoom, texto). */
+  onOpenPage: (pageIndex: number) => void;
+  /** Troca o conteúdo de dois quadros (um deles pode estar vazio). */
+  onSwapFrames: (from: FrameRef, to: FrameRef) => void;
+  /** Põe uma foto da bandeja num quadro. */
+  onPlacePhoto: (to: FrameRef, photoId: string) => void;
+  /** Tira a foto do quadro; ela volta para a bandeja. */
+  onClearFrame: (frame: FrameRef) => void;
+  onAddSheet: () => void;
+  onRemoveSheet: (pageIndex: number) => void;
+  canRemoveSheet: boolean;
+}
+
+export interface FrameRef {
+  page: number;
+  slot: number;
+}
 
 export interface AlbumEditorProps {
   /** Acervo: fotos já importadas, com EXIF lido e em ordem cronológica. */
@@ -54,13 +92,19 @@ export interface AlbumEditorProps {
   /** Nome do álbum, controlado por fora (é ele que vai para a nuvem). */
   name: string;
   onName: (name: string) => void;
-  onUpload: (files: File[]) => void;
   /** Composição carregada do banco, quando existe. */
   initialAlbum?: EditorAlbum;
   onChange?: (album: EditorAlbum) => void;
   onExport?: (album: EditorAlbum) => void;
   /** Ações do produto (salvar na nuvem, compartilhar) montadas pela página. */
   actions?: React.ReactNode;
+  /**
+   * Recorte da bancada (ver `EditorMode`). Fora do `full`, também saem as
+   * guias de impressão e a ficha técnica do topo.
+   */
+  mode?: EditorMode;
+  /** A visão geral das páginas, desenhada por quem chama (modo `pages`). */
+  renderBoard?: (api: BoardApi) => React.ReactNode;
 }
 
 /**
@@ -77,19 +121,20 @@ export function AlbumEditor({
   photos,
   name,
   onName,
-  onUpload,
   initialAlbum,
   onChange,
   onExport,
   actions,
+  mode = 'full',
+  renderBoard,
 }: AlbumEditorProps) {
+  const simple = mode !== 'full';
   const { lang } = useLang();
   const copy = EDITOR_COPY[lang];
 
   const state = useEditorAlbum(initialAlbum);
   const {
     album,
-    patch,
     spine,
     sheets,
     updateFrame,
@@ -99,7 +144,11 @@ export function AlbumEditor({
     fillChronologically,
   } = state;
 
-  const [view, setView] = useState<View>('pages');
+  const tabIds = useMemo(() => tabsFor(mode, !!renderBoard), [mode, renderBoard]);
+  const [rawView, setView] = useState<View>(tabIds[0]);
+  /* Trocar de recorte (páginas ⇄ capa) leva para a primeira aba dele, sem
+     efeito: a aba guardada só vale se existir no recorte atual. */
+  const view: View = tabIds.includes(rawView) ? rawView : tabIds[0];
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [snap, setSnap] = useState<SnapState>({ x: false, y: false });
   const [guides, setGuides] = useState(false);
@@ -264,6 +313,35 @@ export function AlbumEditor({
     updateFrame(pageIndex, slot, { photoId, ...resetFraming(fit) });
   };
 
+  /* ── a visão geral de quem chama ──────────────────────────────────────── */
+  const activePage = activeSide === 'left' ? leftIndex : rightIndex;
+  const selectPage = (pageIndex: number) => {
+    setSheetIndex(Math.floor(pageIndex / 2));
+    setActiveSide(pageIndex % 2 === 0 ? 'left' : 'right');
+    setSelectedSlot(0);
+    setSelectedTextId(null);
+  };
+  const boardApi: BoardApi = {
+    album,
+    resolve,
+    activePage,
+    onSelectPage: selectPage,
+    onOpenPage: (pageIndex) => {
+      selectPage(pageIndex);
+      setView('pages');
+    },
+    onSwapFrames: (from, to) => {
+      state.swapFrames(from, to);
+      selectPage(to.page);
+      setSelectedSlot(to.slot);
+    },
+    onPlacePhoto: (to, photoId) => onDropPhoto(to.page, to.slot, photoId),
+    onClearFrame: (frame) => updateFrame(frame.page, frame.slot, { photoId: null }),
+    onAddSheet: addSheet,
+    onRemoveSheet: removeSheet,
+    canRemoveSheet: album.pages.length > minPages,
+  };
+
   const onTextChange = (
     pageIndex: number,
     id: string,
@@ -275,27 +353,33 @@ export function AlbumEditor({
     setSelectedTextId(id);
   };
 
-  const tabs: { id: View; label: string; icon: React.ReactNode }[] = [
+  const allTabs: { id: View; label: string; icon: React.ReactNode }[] = [
     { id: 'cover', label: copy.tabCover, icon: <IconType size={13} /> },
     { id: 'pages', label: copy.tabPages, icon: <IconLayers size={13} /> },
     { id: 'book', label: copy.tabBook, icon: <IconBook size={13} /> },
     { id: 'grid', label: copy.tabGrid, icon: <IconGrid size={13} /> },
+    { id: 'board', label: copy.tabBoard, icon: <IconGrid size={13} /> },
   ];
+  const tabs = tabIds
+    .map((id) => allTabs.find((tab) => tab.id === id))
+    .filter((tab): tab is (typeof allTabs)[number] => tab !== undefined);
 
   /* As abas são um interruptor: segurar e arrastar passeia por elas e solta na
      mais próxima. O clique direto numa aba continua valendo. */
-  const pickTab = useCallback((next: number) => setView(TAB_IDS[next]), []);
+  const pickTab = useCallback((next: number) => setView(tabIds[next]), [tabIds]);
   const tabTrack = useTrackDrag(
     tabsRef,
-    TAB_IDS.length,
-    Math.max(0, TAB_IDS.indexOf(view)),
+    tabIds.length,
+    Math.max(0, tabIds.indexOf(view)),
     pickTab,
   );
 
-  const file = fileSize(album.orientation);
-
   return (
-    <div className="ae" style={{ '--ae-accent': accent } as React.CSSProperties}>
+    <div
+      className={`ae${simple ? ' ae-split' : ''}`}
+      style={{ '--ae-accent': accent } as React.CSSProperties}
+    >
+      {!simple && (
       <div className="ae-top">
         <div className="ae-brand">
           <span
@@ -347,20 +431,24 @@ export function AlbumEditor({
         </div>
 
         <span className="ae-spacer" />
-        <span className="ae-meta ae-meta-top">
-          {copy.meta(formatMm(spine, 2), album.pages.length)}
-        </span>
+        {!simple && (
+          <span className="ae-meta ae-meta-top">
+            {copy.meta(formatMm(spine, 2), album.pages.length)}
+          </span>
+        )}
 
         <div className="ae-actions">
-          <button
-            type="button"
-            className={`ae-btn${guides ? ' is-on' : ''}`}
-            aria-pressed={guides}
-            title={copy.guidesTip}
-            onClick={() => setGuides((value) => !value)}
-          >
-            <IconRuler size={13} /> <span className="ae-btn-text">{copy.guides}</span>
-          </button>
+          {!simple && (
+            <button
+              type="button"
+              className={`ae-btn${guides ? ' is-on' : ''}`}
+              aria-pressed={guides}
+              title={copy.guidesTip}
+              onClick={() => setGuides((value) => !value)}
+            >
+              <IconRuler size={13} /> <span className="ae-btn-text">{copy.guides}</span>
+            </button>
+          )}
 
           {actions}
 
@@ -377,14 +465,43 @@ export function AlbumEditor({
           )}
         </div>
       </div>
+      )}
 
       <div className="ae-body">
+        {/* Nas etapas 3 e 4 as visões ficam de lado, num cartão só delas: o que
+            se vê (centro) e o que se muda (direita) não dividem mais a barra
+            do topo com o nome do álbum. */}
+        {simple && (
+          <nav className="ae-rail" aria-label={copy.views}>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={view === tab.id ? 'is-on' : ''}
+                aria-pressed={view === tab.id}
+                aria-label={tab.label}
+                title={tab.label}
+                onClick={() => setView(tab.id)}
+              >
+                {tab.icon}
+                <span className="ae-rail-text">{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        )}
         <div className="ae-main">
           {/* O visor não rola; o palco dentro dele rola. É essa divisão que
               deixa o controle de escala parado no canto enquanto o álbum
               ampliado corre por baixo. */}
           <div className="ae-viewport" ref={viewportRef}>
-            <div className="ae-stage" ref={stageRef}>
+            {view === 'board' && renderBoard && (
+              <div className="ae-board">{renderBoard(boardApi)}</div>
+            )}
+            <div
+              className="ae-stage"
+              ref={stageRef}
+              style={view === 'board' ? { display: 'none' } : undefined}
+            >
               {view === 'cover' && (
                 <CoverWrap
                   album={album}
@@ -489,7 +606,7 @@ export function AlbumEditor({
             {/* A grade não tem escala própria — as miniaturas dela são de
                 tamanho fixo. Um controle que não muda nada é pior que a
                 ausência dele. */}
-            {view !== 'grid' && <ZoomControls zoom={zoom} copy={copy} />}
+            {view !== 'grid' && view !== 'board' && <ZoomControls zoom={zoom} copy={copy} />}
           </div>
 
           {(view === 'pages' || view === 'grid') && (
@@ -578,11 +695,10 @@ export function AlbumEditor({
             />
           )}
 
-          {(view === 'pages' || view === 'grid') && (
+          {(view === 'pages' || view === 'grid' || view === 'board') && (
             <PagesInspector
               state={state}
               copy={copy}
-              photos={photos}
               leftIndex={leftIndex}
               rightIndex={rightIndex}
               activeSide={activeSide}
@@ -591,53 +707,8 @@ export function AlbumEditor({
               onSelectSlot={setSelectedSlot}
               selectedTextId={selectedTextId}
               onSelectText={setSelectedTextId}
-              onUpload={onUpload}
             />
           )}
-
-          <Group title={copy.printGroup}>
-            {/* O número da página é ajuste do álbum inteiro, não da folha: uma
-                numeração que existe em metade do livro não é numeração. */}
-            <Row label={copy.pageNumbers} hint={copy.pageNumbersHint} stack>
-              <Seg<boolean>
-                full
-                label={copy.pageNumbers}
-                value={album.showPageNumbers}
-                onChange={(showPageNumbers) => patch({ showPageNumbers })}
-                options={[
-                  { value: true, label: copy.yes },
-                  { value: false, label: copy.no },
-                ]}
-              />
-            </Row>
-            <Row label={copy.fieldPaper}>
-              <select
-                className="ae-input"
-                aria-label={copy.fieldPaper}
-                value={album.paper}
-                onChange={(event) => patch({ paper: event.target.value as PaperId })}
-              >
-                {PAPERS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {copy[option.labelKey as keyof typeof copy] as string}
-                  </option>
-                ))}
-              </select>
-            </Row>
-            <p className="ae-note">
-              {copy.printNote({
-                trimW: SPEC.trim.w,
-                trimH: SPEC.trim.h,
-                bleed: SPEC.bleed,
-                fileW: file.w,
-                fileH: file.h,
-                safeOuter: SPEC.safe.outer,
-                safeSpine: SPEC.safe.spine,
-                glue: SPEC.glue,
-                hinge: SPEC.hinge,
-              })}
-            </p>
-          </Group>
         </aside>
       </div>
     </div>

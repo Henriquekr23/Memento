@@ -59,7 +59,7 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
 
   return (
     <>
-      <Group title={copy.colorGroup}>
+      <Group title={copy.colorGroup} help={copy.colorNote}>
         <div className="ae-swatches">
           {ALBUM_COLORS.map((color) => (
             <button
@@ -85,11 +85,11 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
             </button>
           ))}
         </div>
-        <p className="ae-note">{copy.colorNote}</p>
       </Group>
 
       <Group
         title={copy.elementsGroup}
+        help={copy.elementsNote}
         right={
           <span style={{ display: 'flex', gap: 4 }}>
             <button type="button" className="ae-chip" onClick={() => onSelect(addText(''))}>
@@ -117,12 +117,12 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
             </button>
           ))}
         </div>
-        {!selected && <p className="ae-note">{copy.elementsNote}</p>}
       </Group>
 
       {selected?.kind === 'text' && (
         <Group
           title={selected.role === 'title' ? copy.titleGroup : copy.textGroup}
+          help={selected.role === 'title' ? copy.titleNote : undefined}
           right={
             selected.role !== 'title' && (
               <button
@@ -198,7 +198,7 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
             />
           </Row>
 
-          <Row label={copy.fieldWidth} hint={copy.fieldWidthHint}>
+          <Row label={copy.fieldWidth} hint="%">
             <Slider
               value={selected.width}
               min={15}
@@ -247,7 +247,7 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
             />
           </Row>
 
-          <Row label={copy.fieldPosition} hint={copy.fieldPositionHint}>
+          <Row label={copy.fieldPosition}>
             <span
               style={{
                 display: 'grid',
@@ -269,12 +269,6 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
               ))}
             </span>
           </Row>
-
-          <p className="ae-note">
-            {selected.role === 'title'
-              ? copy.titleNote
-              : copy.freeTextNote(Math.round(selected.x), Math.round(selected.y))}
-          </p>
         </Group>
       )}
 
@@ -331,6 +325,16 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
 
       <Group
         title={copy.spineGroup}
+        help={
+          album.spine.mm
+            ? undefined
+            : copy.spineComputed(
+                formatMm(spine, 2),
+                album.pages.length,
+                copy[paper.labelKey as keyof EditorCopy] as string,
+                SPEC.spineMin,
+              )
+        }
         right={
           <button
             type="button"
@@ -357,8 +361,8 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
           />
         </Row>
 
-        {album.spine.mm ? (
-          <Row label={copy.spineThickness} hint={copy.spineThicknessHint}>
+        {album.spine.mm && (
+          <Row label={copy.spineThickness} hint="mm">
             <input
               className="ae-input"
               aria-label={copy.spineThickness}
@@ -376,15 +380,6 @@ export function CoverInspector({ state, copy, selectedId, onSelect }: CoverInspe
               }
             />
           </Row>
-        ) : (
-          <p className="ae-note">
-            {copy.spineComputed(
-              formatMm(spine, 2),
-              album.pages.length,
-              copy[paper.labelKey as keyof EditorCopy] as string,
-              SPEC.spineMin,
-            )}
-          </p>
         )}
 
         <Row label={copy.spineDirection} stack>
