@@ -8092,6 +8092,627 @@ textarea.ae-input {
   right: -3px;
 }
 
+/* ══ Telas da conta ("Meus álbuns" e "Minha conta") na roupa da /album ════ */
+
+.ac-root {
+  --af-width: 1184px;
+}
+/* As abas da conta usam a pílula das etapas, sem o arraste: a aba atual leva
+   o fundinho direto. */
+.ac-tabs {
+  padding-bottom: 4px;
+}
+.ac-tab {
+  gap: 8px;
+  padding: 0 16px 0 12px;
+  text-decoration: none;
+}
+.ac-tab[aria-current='page'] {
+  background: var(--landing-pill);
+  color: var(--landing-pill-ink);
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ac-tab:not([aria-current]):hover {
+    background: var(--album-line);
+    color: var(--album-ink);
+  }
+}
+.ac-section {
+  gap: 36px;
+}
+/* Link com classe dentro de `.lp-theme` pega a cor de `--lp-ink` (porta fora
+   de camada, ver CLAUDE.md). Cada link desta tela diz a sua por ela. */
+.ac-tab {
+  --lp-ink: var(--album-muted);
+}
+.ac-tab[aria-current='page'] {
+  --lp-ink: var(--landing-pill-ink);
+}
+.ac-head-cta {
+  --lp-ink: var(--landing-on-cta);
+}
+.ac-btn.af-btn-ghost {
+  --lp-ink: var(--landing-pill-ink);
+}
+.ac-album-cover {
+  --lp-ink: var(--album-cover-ink);
+}
+.ac-head-cta {
+  margin-top: 10px;
+}
+
+/* Cartão: a mesma peça da lateral e do trilho das etapas de montar. */
+.ac-card {
+  border: 1px solid var(--album-line);
+  border-radius: 28px;
+  background: var(--color-surface-2);
+  box-shadow: 0 18px 44px var(--album-shadow);
+}
+.ac-hint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--album-muted);
+}
+.ac-hint.is-warn {
+  color: var(--album-accent-ink);
+}
+.ac-error {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #b0342f;
+}
+.ac-btn {
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+/* ── Meus álbuns ── */
+.ac-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ac-album {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--album-line);
+  border-radius: 28px;
+  background: var(--color-surface-2);
+  box-shadow: 0 18px 44px var(--album-shadow);
+  transition: opacity 160ms ease;
+}
+.ac-album[data-pending] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+/* A capa: o livro de pé numa mesa, como o objeto que o álbum vai ser. É o alvo
+   maior do cartão e abre o álbum. */
+.ac-album-cover {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 196px;
+  margin: 8px 8px 0;
+  border-radius: 21px;
+  background: var(--album-step-2);
+  text-decoration: none;
+}
+.ac-album-book {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  width: 108px;
+  height: 152px;
+  padding: 14px 12px;
+  border-radius: 3px 8px 8px 3px;
+  background: var(--album-cover);
+  color: var(--album-cover-ink);
+  box-shadow:
+    inset 7px 0 0 -2px rgb(0 0 0 / 0.14),
+    0 14px 26px -12px rgb(0 0 0 / 0.45),
+    0 2px 5px rgb(0 0 0 / 0.12);
+  transition: transform 220ms var(--landing-ease-out);
+}
+.ac-album-book-title {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.ac-album-open {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--color-surface-2);
+  color: var(--album-ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 180ms ease,
+    transform 180ms var(--landing-ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .ac-album-cover:hover .ac-album-book {
+    transform: translateY(-4px) rotate(-1.5deg);
+  }
+  .ac-album-cover:hover .ac-album-open {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ac-album-cover:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+.ac-album-cover:focus-visible .ac-album-open {
+  opacity: 1;
+  transform: none;
+}
+.ac-album-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px 20px;
+}
+.ac-album-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ac-album-title {
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 19px;
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+.ac-album-title a {
+  --lp-ink: var(--album-ink);
+  color: var(--album-ink);
+  text-decoration: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ac-album-title a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+.ac-album-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: -8px 0 0;
+  font-size: 13px;
+  color: var(--album-muted);
+}
+.ac-badge {
+  margin-left: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--landing-pill);
+  color: var(--landing-pill-ink);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.ac-badge.is-soft {
+  background: var(--album-line);
+  color: var(--album-ink-2);
+}
+.ac-album-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+.ac-album-actions .ac-btn {
+  flex: 1;
+}
+.ac-icon-btn {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin: -4px -6px 0 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--album-muted);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.ac-icon-btn.is-danger:hover,
+.ac-icon-btn.is-danger:focus-visible {
+  background: color-mix(in srgb, #b0342f 10%, transparent);
+  color: #b0342f;
+}
+.ac-icon-btn:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+
+/* Link público: interruptor com a frase do que ele faz agora. Com quedas para
+   os tokens gerais — a mesma peça aparece na página do álbum, fora da roupa da
+   /album. */
+.ac-share {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+.ac-share-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ac-share-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.ac-share-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--album-ink, var(--color-text));
+}
+.ac-share-hint {
+  font-size: 12px;
+  color: var(--album-muted, color-mix(in srgb, var(--color-text) 60%, transparent));
+}
+.ac-switch {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 20%, transparent);
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+}
+.ac-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ac-switch[aria-checked='true'] {
+  background: var(--landing-cta, var(--color-accent));
+}
+.ac-switch[aria-checked='true'] .ac-switch-knob {
+  transform: translateX(16px);
+}
+.ac-switch:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.ac-switch:focus-visible {
+  outline: 2px solid var(--landing-cta, var(--color-accent));
+  outline-offset: 2px;
+}
+.ac-copy {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--album-line, var(--color-divider));
+  border-radius: 999px;
+  background: var(--color-surface-2, transparent);
+  color: var(--album-ink, var(--color-text));
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ac-copy[data-copied] {
+  border-color: transparent;
+  background: var(--landing-pill, var(--color-accent-200));
+  color: var(--landing-pill-ink, var(--color-accent-800));
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-switch,
+  .ac-switch-knob,
+  .ac-album-book,
+  .ac-album-open {
+    transition: none;
+  }
+}
+
+/* Vazio: três folhas em leque e o caminho para o primeiro álbum. */
+.ac-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 560px;
+  margin-inline: auto;
+  padding: 40px 32px 44px;
+  border: 1.5px dashed var(--album-empty-line);
+  border-radius: 28px;
+  background: var(--album-empty);
+  text-align: center;
+}
+.ac-empty-art {
+  position: relative;
+  width: 120px;
+  height: 92px;
+  margin-bottom: 6px;
+}
+.ac-empty-art span {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 60px;
+  height: 84px;
+  margin-left: -30px;
+  border-radius: 4px 7px 7px 4px;
+  background: var(--album-cover);
+  box-shadow: 0 10px 20px -10px rgb(0 0 0 / 0.4);
+  transform-origin: 50% 100%;
+}
+.ac-empty-art span:nth-child(1) {
+  opacity: 0.45;
+  transform: rotate(-14deg) translateX(-14px);
+}
+.ac-empty-art span:nth-child(2) {
+  opacity: 0.7;
+  transform: rotate(8deg) translateX(12px);
+}
+.ac-empty-title {
+  --lp-h-weight: 800;
+  --lp-h-tracking: -0.02em;
+  margin: 0;
+  font-size: 22px;
+  color: var(--album-ink);
+}
+.ac-empty-text {
+  max-width: 44ch;
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--album-ink-2);
+}
+.ac-block {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 12px;
+}
+.ac-block-head {
+  display: grid;
+  gap: 2px;
+}
+
+/* ── Minha conta ── */
+.ac-account {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+  width: 100%;
+  max-width: 1000px;
+  margin-inline: auto;
+}
+.ac-profile {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 24px 24px;
+  text-align: center;
+}
+.ac-profile-avatar {
+  width: 76px;
+  height: 76px;
+  margin-bottom: 14px;
+  font-size: 32px;
+}
+.ac-profile-name {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--album-ink);
+}
+.ac-profile-email {
+  max-width: 100%;
+  margin: 2px 0 0;
+  overflow: hidden;
+  font-size: 13.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--album-muted);
+}
+.ac-profile-sep {
+  align-self: stretch;
+  height: 1px;
+  margin: 22px 0 18px;
+  background: var(--album-line);
+}
+.ac-profile-out {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+.ac-btn-out {
+  width: 100%;
+  border-color: color-mix(in srgb, #b0342f 35%, transparent);
+  color: #b0342f;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ac-btn-out:hover:not(:disabled) {
+    background: color-mix(in srgb, #b0342f 9%, transparent);
+  }
+}
+.ac-forms {
+  display: grid;
+  gap: 24px;
+}
+.ac-form-card {
+  padding: 26px 28px 24px;
+}
+.ac-card-head {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+.ac-card-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: var(--album-ink);
+}
+.ac-form {
+  display: grid;
+  gap: 18px;
+}
+.ac-field {
+  display: grid;
+  gap: 7px;
+}
+.ac-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--album-ink-2);
+}
+.ac-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 16px;
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-text) 5%, var(--color-surface-2));
+  color: var(--album-ink);
+  font-family: inherit;
+  font-size: 15px;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.ac-input:focus {
+  border-color: var(--landing-cta);
+  background: var(--color-surface-2);
+  outline: none;
+}
+.ac-input:disabled {
+  color: var(--album-muted);
+  cursor: not-allowed;
+}
+.ac-input[aria-invalid='true'] {
+  border-color: color-mix(in srgb, var(--landing-cta) 55%, transparent);
+}
+.ac-field-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.ac-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: start;
+  font-size: 13.5px;
+  color: var(--album-ink-2);
+  cursor: pointer;
+}
+.ac-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--landing-cta);
+}
+.ac-form-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px solid var(--album-line);
+}
+.ac-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto 0 0;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.ac-feedback.is-ok {
+  color: #2f7a4f;
+}
+.ac-feedback.is-error {
+  color: #b0342f;
+}
+
+@media (max-width: 860px) {
+  .ac-account {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ac-profile {
+    position: static;
+  }
+}
+@media (max-width: 640px) {
+  .ac-field-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ac-form-card {
+    padding: 22px 20px 20px;
+  }
+  .ac-form-foot {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .ac-form-foot .ac-btn {
+    width: 100%;
+  }
+  .ac-tab {
+    padding: 0 12px 0 10px;
+  }
+}
+
 /* Fecha `@layer components`, aberto lá em cima. */
 }
 

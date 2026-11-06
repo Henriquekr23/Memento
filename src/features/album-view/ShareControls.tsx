@@ -55,26 +55,37 @@ export function ShareControls({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-      <label className="flex cursor-pointer items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={isPublic}
+    <div className="ac-share" data-on={isPublic || undefined}>
+      <div className="ac-share-row">
+        <span className="ac-share-text">
+          <span className="ac-share-label">Link público</span>
+          <span className="ac-share-hint">
+            {isPublic ? 'Quem tiver o link abre o álbum.' : 'Só você vê este álbum.'}
+          </span>
+        </span>
+        {/* Interruptor, e não caixa de seleção: liga e desliga uma coisa que
+            acontece agora, e é o mesmo controle das etapas de montar. */}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isPublic}
+          aria-label="Link público"
           disabled={pending}
-          onChange={(event) => toggle(event.target.checked)}
-          className="h-4 w-4 accent-[var(--color-accent-700)]"
-        />
-        Link público
-      </label>
+          onClick={() => toggle(!isPublic)}
+          className="ac-switch"
+        >
+          <span aria-hidden className="ac-switch-knob" />
+        </button>
+      </div>
 
       {isPublic && (
-        <button type="button" onClick={copyLink} className="btn btn-secondary btn-sm">
+        <button type="button" onClick={copyLink} className="ac-copy" data-copied={copied || undefined}>
           {copied ? 'Link copiado' : 'Copiar link'}
         </button>
       )}
 
       {error && (
-        <span role="alert" className="text-sm text-[var(--color-accent-700)]">
+        <span role="alert" className="ac-error">
           {error}
         </span>
       )}
