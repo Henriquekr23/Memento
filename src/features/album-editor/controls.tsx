@@ -4,13 +4,33 @@ import { useCallback, useRef, useState } from 'react';
 
 import { round } from './useDrag';
 
-/** Bloco do inspetor, com título e ação opcional à direita. */
+/**
+ * Ponto de interrogação minimalista: a explicação mora no balão, que abre no
+ * hover e no foco. O balão ocupa a largura do bloco (`.ae-group-head` e
+ * `.ae-row` são `position: relative`), então nunca é cortado pela lateral.
+ */
+export function Help({ text }: { text: string }) {
+  return (
+    <span className="ae-help-wrap">
+      <button type="button" className="ae-help" aria-label={text}>
+        ?
+      </button>
+      <span className="ae-help-tip" aria-hidden>
+        {text}
+      </span>
+    </span>
+  );
+}
+
+/** Bloco do inspetor, com título, ajuda opcional e ação opcional à direita. */
 export function Group({
   title,
+  help,
   right,
   children,
 }: {
   title: string;
+  help?: string;
   right?: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -18,7 +38,8 @@ export function Group({
     <section className="ae-group">
       <header className="ae-group-head">
         <h3>{title}</h3>
-        {right}
+        {help && <Help text={help} />}
+        {right && <span className="ae-group-right">{right}</span>}
       </header>
       <div className="ae-group-body">{children}</div>
     </section>
@@ -26,7 +47,8 @@ export function Group({
 }
 
 /**
- * Linha rótulo + controle. `hint` é a unidade ou a explicação curta.
+ * Linha rótulo + controle. `hint` é só a unidade ("mm", "%"); a explicação de
+ * um controle vai em `help`, que vira o "?" ao lado do rótulo.
  *
  * É uma `div`, e não uma `label`: dentro de uma `label` o clique em qualquer
  * lugar da linha é redirecionado para o primeiro controle rotulável, o que
@@ -39,18 +61,23 @@ export function Group({
 export function Row({
   label,
   hint,
+  help,
   stack = false,
   children,
 }: {
   label: string;
   hint?: string;
+  help?: string;
   stack?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className={`ae-row${stack ? ' is-stack' : ''}`}>
       <span className="ae-row-label">
-        {label}
+        <span className="ae-row-name">
+          {label}
+          {help && <Help text={help} />}
+        </span>
         {hint && <em>{hint}</em>}
       </span>
       <span className="ae-row-control">{children}</span>

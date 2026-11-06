@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useLang } from '@/features/i18n/LangProvider';
-import { SPEC, fileSize, PAPERS } from '@/features/album-print/spec';
+import { SPEC } from '@/features/album-print/spec';
 import { formatMm } from '@/lib/format';
 import type {
   CoverElement,
@@ -12,14 +12,13 @@ import type {
   PhotoFrame,
 } from '@/types/album-editor';
 import { resetFraming } from '@/types/album-editor';
-import type { PaperId } from '@/features/album-print/spec';
 import type { Photo } from '@/types/photo';
 
 import { Book3D } from './Book3D';
 import { CoverInspector } from './CoverInspector';
 import { CoverWrap, type SnapState } from './CoverWrap';
 import { EDITOR_COPY } from './copy';
-import { Group, Row, Seg, useTrackDrag } from './controls';
+import { useTrackDrag } from './controls';
 import {
   IconBook,
   IconChevronLeft,
@@ -93,7 +92,6 @@ export interface AlbumEditorProps {
   /** Nome do álbum, controlado por fora (é ele que vai para a nuvem). */
   name: string;
   onName: (name: string) => void;
-  onUpload: (files: File[]) => void;
   /** Composição carregada do banco, quando existe. */
   initialAlbum?: EditorAlbum;
   onChange?: (album: EditorAlbum) => void;
@@ -123,7 +121,6 @@ export function AlbumEditor({
   photos,
   name,
   onName,
-  onUpload,
   initialAlbum,
   onChange,
   onExport,
@@ -138,7 +135,6 @@ export function AlbumEditor({
   const state = useEditorAlbum(initialAlbum);
   const {
     album,
-    patch,
     spine,
     sheets,
     updateFrame,
@@ -377,8 +373,6 @@ export function AlbumEditor({
     Math.max(0, tabIds.indexOf(view)),
     pickTab,
   );
-
-  const file = fileSize(album.orientation);
 
   return (
     <div
@@ -705,7 +699,6 @@ export function AlbumEditor({
             <PagesInspector
               state={state}
               copy={copy}
-              photos={photos}
               leftIndex={leftIndex}
               rightIndex={rightIndex}
               activeSide={activeSide}
@@ -714,53 +707,8 @@ export function AlbumEditor({
               onSelectSlot={setSelectedSlot}
               selectedTextId={selectedTextId}
               onSelectText={setSelectedTextId}
-              onUpload={onUpload}
             />
           )}
-
-          <Group title={copy.printGroup}>
-            {/* O número da página é ajuste do álbum inteiro, não da folha: uma
-                numeração que existe em metade do livro não é numeração. */}
-            <Row label={copy.pageNumbers} hint={copy.pageNumbersHint} stack>
-              <Seg<boolean>
-                full
-                label={copy.pageNumbers}
-                value={album.showPageNumbers}
-                onChange={(showPageNumbers) => patch({ showPageNumbers })}
-                options={[
-                  { value: true, label: copy.yes },
-                  { value: false, label: copy.no },
-                ]}
-              />
-            </Row>
-            <Row label={copy.fieldPaper}>
-              <select
-                className="ae-input"
-                aria-label={copy.fieldPaper}
-                value={album.paper}
-                onChange={(event) => patch({ paper: event.target.value as PaperId })}
-              >
-                {PAPERS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {copy[option.labelKey as keyof typeof copy] as string}
-                  </option>
-                ))}
-              </select>
-            </Row>
-            <p className="ae-note">
-              {copy.printNote({
-                trimW: SPEC.trim.w,
-                trimH: SPEC.trim.h,
-                bleed: SPEC.bleed,
-                fileW: file.w,
-                fileH: file.h,
-                safeOuter: SPEC.safe.outer,
-                safeSpine: SPEC.safe.spine,
-                glue: SPEC.glue,
-                hinge: SPEC.hinge,
-              })}
-            </p>
-          </Group>
         </aside>
       </div>
     </div>

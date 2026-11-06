@@ -40,11 +40,7 @@ export function StepNav({
 
   return (
     <nav ref={navRef} aria-label={t.stepsAria} className="af-steps lp-links" {...pill.handlers}>
-      <span ref={sliderRef} aria-hidden className="lp-slider">
-        <span className="lp-slider-l" />
-        <span className="lp-slider-m" />
-        <span className="lp-slider-r" />
-      </span>
+      <span ref={sliderRef} aria-hidden className="lp-slider" />
       {STEPS.map((n, index) => {
         const label = t.steps[n - 1];
         const current = n === step;

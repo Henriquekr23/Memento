@@ -93,11 +93,7 @@ export function LandingNav({ active }: { active: number }) {
             className="lp-links lp-reveal"
             {...pill.handlers}
           >
-            <span ref={sliderRef} aria-hidden className="lp-slider">
-              <span className="lp-slider-l" />
-              <span className="lp-slider-m" />
-              <span className="lp-slider-r" />
-            </span>
+            <span ref={sliderRef} aria-hidden className="lp-slider" />
             {LANDING_SECTIONS.map((id, index) => (
               <a
                 key={id}

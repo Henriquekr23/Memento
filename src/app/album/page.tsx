@@ -412,7 +412,6 @@ export default function AlbumPage() {
                 photos={included}
                 name={album.name}
                 onName={album.setName}
-                onUpload={(files) => album.addFiles(files, 'tray')}
                 initialAlbum={editorSeed}
                 onChange={setComposition}
                 mode={step === 3 ? 'pages' : 'cover'}

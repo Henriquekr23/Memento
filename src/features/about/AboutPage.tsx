@@ -86,7 +86,7 @@ export function AboutPage() {
 
           <section className="grid gap-7 md:grid-cols-[auto_minmax(0,1fr)] md:items-start md:gap-10">
             <div className="flex h-24 w-24 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--color-divider)] bg-[var(--color-surface)]">
-              <LogoMark size={44} className="text-[var(--color-accent)]" />
+              <LogoMark size={58} className="text-[var(--color-text)]" />
             </div>
             <div>
               <span className="kicker mb-3">{t.authorKicker}</span>

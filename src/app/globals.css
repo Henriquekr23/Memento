@@ -926,11 +926,9 @@ html {
   transition: color 0.18s ease;
 }
 .wordmark-glyph {
-  color: var(--color-accent);
+  /* a marca é preta (cor do texto), sem o laranja de destaque */
+  color: inherit;
   transition: transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-.wordmark:hover {
-  color: var(--color-accent-700);
 }
 .wordmark:hover .wordmark-glyph {
   transform: rotate(-4deg) scale(1.06);
@@ -2308,12 +2306,14 @@ html {
 }
 
 /* A pílula da opção acesa na barra: uma peça só, que desliza entre as opções
-   e que dá para arrastar (`useSlidingPill`). É montada em três partes —
-   ponta, miolo, ponta — para mudar de largura só com `transform`: as pontas
-   andam, o miolo de 1 px estica em `scaleX`, e o arredondado nunca deforma.
-   `--px` (posição) e `--pw` (largura, sem unidade) são escritos pelo
-   JavaScript. Parada, ela viaja com a curva de saída; segurada, segue o dedo
-   com só um respiro de atraso. */
+   e que dá para arrastar (`useSlidingPill`). É **um** elemento, com
+   `border-radius` próprio: posição (`--px`) e largura (`--pw`, sem unidade)
+   são escritas pelo JavaScript e animam juntas, na mesma curva. Já foi
+   montada em três partes (ponta, miolo, ponta) para animar só com
+   `transform`, mas cada parte viajava por um caminho próprio e, na troca para
+   uma opção de largura diferente, abria uma listra do fundo no meio da
+   pílula. Parada, ela viaja com a curva de saída; segurada, segue o dedo com
+   só um respiro de atraso. */
 .lp-links {
   position: relative;
   user-select: none;
@@ -2323,41 +2323,25 @@ html {
   position: absolute;
   left: 0;
   top: 4px;
+  width: calc(var(--pw, 40) * 1px);
   height: 40px;
+  border-radius: 999px;
+  background: var(--landing-pill);
+  transform: translateX(var(--px, 0px));
+  transition:
+    transform 320ms var(--landing-ease-out),
+    width 320ms var(--landing-ease-out);
   pointer-events: none;
   visibility: hidden;
 }
 .lp-slider[data-ready='true'] {
   visibility: visible;
 }
-.lp-slider > span {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 40px;
-  background: var(--landing-pill);
-  transition: transform 320ms var(--landing-ease-out);
-}
-.lp-slider:not([data-ready='true']) > span {
+.lp-slider:not([data-ready='true']) {
   transition-duration: 0ms;
 }
-.lp-links[data-dragging] .lp-slider > span {
+.lp-links[data-dragging] .lp-slider {
   transition-duration: 110ms;
-}
-.lp-slider-l {
-  width: 20px;
-  border-radius: 20px 0 0 20px;
-  transform: translateX(var(--px, 0px));
-}
-.lp-slider-m {
-  width: 1px;
-  transform-origin: 0 0;
-  transform: translateX(calc(var(--px, 0px) + 19px)) scaleX(calc(var(--pw, 40) - 38));
-}
-.lp-slider-r {
-  width: 20px;
-  border-radius: 0 20px 20px 0;
-  transform: translateX(calc(var(--px, 0px) + var(--pw, 40) * 1px - 20px));
 }
 /* A opção acesa é a alça: cursor de pegar, e o dedo arrasta em vez de rolar. */
 .lp-link[data-lit='true'] {
@@ -5461,6 +5445,91 @@ textarea.ae-input {
   line-height: 1.5;
   color: var(--ae-ink-3);
 }
+/* O "?" no lugar do texto de explicação: o texto abre num balão no hover e no
+   foco. O balão ocupa a largura do bloco (`.ae-group-head` e `.ae-row` são
+   `position: relative`), por isso a lateral, que não rola de lado, nunca o
+   corta. */
+.ae-group-head,
+.ae-row {
+  position: relative;
+}
+.ae-row-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ae-help-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+.ae-help {
+  display: inline-grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: 1.25px solid currentColor;
+  border-radius: 999px;
+  color: var(--ae-ink-3);
+  font-family: inherit;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  transition: color 0.15s;
+}
+.ae-help:hover,
+.ae-help:focus-visible {
+  color: var(--ae-accent);
+}
+.ae-help:focus-visible {
+  outline: 2px solid var(--ae-accent);
+  outline-offset: 2px;
+}
+.ae-help-tip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  z-index: 20;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: var(--ae-ink);
+  color: var(--color-bg);
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: 0 12px 28px rgb(0 0 0 / 0.22);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-3px);
+  pointer-events: none;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease,
+    visibility 0.14s;
+}
+.ae-group-head .ae-help-tip {
+  left: 16px;
+  right: 16px;
+  top: calc(100% - 4px);
+}
+.ae-help:hover + .ae-help-tip,
+.ae-help:focus + .ae-help-tip {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+.ae-group-head h3 + .ae-help-wrap {
+  margin-right: auto;
+  margin-left: -2px;
+}
+.ae-group-right {
+  display: inline-flex;
+  margin-left: auto;
+}
 .ae-warn {
   display: flex;
   gap: 7px;
@@ -6584,25 +6653,42 @@ textarea.ae-input {
   padding: 8%;
   background: var(--album-paper);
   box-shadow: 0 10px 24px var(--album-shadow);
-  outline: 2px solid transparent;
-  outline-offset: 3px;
+  /* Corta o que passa da curva dos cantos (foto até a borda). */
+  overflow: hidden;
   cursor: pointer;
-  transition: outline-color 160ms ease;
 }
-.af-board-page-wrap:first-child .af-board-page {
-  border-radius: 4px 0 0 4px;
+/* A página escolhida: um anel por **dentro** da própria página. Por fora ele
+   ficava por baixo da página vizinha na dobra e, com canto reto de um lado e
+   redondo do outro, não acompanhava a curva do papel. Por dentro, `inherit`
+   dá a ele exatamente o raio da página, e nada o cobre. */
+.af-board-page::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 3px var(--landing-cta);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+.af-board-page-wrap:only-child .af-board-page {
+  border-radius: 10px;
+}
+.af-board-page-wrap:first-child:not(:only-child) .af-board-page {
+  border-radius: 10px 0 0 10px;
   box-shadow:
     inset -10px 0 12px -10px rgb(0 0 0 / 0.18),
     0 10px 24px var(--album-shadow);
 }
-.af-board-page-wrap:last-child .af-board-page {
-  border-radius: 0 4px 4px 0;
+.af-board-page-wrap:last-child:not(:only-child) .af-board-page {
+  border-radius: 0 10px 10px 0;
   box-shadow:
     inset 10px 0 12px -10px rgb(0 0 0 / 0.18),
     0 10px 24px var(--album-shadow);
 }
-.af-board-page[data-active] {
-  outline-color: var(--landing-cta);
+.af-board-page[data-active]::after {
+  opacity: 1;
 }
 .af-board-page[data-fill] {
   padding: 0;
@@ -6892,13 +6978,16 @@ textarea.ae-input {
   border-radius: 28px;
   box-shadow: 0 18px 44px var(--album-shadow);
 }
+/* O trilho fica no meio da altura da bancada. O raio de fora é o de dentro
+   (28) mais o respiro (8): os cantos dos botões e do cartão são concêntricos. */
 .ae-rail {
-  align-self: start;
+  align-self: center;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  width: 84px;
-  padding: 10px;
+  gap: 4px;
+  width: 88px;
+  padding: 8px;
+  border-radius: 36px;
   background: var(--color-surface-2);
 }
 .ae-rail button {
@@ -6906,10 +6995,10 @@ textarea.ae-input {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  height: 66px;
+  gap: 6px;
+  height: 68px;
   padding: 0 4px;
-  border-radius: 20px;
+  border-radius: 28px;
   color: var(--album-muted);
   font-size: 11.5px;
   font-weight: 600;
@@ -6946,6 +7035,112 @@ textarea.ae-input {
 }
 .ae-split .ae-board {
   padding-top: 26px;
+}
+
+/* Lateral de ajustes: menos "painel técnico", mais cartão. Títulos em caixa
+   normal (maiúscula espaçada de 10 px lia como legenda de planilha), blocos
+   separados por um fio recuado em vez de linha de ponta a ponta, controles com
+   alvo maior e cantos mais redondos, todos da mesma família. */
+.ae-split .ae-inspector {
+  padding: 6px 0;
+  scrollbar-width: thin;
+}
+.ae-split .ae-group {
+  position: relative;
+  border-bottom: 0;
+}
+.ae-split .ae-group + .ae-group::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20px;
+  right: 20px;
+  height: 1px;
+  background: var(--ae-line-soft);
+}
+.ae-split .ae-group:last-child {
+  padding-bottom: 14px;
+}
+.ae-split .ae-group-head {
+  padding: 18px 20px 10px;
+}
+.ae-split .ae-group-head h3 {
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ae-ink);
+}
+.ae-split .ae-group-head .ae-help-tip {
+  left: 20px;
+  right: 20px;
+}
+.ae-split .ae-group-body {
+  padding: 0 20px 18px;
+  gap: 14px;
+}
+.ae-split .ae-row-label {
+  font-size: 12.5px;
+  color: var(--ae-ink-2);
+}
+.ae-split .ae-meta {
+  font-size: 11.5px;
+}
+.ae-split .ae-seg {
+  padding: 3px;
+  border-radius: 12px;
+  border-color: transparent;
+  background: var(--ae-panel-2);
+}
+.ae-split .ae-seg-knob {
+  border-radius: 9px;
+}
+.ae-split .ae-seg button {
+  min-height: 30px;
+  border-radius: 9px;
+  font-size: 12px;
+}
+.ae-split .ae-layouts {
+  gap: 8px;
+}
+.ae-split .ae-layouts button {
+  border-radius: 12px;
+  border-color: transparent;
+  padding: 7px;
+}
+.ae-split .ae-frames button {
+  min-height: 32px;
+  border-radius: 10px;
+  border-color: transparent;
+}
+.ae-split .ae-input {
+  padding: 8px 11px;
+  border-radius: 10px;
+  border-color: transparent;
+}
+.ae-split .ae-input:focus {
+  border-color: var(--ae-accent);
+}
+.ae-split .ae-chip {
+  padding: 6px 11px;
+  border-color: var(--ae-line);
+}
+.ae-split .ae-slider input {
+  height: 5px;
+}
+.ae-split .ae-slider input::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+}
+.ae-split .ae-slider input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+}
+.ae-split .ae-swatches button {
+  border-radius: 9px;
+}
+.ae-split .ae-danger {
+  padding: 4px 0;
 }
 
 @media (max-width: 960px) {

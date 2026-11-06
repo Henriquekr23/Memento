@@ -80,7 +80,7 @@ export function SiteFooter({ showMark = true }: { showMark?: boolean } = {}) {
         <div>
           <span className="inline-flex items-center gap-2.5">
             {/* A landing mostra a marca só como palavra, sem o ícone. */}
-            {showMark && <LogoMark size={20} className="text-[var(--color-accent)]" />}
+            {showMark && <LogoMark size={20} className="text-[var(--color-text)]" />}
             <span className="font-[family-name:var(--font-heading)] text-[17px] font-bold">
               {t.footerMadeBy} {AUTHOR.name}
             </span>

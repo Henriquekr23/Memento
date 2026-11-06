@@ -1,18 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" rx="6" fill="#201e1d"/>
-  <!-- Mesmo desenho de `components/Logo.tsx` — as duas fotos empilhadas fora de
-       esquadro —, aqui com cores fixas: a aba do navegador não herda nada da
-       página, então não dá para usar `currentColor`.
-
-       O grupo recentraliza e encolhe a marca: o desenho do componente ocupa a
-       moldura inteira, e aqui precisa de respiro até o canto arredondado. O
-       traço da foto de trás vai de 1.6 para 2.2 e a opacidade de 0.45 para
-       0.62 porque a 16px, na aba, o valor original some. -->
-  <g transform="translate(16 16) scale(0.84) translate(-14.7 -15.6)">
-    <rect x="4.5" y="8.5" width="14" height="18" rx="3"
-          transform="rotate(11 11.5 17.5)"
-          fill="none" stroke="#c67139" stroke-width="2.2" opacity="0.62"/>
-    <rect x="11" y="4.5" width="14" height="18" rx="3"
-          transform="rotate(-10 18 13.5)" fill="#c67139"/>
+  <rect width="32" height="32" rx="6" fill="#111111"/>
+  <!-- Mesmo "m." de `components/Logo.tsx`, aqui com cores fixas — preto e branco, sem o laranja do site: a aba do
+       navegador não herda nada da página, então não dá para usar
+       `currentColor`. A marca ocupa 25 dos 32px de largura, centrada — a 16px
+       na aba, menos que isso e o miolo do "m" fecha. -->
+  <g transform="translate(3.5 9.57) scale(0.02318)" fill="#ffffff">
+    <path d="M-0 542V208.2V14H127.8L129.5 178.2H148.3Q161.2 116.7 183.7 77.5Q206.3 38.3 239.6 19.2Q272.8 0 317.5 0Q364.2 0 394.7 20.3Q425.3 40.7 442.8 79.9Q460.3 119.2 465.2 178.2H480.7Q495.2 115.2 520.9 76Q546.7 36.8 582.7 18.4Q618.7 0 661.8 0Q706.2 0 739.1 17.1Q772 34.2 794.2 67.9Q816.3 101.7 827.2 152.6Q838 203.5 838 270.3V542H676V289.3Q676 238.8 667.8 205Q659.7 171.2 642.5 154.5Q625.3 137.8 597.8 137.8Q566.8 137.8 544.4 159.3Q522 180.7 509.7 219.3Q497.5 258 497.5 309.2V542H339.5V291.2Q339.5 239 330.5 205.4Q321.5 171.8 303.8 154.8Q286.2 137.8 259.5 137.8Q228.7 137.8 206.7 158.8Q184.8 179.7 173 218.3Q161.2 257 161.2 309.2V542Z"/>
+    <path d="M973.5 555Q921.5 555 896 533Q870.5 511 870.5 465Q870.5 418 896 396Q921.5 374 973.5 374Q1026.5 374 1052.5 396Q1078.5 418 1078.5 465Q1078.5 555 973.5 555Z"/>
   </g>
 </svg>
