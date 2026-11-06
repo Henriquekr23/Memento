@@ -1,11 +1,10 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
-import { SiteFooter } from '@/components/SiteFooter';
-import { SiteNav } from '@/components/SiteNav';
+import { AccountShell } from '@/features/account/AccountShell';
 import { NameForm, PasswordForm } from '@/features/auth/AccountForms';
 import { signOutAction } from '@/features/auth/actions';
-import { nameOf } from '@/features/auth/name';
+import { initialOf, nameOf } from '@/features/auth/name';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { getSessionUser } from '@/lib/supabase/server';
 
@@ -17,9 +16,10 @@ export const metadata: Metadata = {
 /**
  * A conta em um lugar só: nome, e-mail, senha e a saída.
  *
- * "Sair" mora aqui, e não na lista de álbuns: lá ele dividia a linha com
- * "Montar um álbum" — a ação mais construtiva e a mais destrutiva da tela lado
- * a lado, do mesmo tamanho.
+ * Desenhada como as etapas de montar: quem você é num cartão do lado (como o
+ * trilho da bancada) e o que se muda nos cartões ao lado dele (como o
+ * inspetor). "Sair" mora no cartão de quem você é — longe dos botões de
+ * salvar, sem dividir fileira com eles.
  */
 export default async function ContaPage() {
   if (!isSupabaseConfigured) redirect('/album');
@@ -27,44 +27,56 @@ export default async function ContaPage() {
   const user = await getSessionUser();
   if (!user) redirect('/entrar?next=%2Fconta');
 
+  const name = nameOf(user);
+
   return (
-    <main className="page-shell page-body">
-      <SiteNav variant="inner" />
-      <hr className="hr" />
-
-      <header className="page-head">
-        <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-3xl">
-            Minha conta
-          </h1>
-          <p className="muted mt-1 text-sm">
-            {nameOf(user)} · {user.email}
-          </p>
+    <AccountShell section="account">
+      <section className="af-section ac-section">
+        <div className="af-head">
+          <h1 className="lp-h af-title">Sua conta.</h1>
+          <p className="af-lead">Seu nome, sua senha e a saída — tudo aqui.</p>
         </div>
-      </header>
 
-      {/* Coluna estreita: são formulários curtos, e esticá-los por 1200px faz
-          o olho percorrer a linha inteira à toa entre o rótulo e o campo. */}
-      {/* <div className="flex max-w-[680px] flex-col gap-6"> */}
-      <div className="flex flex-col gap-6">
-        <NameForm name={nameOf(user)} email={user.email ?? ''} />
-        <PasswordForm />
+        <div className="ac-account">
+          <aside className="ac-card ac-profile">
+            <span aria-hidden className="avatar ac-profile-avatar">
+              {initialOf(name)}
+            </span>
+            <p className="ac-profile-name">{name}</p>
+            <p className="ac-profile-email">{user.email}</p>
 
-        <section className="panel">
-          <h2 className="panel-title">Sessão</h2>
-          <p className="field-hint max-w-[58ch]">
-            Sair encerra a sessão neste navegador. Seus álbuns guardados
-            continuam onde estão.
-          </p>
-          <form action={signOutAction} className="panel-actions">
-            <button type="submit" className="btn btn-secondary">
-              Sair da conta
-            </button>
-          </form>
-        </section>
-      </div>
+            <div className="ac-profile-sep" />
 
-      <SiteFooter />
-    </main>
+            <form action={signOutAction} className="ac-profile-out">
+              <button type="submit" className="af-btn af-btn-ghost ac-btn ac-btn-out">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.7}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15M10 16l4-4-4-4M14 12H4" />
+                </svg>
+                Sair da conta
+              </button>
+              <p className="ac-hint">
+                Encerra a sessão neste navegador. Seus álbuns guardados continuam onde estão.
+              </p>
+            </form>
+          </aside>
+
+          <div className="ac-forms">
+            <NameForm name={name} email={user.email ?? ''} />
+            <PasswordForm />
+          </div>
+        </div>
+      </section>
+    </AccountShell>
   );
 }

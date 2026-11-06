@@ -60,6 +60,8 @@ export interface FlowCopy {
   boardEmptyAria: (page: number, frame: number) => string;
   boardClearAria: (page: number, frame: number) => string;
   openPage: string;
+  movePageAria: (page: number) => string;
+  movePageTip: string;
   removeSpreadAria: (first: number, second: number) => string;
   addSpread: string;
 
@@ -150,6 +152,8 @@ const pt: FlowCopy = {
   boardEmptyAria: (page, frame) => `Quadro ${frame} da página ${page}, vazio`,
   boardClearAria: (page, frame) => `Tirar a foto ${frame} da página ${page}`,
   openPage: 'Ajustar fotos',
+  movePageAria: (page) => `Mover a página ${page}`,
+  movePageTip: 'Segure e arraste para mudar a página de lugar. No teclado, setas ← e →.',
   removeSpreadAria: (first, second) => `Remover as páginas ${first} e ${second}`,
   addSpread: 'Nova folha',
 
@@ -238,6 +242,8 @@ const en: FlowCopy = {
   boardEmptyAria: (page, frame) => `Frame ${frame} on page ${page}, empty`,
   boardClearAria: (page, frame) => `Take photo ${frame} off page ${page}`,
   openPage: 'Adjust photos',
+  movePageAria: (page) => `Move page ${page}`,
+  movePageTip: 'Hold and drag to move the page. With the keyboard, ← and → arrows.',
   removeSpreadAria: (first, second) => `Remove pages ${first} and ${second}`,
   addSpread: 'New sheet',
 

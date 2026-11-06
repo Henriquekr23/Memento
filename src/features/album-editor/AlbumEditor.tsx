@@ -41,7 +41,7 @@ import { useStageZoom } from './useStageZoom';
 import { ZoomControls } from './ZoomControls';
 import { accentFor, colorById } from './palette';
 import { clamp } from './useDrag';
-import { useEditorAlbum } from './useEditorAlbum';
+import { movePageIn, useEditorAlbum } from './useEditorAlbum';
 
 type View = 'cover' | 'pages' | 'book' | 'grid' | 'board';
 
@@ -85,6 +85,9 @@ export interface BoardApi {
   onClearFrame: (frame: FrameRef) => void;
   onAddSheet: () => void;
   onRemoveSheet: (pageIndex: number) => void;
+  /** Leva a página para outra posição; `false` se não dá (página espelhada no caminho). */
+  canMovePage: (from: number, to: number) => boolean;
+  onMovePage: (from: number, to: number) => void;
   canRemoveSheet: boolean;
 }
 
@@ -356,6 +359,13 @@ export function AlbumEditor({
     onClearFrame: (frame) => updateFrame(frame.page, frame.slot, { photoId: null }),
     onAddSheet: addSheet,
     onRemoveSheet: removeSheet,
+    canMovePage: (from, to) => movePageIn(album.pages, from, to) !== null,
+    onMovePage: (from, to) => {
+      if (movePageIn(album.pages, from, to) === null) return;
+      state.movePage(from, to);
+      // A página escolhida segue a página arrastada até o lugar novo.
+      selectPage(to);
+    },
     canRemoveSheet: album.pages.length > minPages,
   };
 

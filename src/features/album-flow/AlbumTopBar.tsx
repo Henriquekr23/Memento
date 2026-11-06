@@ -23,8 +23,11 @@ import { FLOW_COPY } from './copy';
  * "Entrar" aqui **não navega**: abre o `InlineAuthDialog` (`onSignIn`). O álbum
  * vive só na memória desta aba, e ir para `/entrar` no meio da montagem
  * jogaria fora tudo o que foi escolhido.
+ *
+ * Fora da /album (as telas da conta) não há álbum na memória a proteger: sem
+ * `onSignIn`, "Entrar" é um link comum para `/entrar`.
  */
-export function AlbumTopBar({ onSignIn }: { onSignIn: () => void }) {
+export function AlbumTopBar({ onSignIn }: { onSignIn?: () => void } = {}) {
   const { lang } = useLang();
   const t = FLOW_COPY[lang];
 
@@ -43,7 +46,7 @@ export function AlbumTopBar({ onSignIn }: { onSignIn: () => void }) {
   );
 }
 
-function AccountSlot({ onSignIn }: { onSignIn: () => void }) {
+function AccountSlot({ onSignIn }: { onSignIn?: () => void }) {
   const { user, isLoading } = useSessionUser();
   const { lang } = useLang();
 
@@ -51,6 +54,14 @@ function AccountSlot({ onSignIn }: { onSignIn: () => void }) {
   // por um quadro para quem já tem sessão.
   if (isLoading) return <span aria-hidden className="af-account-wait" />;
   if (user) return <AccountMenu />;
+
+  if (!onSignIn) {
+    return (
+      <Link href="/entrar" className="af-signin">
+        {COMMON[lang].navSignIn}
+      </Link>
+    );
+  }
 
   return (
     <button type="button" className="af-signin" onClick={onSignIn}>

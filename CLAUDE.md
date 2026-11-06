@@ -153,8 +153,9 @@ leitura de EXIF.
 8. **O PDF redesenha a página num canvas, em milímetros.** Em
    `album-export/pdf/drawPrintPage.ts` a régua é `mm()`, não pixel de tela: o
    arquivo tem que bater com o gabarito, e gabarito é medido em mm. O arquivo
-   sai na estrutura do R1219 — capa, contracapa e lombada em páginas próprias,
-   miolo uma página por página, tudo com 5 mm de sangria. `pdfWriter.ts`
+   sai na ordem de leitura — capa, miolo uma página por página, contracapa no
+   fim —, tudo com 5 mm de sangria. A lombada não entra no PDF por ora
+   (`drawSpine` continua pronta para uma exportação de gráfica). `pdfWriter.ts`
    empilha os JPEGs à mão (filtro `DCTDecode`, sem recompressão).
 9. **`motifPaths.ts` é a fonte única dos grafismos.** A tela desenha em SVG e o
    canvas do PDF desenha o mesmo `d` num `Path2D`. Dois desenhos parecidos em
@@ -332,8 +333,9 @@ leitura de EXIF.
   para as seções antigas), compartilhados com a `/album` sem duplicar valor:
   `.lp-theme` recebe os `--landing-*` (e os `--album-*` da página), `.lp-remap`
   recebe o Organic relido. Na `/album` a bancada do editor fica **fora** da
-  `.lp-remap` e continua no Organic. `/sobre`, `/albums`, `/conta` e
-  `/obrigado` não usam nenhum dos dois.
+  `.lp-remap` e continua no Organic. `/albums` e `/conta` vestem a mesma roupa
+  da `/album` (`features/account/AccountShell`: topo, fundo da etapa 1, abas
+  da conta, classes `.ac-*`). `/sobre` e `/obrigado` não usam nenhum dos dois.
 - **Duas portas fora de camada em `globals.css`**: `a { color: inherit }` e
   `h1…h6 {…}` estão fora de `@layer` e venceriam qualquer classe. Na landing,
   link com classe pega cor de `--lp-ink` (também dentro de `.lp-theme`), e título com `.lp-h` pega peso,

@@ -10,7 +10,12 @@ import { ShareControls } from '@/features/album-view/ShareControls';
 import type { AlbumListItem } from '@/features/album-view/loadAlbum';
 
 /**
- * Uma linha da lista: abrir, editar, compartilhar, apagar.
+ * Um cartão da lista: abrir, editar, compartilhar, apagar.
+ *
+ * A capa no topo é o alvo maior e abre o álbum — é o que a pessoa mais faz
+ * aqui. Embaixo, o link público (só do dono) e as ações. "Apagar" é um ícone
+ * no canto, longe de "Editar": não divide fileira, tamanho nem cor com as
+ * ações que constroem.
  *
  * `variant` diz de quem é o álbum. No álbum de outra pessoa — aquele em que
  * este usuário foi convidado a montar — não existe link público nem apagar:
@@ -48,57 +53,79 @@ export function AlbumCard({
   }
 
   return (
-    <li className={`card p-5 ${pending ? 'opacity-50' : ''}`}>
-      {/* Empilha no celular e vira linha a partir de sm: o cartão inteiro é
-          alvo de toque, então os controles precisam de espaço próprio. */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <Link
-            href={`/album/${album.id}`}
-            className="font-[family-name:var(--font-heading)] text-xl hover:underline"
-          >
-            {album.title}
-          </Link>
-          <p className="muted mt-1 text-sm">
-            {album.photoCount} {album.photoCount === 1 ? 'foto' : 'fotos'} · {created}
-            {album.lockedAt ? ' · finalizado' : ''}
-          </p>
-        </div>
+    <li className="ac-album" data-pending={pending || undefined}>
+      <Link href={`/album/${album.id}`} className="ac-album-cover" aria-label={`Abrir ${album.title}`}>
+        <span aria-hidden className="ac-album-book">
+          <span className="ac-album-book-title">{album.title}</span>
+        </span>
+        <span aria-hidden className="ac-album-open">Abrir</span>
+      </Link>
 
-        <div className="flex flex-col items-start gap-3 sm:items-end">
+      <div className="ac-album-body">
+        <div className="ac-album-head">
+          <h3 className="ac-album-title">
+            <Link href={`/album/${album.id}`}>{album.title}</Link>
+          </h3>
           {variant === 'mine' && (
-            <ShareControls albumId={album.id} isPublic={album.isPublic} />
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              disabled={pending}
+              className="ac-icon-btn is-danger"
+              aria-label={`Apagar ${album.title}`}
+              title="Apagar"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.7}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
+              </svg>
+            </button>
           )}
-          <div className="flex flex-wrap gap-2">
-            {/* Álbum finalizado não oferece editar: a bancada recusaria a
-                abertura, e um botão que leva a um aviso é um botão quebrado. */}
-            {!album.lockedAt && (
-              <Link
-                href={`/album/${album.id}/editar`}
-                className="btn btn-secondary btn-sm"
-              >
-                Editar
-              </Link>
-            )}
-            {variant === 'mine' && (
-              <button
-                type="button"
-                onClick={() => setConfirming(true)}
-                disabled={pending}
-                className="btn btn-secondary btn-sm"
-              >
-                Apagar
-              </button>
-            )}
-          </div>
         </div>
-      </div>
 
-      {error && (
-        <p role="alert" className="mt-3 text-sm text-[var(--color-accent-700)]">
-          {error}
+        <p className="ac-album-meta">
+          <span>
+            {album.photoCount} {album.photoCount === 1 ? 'foto' : 'fotos'}
+          </span>
+          <span aria-hidden>·</span>
+          <span>{created}</span>
+          {album.lockedAt && <span className="ac-badge">Finalizado</span>}
+          {variant === 'shared' && <span className="ac-badge is-soft">Convidado</span>}
         </p>
-      )}
+
+        {variant === 'mine' && (
+          <ShareControls albumId={album.id} isPublic={album.isPublic} />
+        )}
+
+        <div className="ac-album-actions">
+          <Link href={`/album/${album.id}`} className="af-btn af-btn-ghost ac-btn">
+            Abrir
+          </Link>
+          {/* Álbum finalizado não oferece editar: a bancada recusaria a
+              abertura, e um botão que leva a um aviso é um botão quebrado. */}
+          {!album.lockedAt && (
+            <Link href={`/album/${album.id}/editar`} className="af-btn af-btn-ghost ac-btn">
+              Editar
+            </Link>
+          )}
+        </div>
+
+        {error && (
+          <p role="alert" className="ac-error">
+            {error}
+          </p>
+        )}
+      </div>
 
       <ConfirmDialog
         open={confirming}

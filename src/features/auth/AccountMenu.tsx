@@ -118,27 +118,58 @@ export function AccountMenu({
       </button>
 
       {open && (
-        <div role="menu" className="menu">
-          <p className="px-2.5 pb-1.5 pt-1 text-xs text-[color-mix(in_srgb,var(--color-text)_50%,transparent)]">
-            {user.email}
-          </p>
+        <div role="menu" className="menu account-menu">
+          {/* Quem está entrou: o mesmo círculo do botão, nome e e-mail. */}
+          <div className="account-menu-head">
+            <span className="avatar" aria-hidden>
+              {initialOf(user.name)}
+            </span>
+            <span className="account-menu-who">
+              <span className="account-menu-name">{user.name}</span>
+              <span className="account-menu-email">{user.email}</span>
+            </span>
+          </div>
           <div className="menu-sep" />
           {/* Fechar no clique, e não num efeito que observa a rota: o menu
               precisa sumir junto com o clique, antes da tela nova chegar. */}
           <Link role="menuitem" href="/albums" className="menu-item" onClick={close}>
+            <MenuIcon d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5zM12 4v16" />
             {t.navMyAlbums}
           </Link>
           <Link role="menuitem" href="/conta" className="menu-item" onClick={close}>
+            <MenuIcon d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20a7.5 7.5 0 0 1 15 0" />
             {t.navAccount}
           </Link>
           <div className="menu-sep" />
           <form action={signOutAction} onSubmit={close}>
-            <button role="menuitem" type="submit" className="menu-item">
+            <button role="menuitem" type="submit" className="menu-item is-danger">
+              <MenuIcon d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15M10 16l4-4-4-4M14 12H4" />
               {t.navSignOut}
             </button>
           </form>
         </div>
       )}
     </div>
+  );
+}
+
+/** Ícone de traço dos itens do menu — herda a cor do item. */
+function MenuIcon({ d }: { d: string }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      className="menu-icon"
+    >
+      <path d={d} />
+    </svg>
   );
 }
