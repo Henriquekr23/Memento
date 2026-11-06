@@ -195,6 +195,12 @@ interface PageContentProps {
    */
   bleedMm?: number;
   spineSide?: SpineSide;
+  /**
+   * Camada por cima de cada quadro, desenhada por quem chama. A visão geral da
+   * `/album` põe ali o alvo de arraste dela — assim a prévia é **esta** página,
+   * com respiro, encaixe, zoom e textos, e não um desenho parecido.
+   */
+  slotOverlay?: (index: number) => React.ReactNode;
 }
 
 /** Tipo de dado do arrasto da bandeja para o quadro. */
@@ -215,6 +221,7 @@ export function PageContent({
   onTextChange,
   bleedMm = 0,
   spineSide = 'left',
+  slotOverlay,
 }: PageContentProps) {
   /** Quadro sob o arrasto de uma foto da bandeja — realce de alvo, só isso. */
   const [overSlot, setOverSlot] = useState(-1);
@@ -269,6 +276,7 @@ export function PageContent({
         }}
         onPan={(patch) => onFrame?.(index, patch)}
       />
+      {slotOverlay?.(index)}
     </div>
   );
 

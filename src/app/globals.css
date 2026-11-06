@@ -240,12 +240,12 @@
   --landing-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 
   /* /album (`.af-*`): o fundo de cada etapa, a mesa, a capa. Os dois
-     primeiros tons são os do herói; o terceiro, um cinza-azulado frio para a
-     bancada. A capa é o tecido da seção escura; no escuro ela vira papel. */
+     primeiros tons são os do herói; o quarto, um cinza quente de mesa para a
+     bancada (o azulado frio que estava ali brigava com o papel das páginas). A capa é o tecido da seção escura; no escuro ela vira papel. */
   --album-step-1: var(--landing-tint-0);
   --album-step-2: var(--landing-tint-1);
   --album-step-3: var(--landing-tint-3);
-  --album-step-4: #eceef1;
+  --album-step-4: #ece9e3;
   --album-ink: var(--landing-text);
   --album-ink-2: var(--landing-ink-2);
   --album-muted: var(--landing-muted);
@@ -6640,17 +6640,12 @@ textarea.ae-input {
   flex: 1;
   min-width: 0;
 }
-/* A página: papel A5, o tipo dela (`data-layout`) escolhe a grade e o
-   preenchimento (`data-fill`) tira a margem. É uma prévia, não o desenho
-   em milímetros — esse é o da folha aberta. */
+/* A página: papel A5 com a própria `PageContent` dentro, desenhada em
+   milímetros na escala da miniatura (`BoardPaper` mede a largura). Respiro,
+   encaixe, zoom e texto do inspetor aparecem aqui como na folha aberta. */
 .af-board-page {
   position: relative;
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: 1fr;
-  gap: 4px;
   aspect-ratio: 148 / 210;
-  padding: 8%;
   background: var(--album-paper);
   box-shadow: 0 10px 24px var(--album-shadow);
   /* Corta o que passa da curva dos cantos (foto até a borda). */
@@ -6690,36 +6685,12 @@ textarea.ae-input {
 .af-board-page[data-active]::after {
   opacity: 1;
 }
-.af-board-page[data-fill] {
-  padding: 0;
-  gap: 2px;
-}
-.af-board-page[data-layout='inset'] {
-  padding: 16%;
-}
-.af-board-page[data-layout='duoV'] {
-  grid-template-columns: 1fr 1fr;
-}
-.af-board-page[data-layout='duoH'] {
-  grid-template-rows: 1fr 1fr;
-}
-.af-board-page[data-layout='trio'] {
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1.38fr 1fr;
-}
-.af-board-page[data-layout='trio'] > :first-child {
-  grid-column: 1 / -1;
-}
-.af-board-page[data-layout='quad'] {
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-}
+/* O alvo de arraste mora por cima do quadro da `PageContent`, do tamanho
+   dele: a foto embaixo já está enquadrada, aqui é só o gesto. */
 .af-board-frame {
-  position: relative;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  background: var(--album-empty);
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   transition: opacity 160ms ease;
 }
 .af-board-frame.is-empty {
@@ -6742,12 +6713,6 @@ textarea.ae-input {
 .af-board[data-picking] .af-board-hit {
   cursor: pointer;
 }
-.af-board-hit img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-}
 /* O quadro inteiro é o alvo: ao passar por cima com uma foto, ele se acende
    todo. Contorno por cima da foto, sem mudar o tamanho de nada. */
 .af-board-frame::after {
@@ -6766,6 +6731,12 @@ textarea.ae-input {
 .af-board-frame[data-sel]::after {
   opacity: 1;
   background: transparent;
+}
+/* O quadro que o inspetor está editando: anel fino, sem véu por cima. */
+.af-board-frame[data-current]::after {
+  opacity: 1;
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--landing-cta);
 }
 .af-board-x {
   top: 4px;
@@ -6793,15 +6764,12 @@ textarea.ae-input {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 0;
-  background: transparent;
   color: var(--album-muted);
-  font-family: inherit;
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.35;
   text-align: center;
-  cursor: pointer;
+  pointer-events: none;
 }
 .af-board-page-foot {
   display: flex;
@@ -6980,17 +6948,42 @@ textarea.ae-input {
 }
 /* O trilho fica no meio da altura da bancada. O raio de fora é o de dentro
    (28) mais o respiro (8): os cantos dos botões e do cartão são concêntricos. */
+/* É o mesmo interruptor das abas (`useTrackDrag`), em pé: a pílula acesa é
+   uma peça só, que dá para segurar e arrastar até a outra visão. Sem `gap`
+   entre os botões — o gesto divide o trilho em casas iguais. */
 .ae-rail {
+  position: relative;
   align-self: center;
   display: flex;
   flex-direction: column;
-  gap: 4px;
   width: 88px;
   padding: 8px;
   border-radius: 36px;
   background: var(--color-surface-2);
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+.ae-rail.is-dragging {
+  cursor: grabbing;
+}
+.ae-rail-knob {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  border-radius: 28px;
+  background: var(--landing-pill);
+  transition: transform 0.22s var(--landing-ease-out);
+  pointer-events: none;
+}
+.ae-rail.is-dragging .ae-rail-knob {
+  transition: none;
+  box-shadow: 0 6px 18px var(--album-shadow);
 }
 .ae-rail button {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -7004,21 +6997,18 @@ textarea.ae-input {
   font-weight: 600;
   line-height: 1.1;
   text-align: center;
-  transition:
-    background-color 160ms ease,
-    color 160ms ease;
+  cursor: inherit;
+  transition: color 160ms ease;
 }
 .ae-rail button svg {
   width: 19px;
   height: 19px;
 }
 .ae-rail button.is-on {
-  background: var(--landing-pill);
   color: var(--landing-pill-ink);
 }
 @media (hover: hover) and (pointer: fine) {
-  .ae-rail button:not(.is-on):hover {
-    background: var(--album-line);
+  .ae-rail:not(.is-dragging) button:not(.is-on):hover {
     color: var(--color-text);
   }
 }
@@ -7142,6 +7132,56 @@ textarea.ae-input {
 .ae-split .ae-danger {
   padding: 4px 0;
 }
+/* Fotos do álbum que não estão em página nenhuma: clicar põe no quadro
+   escolhido, arrastar leva até qualquer quadro. */
+.ae-tray {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 6px;
+}
+.ae-tray-item {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--ae-panel-2);
+  cursor: grab;
+  transition: transform 160ms var(--landing-ease-out);
+}
+.ae-tray-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.ae-tray-item:active {
+  transform: scale(0.96);
+}
+.ae-tray-item:focus-visible {
+  outline: 2px solid var(--ae-accent);
+  outline-offset: 2px;
+}
+/* Aviso de que a troca de tipo levou fotos para o fim do álbum. */
+.ae-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--landing-pill);
+  color: var(--landing-pill-ink);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.ae-notice span {
+  flex: 1;
+}
+.ae-notice .ae-chip {
+  flex: none;
+  border-color: currentColor;
+  color: inherit;
+}
 
 @media (max-width: 960px) {
   .af-workbench {
@@ -7157,6 +7197,13 @@ textarea.ae-input {
     justify-content: center;
     width: auto;
     padding: 6px;
+    border-radius: 999px;
+  }
+  .ae-rail-knob {
+    top: 6px;
+    bottom: 6px;
+    left: 6px;
+    right: auto;
     border-radius: 999px;
   }
   .ae-rail button {

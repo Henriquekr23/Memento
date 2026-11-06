@@ -16,6 +16,7 @@ import { includedInOrder, pruneExcluded } from '../src/features/album-builder/se
 import { composeFromOrder, pruneComposition } from '../src/features/album-flow/compose.ts';
 import { moveNextTo } from '../src/features/album-flow/order.ts';
 import { pageCountFor, toSpreads } from '../src/features/album-flow/paginate.ts';
+import { relayoutPage } from '../src/features/album-editor/relayout.ts';
 
 type P = { id: string; timestamp: Date; timestampSource: 'exif' | 'file' };
 const at = (id: string, hour: number): P => ({
@@ -66,6 +67,41 @@ assert.equal(toSpreads([1, 2, 3, 4]).length, 2);
   const pruned = pruneComposition(album, new Set(['1', '3', '4', '5']));
   assert.deepEqual(pruned.pages[0].slots.map((s) => s.photoId), ['1', null, null, null]);
   assert.equal(pruneComposition(album, new Set(['1', '2', '3', '4', '5'])), album);
+}
+
+// Trocar o tipo da página não esconde foto: a que não cabe vai para o fim.
+{
+  // 5 fotos, 2 por página → páginas 1–3 com foto, página 4 em branco.
+  const album = composeFromOrder(['1', '2', '3', '4', '5'], 2, 'Viagem');
+  assert.equal(album.pages.length, 4);
+  album.pages[0].slots[1].zoom = 2;
+
+  const one = relayoutPage(album, 0, 'full');
+  assert.equal(one.moved, 1);
+  assert.equal(one.movedTo, 3, 'vai para a primeira página em branco depois da última cheia');
+  assert.deepEqual(one.album.pages[0].slots.map((s) => s.photoId), ['1', null, null, null]);
+  assert.equal(one.album.pages[3].slots[0].photoId, '2');
+  assert.equal(one.album.pages[3].slots[0].zoom, 2, 'leva o enquadramento junto');
+  assert.equal(one.album.pages[3].layout, 'full');
+  assert.equal(one.album.pages.length, 4);
+
+  // Sem página em branco no fim, o álbum ganha uma folha.
+  const again = relayoutPage(one.album, 1, 'text');
+  assert.equal(again.moved, 2);
+  assert.equal(again.album.pages.length, 6);
+  assert.equal(again.movedTo, 4);
+  assert.equal(again.album.pages[4].layout, 'duoH');
+  assert.deepEqual(again.album.pages[4].slots.slice(0, 2).map((s) => s.photoId), ['3', '4']);
+
+  // Nenhuma foto some: o conjunto continua o mesmo.
+  const ids = (a: typeof album) =>
+    a.pages.flatMap((p) => p.slots.map((s) => s.photoId)).filter(Boolean).sort();
+  assert.deepEqual(ids(again.album), ['1', '2', '3', '4', '5']);
+
+  // Aumentar a página não move nada.
+  const grow = relayoutPage(album, 0, 'quad');
+  assert.equal(grow.movedTo, null);
+  assert.equal(grow.album.pages.length, 4);
 }
 
 console.log('checkAlbumFlow: ok');

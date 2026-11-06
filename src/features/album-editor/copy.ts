@@ -161,6 +161,13 @@ export interface EditorCopy {
   trayUsed: string;
   trayNote: string;
   trayEmpty: string;
+  /** Página de texto escolhida: não há quadro onde pôr a foto. */
+  trayNoFrame: string;
+  trayPlaceAria: (name: string) => string;
+  /** Trocar de tipo empurrou fotos para o fim do álbum. */
+  layoutMoved: (count: number, page: number) => string;
+  layoutMovedGo: string;
+  frameEmptyNote: string;
   innerGroup: string;
   removeSheet: string;
   innerNote: (mm: string) => string;
@@ -364,11 +371,19 @@ const PT: EditorCopy = {
   depthBehind: 'Atrás',
   removeText: 'Remover texto',
   pageNumbers: 'Número da página',
-  trayGroup: 'Bandeja',
+  trayGroup: 'Fotos fora das páginas',
   trayUpload: 'Enviar',
   trayUsed: 'já está numa página',
   trayNote: 'Clique para colocar no quadro selecionado, ou arraste até a página.',
   trayEmpty: 'Nenhuma foto ainda. Envie as fotos da viagem para começar.',
+  trayNoFrame: 'Esta página é só texto. Escolha uma página com quadros, ou arraste a foto até ela.',
+  trayPlaceAria: (name) => (name ? `Colocar ${name} no quadro selecionado` : 'Colocar no quadro selecionado'),
+  layoutMoved: (count, page) =>
+    count === 1
+      ? `A foto que não coube foi para a página ${page}.`
+      : `As ${count} fotos que não couberam foram para a página ${page}.`,
+  layoutMovedGo: 'Ver',
+  frameEmptyNote: 'Quadro vazio. Arraste uma foto até ele, ou escolha uma das fotos fora das páginas.',
   innerGroup: 'Miolo',
   removeSheet: 'Remover esta folha',
   innerNote: (mm) =>
@@ -560,11 +575,19 @@ const EN: EditorCopy = {
   depthBehind: 'Behind',
   removeText: 'Remove text',
   pageNumbers: 'Page number',
-  trayGroup: 'Tray',
+  trayGroup: 'Photos off the pages',
   trayUpload: 'Upload',
   trayUsed: 'already on a page',
   trayNote: 'Click to place in the selected frame, or drag onto the page.',
   trayEmpty: 'No photos yet. Upload the trip photos to start.',
+  trayNoFrame: 'This is a text-only page. Pick a page with frames, or drag the photo onto one.',
+  trayPlaceAria: (name) => (name ? `Place ${name} in the selected frame` : 'Place in the selected frame'),
+  layoutMoved: (count, page) =>
+    count === 1
+      ? `The photo that didn't fit moved to page ${page}.`
+      : `The ${count} photos that didn't fit moved to page ${page}.`,
+  layoutMovedGo: 'View',
+  frameEmptyNote: 'Empty frame. Drag a photo onto it, or pick one of the photos off the pages.',
   innerGroup: 'Inner pages',
   removeSheet: 'Remove this sheet',
   innerNote: (mm) =>
