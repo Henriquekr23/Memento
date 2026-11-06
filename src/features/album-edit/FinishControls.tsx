@@ -54,53 +54,55 @@ export function FinishControls({
     });
 
     return (
-      <section className="card p-5">
-        <h2 className="font-[family-name:var(--font-heading)] text-lg">
-          Álbum finalizado
-        </h2>
-        <p className="muted mt-1 text-sm">
-          Enviado em {finished}. Ninguém pode mudar a montagem nem mandar fotos
-          novas — nem você, enquanto ele estiver assim. O link público e o PDF
-          continuam funcionando normalmente.
-        </p>
-        <button
-          type="button"
-          onClick={() => run(() => reopenAlbum(albumId))}
-          disabled={pending}
-          className="btn btn-secondary btn-sm mt-4"
-        >
-          {pending ? 'Reabrindo…' : 'Reabrir a edição'}
-        </button>
+      <div className="av-item">
+        <div className="av-item-head">
+          <div className="av-item-text">
+            <h3 className="av-item-title">Álbum finalizado</h3>
+            <p className="ac-hint">
+              Enviado em {finished}. A montagem está travada para todo mundo e o convite
+              não recebe fotos. O link público e o PDF continuam funcionando.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => run(() => reopenAlbum(albumId))}
+            disabled={pending}
+            className="af-btn af-btn-ghost af-btn-sm"
+          >
+            {pending ? 'Reabrindo…' : 'Reabrir a edição'}
+          </button>
+        </div>
         {error && (
-          <p role="alert" className="mt-3 text-sm text-[var(--color-accent-700)]">
+          <p role="alert" className="ac-error">
             {error}
           </p>
         )}
-      </section>
+      </div>
     );
   }
 
   return (
-    <section className="card p-5">
-      <h2 className="font-[family-name:var(--font-heading)] text-lg">
-        Dar o álbum por pronto
-      </h2>
-      <p className="muted mt-1 text-sm">
-        Enquanto o álbum está em montagem, você e quem você convidou podem mexer
-        nele. Enviar fecha a montagem: nada mais entra e nada mais muda até você
-        reabrir.
-      </p>
-      <button
-        type="button"
-        onClick={() => setConfirming(true)}
-        disabled={pending}
-        className="btn btn-primary btn-sm mt-4"
-      >
-        {pending ? 'Enviando…' : 'Enviar álbum'}
-      </button>
+    <div className="av-item">
+      <div className="av-item-head">
+        <div className="av-item-text">
+          <h3 className="av-item-title">Dar o álbum por pronto</h3>
+          <p className="ac-hint">
+            Trava a montagem e fecha o convite — para você e para quem você chamou. Dá
+            para reabrir depois.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          disabled={pending}
+          className="af-btn af-btn-ghost af-btn-sm"
+        >
+          {pending ? 'Enviando…' : 'Enviar álbum'}
+        </button>
+      </div>
 
       {error && (
-        <p role="alert" className="mt-3 text-sm text-[var(--color-accent-700)]">
+        <p role="alert" className="ac-error">
           {error}
         </p>
       )}
@@ -113,6 +115,6 @@ export function FinishControls({
         onConfirm={() => run(() => finishAlbum(albumId))}
         onCancel={() => setConfirming(false)}
       />
-    </section>
+    </div>
   );
 }

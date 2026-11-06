@@ -4,41 +4,41 @@ import { useLang } from '@/features/i18n/LangProvider';
 import type { Photo } from '@/types/photo';
 
 import { FLOW_COPY } from './copy';
-import type { Side } from './order';
+import type { PageGroups, SortMode } from './pageGroups';
 import { PhotoSorter } from './PhotoSorter';
 import { ContinueButton, isFileDrag } from './StepStart';
 
 /**
- * Etapa 2, "Confira a ordem.": só a sequência das fotos, sem páginas
- * (`PhotoSorter`). O "Continuar" fica embaixo, à direita, como na etapa 1; no
+ * Etapa 2, "Confira a ordem.": a sequência das fotos já dividida em páginas,
+ * uma coluna por página (`PhotoSorter`). O "Continuar" fica embaixo, à direita, como na etapa 1; no
  * celular, preso no pé da tela.
  *
  * Arrastar arquivos por cima da etapa também importa, como na etapa 1.
  */
 export function StepOrder({
   photos,
+  groups,
   outside,
-  isManuallyOrdered,
-  onMove,
+  sortMode,
+  onSort,
+  onMoveTo,
   onRemove,
   onRestore,
-  onSortByDate,
   onFiles,
   onContinue,
-  onRestart,
   notes,
   toast,
 }: {
   photos: readonly Photo[];
+  groups: PageGroups;
   outside: readonly Photo[];
-  isManuallyOrdered: boolean;
-  onMove: (id: string, targetId: string, side: Side) => void;
+  sortMode: SortMode;
+  onSort: (mode: SortMode) => void;
+  onMoveTo: (id: string, group: number, index: number) => void;
   onRemove: (id: string) => void;
   onRestore: (id: string) => void;
-  onSortByDate: () => void;
   onFiles: (files: File[]) => void;
   onContinue: () => void;
-  onRestart: () => void;
   notes: React.ReactNode;
   toast: React.ReactNode;
 }) {
@@ -65,41 +65,37 @@ export function StepOrder({
       {notes}
       <PhotoSorter
         photos={photos}
+        groups={groups}
         outside={outside}
-        isManuallyOrdered={isManuallyOrdered}
-        onMove={onMove}
+        sortMode={sortMode}
+        onSort={onSort}
+        onMoveTo={onMoveTo}
         onRemove={onRemove}
         onRestore={onRestore}
-        onSortByDate={onSortByDate}
       />
-      <StepFoot canContinue={canContinue} onContinue={onContinue} onRestart={onRestart} />
+      <StepFoot canContinue={canContinue} onContinue={onContinue} />
       {toast}
     </section>
   );
 }
 
 /**
- * O pé das etapas 2 e 3: "Começar de novo" à esquerda, "Continuar" à direita —
- * a mesma linha de fim da etapa 1. No celular o "Continuar" fica preso no pé
- * da tela (`.af-bottombar`).
+ * O pé da etapa 2: "Continuar" à direita, a mesma linha de fim da etapa 1. No
+ * celular ele fica preso no pé da tela (`.af-bottombar`). "Começar de novo"
+ * saiu daqui: uma ação que apaga tudo não divide a linha com a que avança.
  */
 export function StepFoot({
   canContinue,
   onContinue,
-  onRestart,
 }: {
   canContinue: boolean;
   onContinue: () => void;
-  onRestart: () => void;
 }) {
   const { lang } = useLang();
   const t = FLOW_COPY[lang];
   return (
     <>
       <div className="af-step-foot">
-        <button type="button" className="af-link" onClick={onRestart}>
-          {t.restart}
-        </button>
         <ContinueButton disabled={!canContinue} onClick={onContinue} label={t.continue} className="af-step-foot-cta" />
       </div>
       <div className="af-bottombar">

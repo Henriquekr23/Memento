@@ -18,7 +18,13 @@ import {
   type Orientation,
   type PaperId,
 } from '@/features/album-print/spec';
-import { ALBUM_COLORS, COVER_FONTS, DEFAULT_COLOR } from '@/features/album-editor/palette';
+import {
+  ALBUM_COLORS,
+  COVER_FONTS,
+  CUSTOM_COLOR,
+  DEFAULT_COLOR,
+  isHexColor,
+} from '@/features/album-editor/palette';
 import { emptyAlbum } from '@/features/album-editor/emptyAlbum';
 import { MOTIF_SHAPES } from '@/features/album-editor/motifPaths';
 import {
@@ -118,7 +124,7 @@ function coverElement(value: unknown): CoverElement | null {
   return {
     ...base,
     kind: 'text',
-    role: value.role === 'title' ? 'title' : 'free',
+    role: value.role === 'title' ? 'title' : value.role === 'emoji' ? 'emoji' : 'free',
     text: str(value.text),
     width: num(value.width, 76, 5, 100),
     size: num(value.size, 18, 1, 200),
@@ -186,6 +192,12 @@ function page(value: unknown): EditorPage {
   };
 }
 
+function customColor(value: unknown): { bg: string; ink: string } | null {
+  if (!isRecord(value)) return null;
+  const { bg, ink } = value;
+  return isHexColor(bg) && isHexColor(ink) ? { bg, ink } : null;
+}
+
 function editorAlbum(value: unknown): EditorAlbum {
   const fallback = emptyAlbum();
   if (!isRecord(value)) return fallback;
@@ -209,7 +221,10 @@ function editorAlbum(value: unknown): EditorAlbum {
     name: str(value.name),
     orientation: oneOf<Orientation>(value.orientation, ['portrait', 'landscape'], 'portrait'),
     paper: oneOf<PaperId>(value.paper, PAPER_IDS, DEFAULT_PAPER),
-    color: oneOf(value.color, COLOR_IDS, DEFAULT_COLOR),
+    color: oneOf(value.color, [...COLOR_IDS, CUSTOM_COLOR], DEFAULT_COLOR),
+    // Só entra quando existe: álbum sem cor personalizada volta igual ao que
+    // foi salvo (o campo é opcional no modelo).
+    ...(customColor(value.customColor) ? { customColor: customColor(value.customColor) } : {}),
     elements,
     back: { show: bool(back.show, false), text: str(back.text) },
     showPageNumbers: bool(value.showPageNumbers, true),

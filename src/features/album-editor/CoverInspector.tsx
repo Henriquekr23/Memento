@@ -10,6 +10,8 @@ import type {
   TextAlign,
 } from '@/types/album-editor';
 
+import { useState } from 'react';
+
 import type { EditorCopy } from './copy';
 import type { EditorAlbumState } from './useEditorAlbum';
 import { Group, Row, Seg, Slider, Switch } from './controls';
@@ -17,11 +19,19 @@ import {
   IconAlignCenter,
   IconAlignLeft,
   IconAlignRight,
+  IconPlus,
   IconTrash,
   IconType,
   IconWarning,
 } from './icons';
-import { ALBUM_COLORS, COVER_FONTS } from './palette';
+import {
+  ALBUM_COLORS,
+  COVER_FONTS,
+  CUSTOM_COLOR,
+  colorOf,
+  contrastRatio,
+  isHexColor,
+} from './palette';
 import { Motif, MOTIF_SHAPES } from './motifs';
 
 /** Nove posições de atalho, na grade 3×3 da página. */
@@ -67,7 +77,12 @@ export function CoverInspector({
   name,
   onName,
 }: CoverInspectorProps) {
-  const { album, patch, spine, updateElement, removeElement, addText, addMotif } = state;
+  const { album, patch, spine, updateElement, removeElement, addText, addEmoji, addMotif } =
+    state;
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const color = colorOf(album);
+  const isCustom = album.color === CUSTOM_COLOR;
+  const lowContrast = isCustom && contrastRatio(color.bg, color.ink) < 3;
   const selected: CoverElement | null =
     album.elements.find((element) => element.id === selectedId) ?? null;
   const title = album.elements.find(
@@ -81,13 +96,15 @@ export function CoverInspector({
   const elementLabel = (element: CoverElement) => {
     if (element.kind === 'motif') return copy[SHAPE_LABEL[element.shape]] as string;
     if (element.role === 'title') return name.trim() || copy.coverTitlePlaceholder;
+    // O ícone da linha já é o próprio emoji.
+    if (element.role === 'emoji') return copy.emojiGroup;
     return element.text.trim().slice(0, 22) || copy.untitled;
   };
 
   return (
     <>
       {title && (
-        <Group title={copy.titleGroup} help={copy.titleNote}>
+        <Group title={copy.titleGroup} help={copy.titleNote} collapsible>
           <input
             className="ae-input ae-input-lg"
             value={name}
@@ -113,36 +130,86 @@ export function CoverInspector({
         </Group>
       )}
 
-      <Group title={copy.colorGroup} help={copy.colorNote}>
-        <div className="ae-swatches">
-          {ALBUM_COLORS.map((color) => (
-            <button
-              key={color.id}
-              type="button"
-              className={album.color === color.id ? 'is-on' : ''}
-              style={{ background: color.bg }}
-              onClick={() => patch({ color: color.id })}
-              title={copy[color.labelKey as keyof EditorCopy] as string}
-              aria-label={copy[color.labelKey as keyof EditorCopy] as string}
-              aria-pressed={album.color === color.id}
-            >
-              <span
-                aria-hidden
-                style={{
-                  position: 'absolute',
-                  inset: 'auto 3px 3px auto',
-                  width: 7,
-                  height: 7,
-                  borderRadius: 999,
-                  background: color.ink,
-                }}
-              />
-            </button>
-          ))}
-        </div>
+      <Group title={copy.colorGroup} help={copy.colorNote} collapsible>
+        <Seg<boolean>
+          full
+          label={copy.colorModeAria}
+          value={isCustom}
+          onChange={(custom) => {
+            if (!custom) {
+              // Volta para a última cor padrão — ou a primeira, se nunca houve.
+              const last = ALBUM_COLORS.find((c) => c.bg === color.bg && c.ink === color.ink);
+              patch({ color: last?.id ?? ALBUM_COLORS[0].id });
+              return;
+            }
+            // A primeira vez parte da cor que já está na capa: a pessoa ajusta
+            // a partir do que vê, em vez de cair num par aleatório.
+            patch({
+              color: CUSTOM_COLOR,
+              customColor: album.customColor ?? { bg: color.bg, ink: color.ink },
+            });
+          }}
+          options={[
+            { value: false, label: copy.colorPresets },
+            { value: true, label: copy.colorCustomMode },
+          ]}
+        />
+
+        {!isCustom ? (
+          <div className="ae-swatches">
+            {ALBUM_COLORS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                className={album.color === preset.id ? 'is-on' : ''}
+                style={{ background: preset.bg }}
+                onClick={() => patch({ color: preset.id })}
+                title={copy[preset.labelKey as keyof EditorCopy] as string}
+                aria-label={copy[preset.labelKey as keyof EditorCopy] as string}
+                aria-pressed={album.color === preset.id}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute',
+                    inset: 'auto 3px 3px auto',
+                    width: 7,
+                    height: 7,
+                    borderRadius: 999,
+                    background: preset.ink,
+                  }}
+                />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="ae-custom-colors">
+            <ColorField
+              label={copy.colorPrimary}
+              note={copy.colorPrimaryNote}
+              value={color.bg}
+              onChange={(bg) => patch({ customColor: { bg, ink: color.ink } })}
+            />
+            <ColorField
+              label={copy.colorSecondary}
+              note={copy.colorSecondaryNote}
+              value={color.ink}
+              onChange={(ink) => patch({ customColor: { bg: color.bg, ink } })}
+            />
+            <div className="ae-color-preview" style={{ background: color.bg, color: color.ink }} aria-hidden>
+              Aa
+            </div>
+            {lowContrast && (
+              <p className="ae-warn">
+                <IconWarning size={12} />
+                <span>{copy.colorContrastWarn}</span>
+              </p>
+            )}
+          </div>
+        )}
       </Group>
 
-      <Group title={copy.elementsGroup} help={copy.elementsNote}>
+      <Group title={copy.elementsGroup} help={copy.elementsNote} collapsible>
         <div className="ae-layers" role="list">
           {album.elements.map((element) => (
             <div
@@ -157,7 +224,9 @@ export function CoverInspector({
                 onClick={() => onSelect(selectedId === element.id ? null : element.id)}
               >
                 <span className="ae-layer-icon" aria-hidden>
-                  {element.kind === 'motif' ? (
+                  {element.kind === 'text' && element.role === 'emoji' ? (
+                    <span className="ae-layer-emoji">{element.text}</span>
+                  ) : element.kind === 'motif' ? (
                     <svg viewBox="0 0 100 100" width="14" height="14">
                       <Motif shape={element.shape} ink="currentColor" paper="transparent" />
                     </svg>
@@ -198,10 +267,72 @@ export function CoverInspector({
           <button type="button" className="ae-chip" onClick={() => onSelect(addMotif())}>
             {copy.addShape}
           </button>
+          <button
+            type="button"
+            className={`ae-chip${emojiOpen ? ' is-on' : ''}`}
+            aria-expanded={emojiOpen}
+            onClick={() => setEmojiOpen((value) => !value)}
+          >
+            {copy.addEmoji}
+          </button>
         </div>
+        {emojiOpen && (
+          <EmojiPicker
+            copy={copy}
+            aria={copy.emojiAria}
+            onPick={(emoji) => {
+              onSelect(addEmoji(emoji));
+              setEmojiOpen(false);
+            }}
+          />
+        )}
       </Group>
 
-      {selected?.kind === 'text' && (
+      {selected?.kind === 'text' && selected.role === 'emoji' && (
+        <Group
+          title={copy.emojiGroup}
+          right={
+            <button type="button" className="ae-chip" onClick={() => onSelect(null)}>
+              {copy.done}
+            </button>
+          }
+        >
+          <EmojiPicker
+            copy={copy}
+            aria={copy.emojiSwapAria}
+            current={selected.text}
+            onPick={(emoji) => updateElement(selected.id, { text: emoji })}
+          />
+          <Row label={copy.fieldShapeSize} hint="mm">
+            <Slider
+              value={selected.size}
+              min={6}
+              max={90}
+              step={0.5}
+              label={copy.fieldShapeSize}
+              onChange={(size) => updateElement(selected.id, { size })}
+            />
+          </Row>
+          <Row label={copy.fieldRotation}>
+            <Slider
+              value={selected.rotation}
+              min={-180}
+              max={180}
+              unit="°"
+              label={copy.fieldRotation}
+              onChange={(rotation) => updateElement(selected.id, { rotation })}
+            />
+          </Row>
+          <PositionPad
+            copy={copy}
+            x={selected.x}
+            y={selected.y}
+            onPick={(x, y) => updateElement(selected.id, { x, y })}
+          />
+        </Group>
+      )}
+
+      {selected?.kind === 'text' && selected.role !== 'emoji' && (
         <Group
           title={
             selected.role === 'title' ? copy.titleStyleGroup : copy.textGroup
@@ -378,6 +509,28 @@ export function CoverInspector({
       )}
 
       <Group
+        title={copy.backGroup}
+        right={
+          <Switch
+            label={copy.backGroup}
+            checked={album.back.show}
+            onChange={(show) => patch({ back: { ...album.back, show } })}
+          />
+        }
+      >
+        {album.back.show && (
+          <textarea
+            className="ae-input"
+            rows={3}
+            value={album.back.text}
+            placeholder={copy.backPlaceholder}
+            aria-label={copy.backGroup}
+            onChange={(event) => patch({ back: { ...album.back, text: event.target.value } })}
+          />
+        )}
+      </Group>
+
+      <Group
         title={copy.spineGroup}
         help={copy.spineNote}
         right={
@@ -429,28 +582,6 @@ export function CoverInspector({
               </p>
             )}
           </>
-        )}
-      </Group>
-
-      <Group
-        title={copy.backGroup}
-        right={
-          <Switch
-            label={copy.backGroup}
-            checked={album.back.show}
-            onChange={(show) => patch({ back: { ...album.back, show } })}
-          />
-        }
-      >
-        {album.back.show && (
-          <textarea
-            className="ae-input"
-            rows={3}
-            value={album.back.text}
-            placeholder={copy.backPlaceholder}
-            aria-label={copy.backGroup}
-            onChange={(event) => patch({ back: { ...album.back, text: event.target.value } })}
-          />
         )}
       </Group>
     </>
@@ -525,5 +656,137 @@ function PositionPad({
         })}
       </span>
     </Row>
+  );
+}
+
+/** Uma cor escolhida à mão: o seletor do sistema e o código ao lado. */
+function ColorField({
+  label,
+  note,
+  value,
+  onChange,
+}: {
+  label: string;
+  note: string;
+  value: string;
+  onChange: (hex: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  // O código acompanha o seletor; digitado, só vale quando forma uma cor.
+  const [seen, setSeen] = useState(value);
+  if (seen !== value) {
+    setSeen(value);
+    setDraft(value);
+  }
+  return (
+    <div className="ae-color-field">
+      <label className="ae-color-swatch" style={{ background: value }}>
+        <input
+          type="color"
+          value={value}
+          aria-label={label}
+          onChange={(event) => onChange(event.target.value.toUpperCase())}
+        />
+      </label>
+      <span className="ae-color-text">
+        <span className="ae-color-name">{label}</span>
+        <span className="ae-note">{note}</span>
+      </span>
+      <input
+        className="ae-input ae-color-hex"
+        value={draft}
+        aria-label={`${label} (hex)`}
+        spellCheck={false}
+        maxLength={7}
+        onChange={(event) => {
+          const next = event.target.value.startsWith('#')
+            ? event.target.value
+            : `#${event.target.value}`;
+          setDraft(next);
+          if (isHexColor(next)) onChange(next.toUpperCase());
+        }}
+        onBlur={() => setDraft(value)}
+      />
+    </div>
+  );
+}
+
+/** Emojis de viagem para começar; o campo embaixo aceita qualquer outro. */
+const EMOJIS = [
+  '✈️', '🌍', '🗺️', '🧭', '🏝️', '🏖️', '🌊', '⛰️',
+  '🏔️', '🌋', '🏕️', '🌅', '🌄', '🌙', '⭐', '☀️',
+  '🌸', '🌴', '🌵', '🍃', '🚗', '🚂', '🚢', '⛵',
+  '🚲', '🎒', '📷', '🎞️', '🗼', '🏛️', '⛩️', '🏰',
+  '🍕', '🍜', '🍷', '☕', '🍦', '❤️', '🎉', '✨',
+];
+
+/** Primeiro "caractere que a pessoa vê" de um texto — um emoji composto inteiro. */
+function firstGrapheme(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return '';
+  if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
+    const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+    const first = segmenter.segment(trimmed)[Symbol.iterator]().next();
+    return first.done ? '' : first.value.segment;
+  }
+  return Array.from(trimmed)[0] ?? '';
+}
+
+function EmojiPicker({
+  copy,
+  aria,
+  current,
+  onPick,
+}: {
+  copy: EditorCopy;
+  aria: (emoji: string) => string;
+  current?: string;
+  onPick: (emoji: string) => void;
+}) {
+  const [other, setOther] = useState('');
+  return (
+    <div className="ae-emoji">
+      <div className="ae-emoji-grid" role="group" aria-label={copy.emojiPick}>
+        {EMOJIS.map((emoji) => (
+          <button
+            key={emoji}
+            type="button"
+            className={current === emoji ? 'is-on' : ''}
+            aria-pressed={current === emoji}
+            aria-label={aria(emoji)}
+            onClick={() => onPick(emoji)}
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+      <form
+        className="ae-emoji-other"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const emoji = firstGrapheme(other);
+          if (!emoji) return;
+          onPick(emoji);
+          setOther('');
+        }}
+      >
+        <input
+          className="ae-input"
+          value={other}
+          placeholder={copy.emojiOtherPlaceholder}
+          aria-label={copy.emojiOther}
+          onChange={(event) => setOther(event.target.value)}
+        />
+        <button
+          type="submit"
+          className="ae-chip"
+          aria-label={copy.emojiOther}
+          title={copy.emojiOther}
+          disabled={!firstGrapheme(other)}
+        >
+          <IconPlus size={13} />
+        </button>
+      </form>
+    </div>
   );
 }

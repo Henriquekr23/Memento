@@ -15,7 +15,7 @@
  */
 
 import { SPEC } from '@/features/album-print/spec';
-import { COVER_FONTS, canvasFontFamily, colorById } from '@/features/album-editor/palette';
+import { COVER_FONTS, canvasFontFamily, colorOf } from '@/features/album-editor/palette';
 import { slugify } from '@/lib/format';
 import type { EditorAlbum } from '@/types/album-editor';
 import type { Photo } from '@/types/photo';
@@ -83,7 +83,7 @@ async function canvasToJpeg(canvas: HTMLCanvasElement): Promise<Uint8Array> {
 }
 
 function contextOf(album: EditorAlbum, images: Map<string, LoadedImage>): PrintContext {
-  const color = colorById(album.color);
+  const color = colorOf(album);
   const family: Record<string, string> = {};
   const weight: Record<string, number> = {};
   for (const font of COVER_FONTS) {

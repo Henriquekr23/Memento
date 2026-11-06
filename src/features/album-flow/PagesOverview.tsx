@@ -3,7 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { BoardApi, FrameRef } from '@/features/album-editor/AlbumEditor';
-import { IconGrip, IconPlus, IconTrash, IconX } from '@/features/album-editor/icons';
+import {
+  IconEdit,
+  IconGrip,
+  IconMinus,
+  IconPlus,
+  IconTrash,
+  IconX,
+} from '@/features/album-editor/icons';
 import { PageContent, PHOTO_DND_TYPE } from '@/features/album-editor/PageContent';
 import { SPEC } from '@/features/album-print/spec';
 import { useLang } from '@/features/i18n/LangProvider';
@@ -17,6 +24,16 @@ import { toSpreads } from './paginate';
 const FRAME_DND_TYPE = 'text/memento-frame';
 /** Arraste de página inteira (pela alça do número), não de foto. */
 const PAGE_DND_TYPE = 'text/memento-page';
+
+/**
+ * O "zoom" da visão geral: quantas aberturas (duas páginas) cabem por linha.
+ * A barra anda do mais afastado (4 aberturas, 8 páginas) ao mais perto (1
+ * abertura, 2 páginas) — arrastar para a direita aproxima, como num zoom.
+ */
+const MIN_COLS = 1;
+const MAX_COLS = 4;
+/** Posição da barra (1 = mais afastado) ⇄ aberturas por linha. */
+const colsFromZoom = (zoom: number) => MAX_COLS + MIN_COLS - zoom;
 
 function isPageDrag(event: React.DragEvent): boolean {
   return Array.from(event.dataTransfer?.types ?? []).includes(PAGE_DND_TYPE);
@@ -74,6 +91,13 @@ export function PagesOverview({ api }: { api: BoardApi }) {
   /** Página sendo arrastada pela alça e a página sob o ponteiro. */
   const [pageFrom, setPageFrom] = useState<number | null>(null);
   const [pageOver, setPageOver] = useState<number | null>(null);
+  const [newOver, setNewOver] = useState(false);
+  /** Aberturas por linha; a partida é a de antes (4 páginas). */
+  const [cols, setCols] = useState(2);
+  const zoom = colsFromZoom(cols);
+  const setZoom = (next: number) =>
+    setCols(colsFromZoom(Math.min(MAX_COLS, Math.max(MIN_COLS, next))));
+  const zoomFill = ((zoom - MIN_COLS) / (MAX_COLS - MIN_COLS)) * 100;
 
   useEffect(() => {
     if (!picked) return;
@@ -305,8 +329,14 @@ export function PagesOverview({ api }: { api: BoardApi }) {
             <span className="af-board-num">{index + 1}</span>
           </button>
           {isActive && (
-            <button type="button" className="af-board-open" onClick={() => api.onOpenPage(index)}>
-              {t.openPage}
+            <button
+              type="button"
+              className="af-board-open"
+              aria-label={t.editPageAria(index + 1)}
+              title={t.openPage}
+              onClick={() => api.onOpenPage(index)}
+            >
+              <IconEdit size={14} />
             </button>
           )}
         </div>
@@ -315,7 +345,11 @@ export function PagesOverview({ api }: { api: BoardApi }) {
   };
 
   return (
-    <div className="af-board" data-picking={picked ? true : undefined}>
+    <div
+      className="af-board"
+      data-picking={picked ? true : undefined}
+      style={{ '--board-cols': cols } as React.CSSProperties}
+    >
       <div className="af-board-spreads">
         {spreads.map(([left, right], spreadIndex) => (
           <div className="af-board-spread-wrap" key={left.page.id}>
@@ -339,10 +373,73 @@ export function PagesOverview({ api }: { api: BoardApi }) {
             </button>
           </div>
         ))}
-        <button type="button" className="af-board-add" onClick={api.onAddSheet}>
+        {/* Clicar abre uma folha vazia; soltar uma foto aqui abre a folha já
+            com ela na primeira página. */}
+        <button
+          type="button"
+          className="af-board-add"
+          data-over={newOver || undefined}
+          onClick={api.onAddSheet}
+          onDragOver={(event) => {
+            if (!isPhotoDrag(event)) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            if (!newOver) setNewOver(true);
+          }}
+          onDragLeave={() => setNewOver(false)}
+          onDrop={(event) => {
+            if (!isPhotoDrag(event)) return;
+            event.preventDefault();
+            setNewOver(false);
+            setOver(null);
+            setDragFrom(null);
+            const from = readFrame(event.dataTransfer.getData(FRAME_DND_TYPE));
+            const photoId = event.dataTransfer.getData(PHOTO_DND_TYPE);
+            if (photoId) api.onDropToNewSheet(photoId, from);
+          }}
+        >
           <IconPlus size={18} />
-          <span>{t.addSpread}</span>
+          <span>{newOver ? t.addSpreadDrop : t.addSpread}</span>
         </button>
+      </div>
+      {/* Quantas páginas por linha: menos páginas, cada uma maior para
+          enquadrar; mais, para ver o álbum inteiro de uma vez. No canto de
+          baixo, grudada, como o zoom das outras visões — e só a barra. */}
+      <div className="af-board-bar">
+        <div className="af-board-perrow" role="group" aria-label={t.perRowLabel}>
+          <button
+            type="button"
+            className="af-board-zoom-btn"
+            aria-label={t.perRowMore}
+            title={t.perRowMore}
+            disabled={zoom <= MIN_COLS}
+            onClick={() => setZoom(zoom - 1)}
+          >
+            <IconMinus size={14} />
+          </button>
+          <input
+            type="range"
+            className="af-board-zoom"
+            min={MIN_COLS}
+            max={MAX_COLS}
+            step={1}
+            value={zoom}
+            aria-label={t.perRowLabel}
+            aria-valuetext={t.perRowAria(cols * 2)}
+            style={{ '--fill': `${zoomFill}%` } as React.CSSProperties}
+            onChange={(event) => setZoom(Number(event.target.value))}
+          />
+          <button
+            type="button"
+            className="af-board-zoom-btn"
+            aria-label={t.perRowFewer}
+            title={t.perRowFewer}
+            disabled={zoom >= MAX_COLS}
+            onClick={() => setZoom(zoom + 1)}
+          >
+            <IconPlus size={14} />
+          </button>
+        </div>
       </div>
     </div>
   );

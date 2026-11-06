@@ -45,6 +45,7 @@ export function StepStart({
   onFiles,
   onContinue,
   notes,
+  coverColor,
 }: {
   name: string;
   onName: (name: string) => void;
@@ -54,6 +55,8 @@ export function StepStart({
   onFiles: (files: File[]) => void;
   onContinue: () => void;
   notes: React.ReactNode;
+  /** A cor do álbum (a escolhida na capa, ou a padrão). */
+  coverColor?: { bg: string; ink: string };
 }) {
   const { lang } = useLang();
   const t = FLOW_COPY[lang];
@@ -133,7 +136,7 @@ export function StepStart({
         }}
       >
         <div className="af-cover-stage">
-          <AlbumCover name={name} onName={onName} variant="hero" />
+          <AlbumCover name={name} onName={onName} variant="hero" color={coverColor} />
         </div>
 
         {/* Mouse: bloco de soltar com o botão dentro. */}

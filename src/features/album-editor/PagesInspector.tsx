@@ -10,7 +10,6 @@ import {
   resetFraming,
   type CoverFontId,
   type EditorLayoutId,
-  type FrameFit,
   type TextAlign,
   type TextBackdrop,
   type TextBlockPreset,
@@ -23,6 +22,7 @@ import {
   IconAlignCenter,
   IconAlignLeft,
   IconAlignRight,
+  IconRecenter,
   IconTrash,
   IconX,
 } from './icons';
@@ -295,39 +295,42 @@ export function PagesInspector({
 
           {frame.photoId && (
           <>
-          <Row label={copy.fieldFit} help={copy.fitNote} stack>
-            <Seg<FrameFit>
-              full
-              label={copy.fieldFit}
-              value={frame.fit}
-              onChange={(fit) => updateFrame(framePage, frameSlot, { fit })}
-              options={[
-                { value: 'cover', label: copy.fitCover },
-                { value: 'contain', label: copy.fitContain },
-              ]}
+          {/* Preencher ligado = `cover` (a foto ocupa o quadro); desligado =
+              `contain` (a foto inteira, papel em volta). */}
+          <Row label={copy.fitFill} help={copy.fitFillNote} switchRow>
+            <Switch
+              label={copy.fitFill}
+              checked={frame.fit === 'cover'}
+              onChange={(on) =>
+                updateFrame(framePage, frameSlot, { fit: on ? 'cover' : 'contain' })
+              }
             />
           </Row>
 
+          {/* Centralizar de novo mora ao lado do zoom: os dois mexem no
+              enquadramento, e o ícone devolve zoom e posição ao começo. */}
           <Row label={copy.fieldZoom} stack>
-            <Slider
-              value={frame.zoom}
-              min={1}
-              max={3}
-              step={0.02}
-              label={copy.fieldZoom}
-              onChange={(zoom) => updateFrame(framePage, frameSlot, { zoom })}
-            />
+            <span className="ae-zoom-row">
+              <Slider
+                value={frame.zoom}
+                min={1}
+                max={3}
+                step={0.02}
+                label={copy.fieldZoom}
+                onChange={(zoom) => updateFrame(framePage, frameSlot, { zoom })}
+              />
+              <button
+                type="button"
+                className="ae-icon-chip"
+                aria-label={copy.recenterFrame}
+                title={copy.recenterFrame}
+                onClick={() => updateFrame(framePage, frameSlot, resetFraming(frame.fit))}
+              >
+                <IconRecenter size={15} />
+              </button>
+            </span>
           </Row>
           </>
-          )}
-          {frame.photoId && (
-            <button
-              type="button"
-              className="ae-chip"
-              onClick={() => updateFrame(framePage, frameSlot, resetFraming(frame.fit))}
-            >
-              {copy.recenterFrame}
-            </button>
           )}
         </Group>
       )}

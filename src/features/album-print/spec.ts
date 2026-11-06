@@ -18,7 +18,11 @@ export interface PrintSpec {
   glue: number;
   /** Vinco/dobra da capa externa, medido do corte. */
   hinge: number;
-  /** Altura mínima que a gráfica aceita para a lombada. */
+  /**
+   * Espessura mínima da lombada. 10 mm é a de um fotolivro de capa dura: a
+   * medida antiga (4 mm, de capa mole) dava uma lombada que mal se via na
+   * bancada e não cabia o título com folga.
+   */
   spineMin: number;
   /** Recuo da área segura em cada lado da lombada. */
   spineSafe: number;
@@ -30,7 +34,7 @@ export const SPEC: PrintSpec = {
   safe: { outer: 5, spine: 12, top: 5, bottom: 5 },
   glue: 7,
   hinge: 7,
-  spineMin: 4,
+  spineMin: 10,
   spineSafe: 1,
 };
 

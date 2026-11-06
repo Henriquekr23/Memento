@@ -8,7 +8,7 @@ import { titleOf } from '@/types/album-editor';
 
 import { CoverElementView } from './CoverElementView';
 import { IconMove } from './icons';
-import { COVER_FONTS, colorById, fontById } from './palette';
+import { COVER_FONTS, colorOf, fontById } from './palette';
 import { clamp, useDrag } from './useDrag';
 
 interface Book3DProps {
@@ -103,7 +103,7 @@ export function Book3D({ album, spine, ppm, hint }: Book3DProps) {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  const color = colorById(album.color);
+  const color = colorOf(album);
   const width = SPEC.trim.w * ppm;
   const height = SPEC.trim.h * ppm;
   const depth = Math.max(spine * ppm, 5);
@@ -116,11 +116,11 @@ export function Book3D({ album, spine, ppm, hint }: Book3DProps) {
    * capas são paralelas, então o corte lateral tem a mesma espessura da
    * lombada. O que **conta as páginas** é a listra: uma raia por folha
    * impressa, calculada a partir da contagem real. Assim o mesmo bloco de
-   * 4 mm mostra cinco raias grossas com dez páginas e raias finas e cerradas
+   * 10 mm mostra cinco raias grossas com dez páginas e raias finas e cerradas
    * com cem — que é o que se vê no corte de um livro de verdade.
    *
    * (Medir o bloco pelo papel — 0,8 mm nas dez páginas — seria fiel ao miolo e
-   * mentiroso sobre o objeto: a lombada tem 4 mm de mínimo de gabarito, e o
+   * mentiroso sobre o objeto: a lombada tem 10 mm de mínimo de gabarito, e o
    * livro fechado tem essa espessura em todos os lados.)
    */
   const sheetCount = Math.max(1, Math.ceil(album.pages.length / 2));
@@ -211,7 +211,7 @@ export function Book3D({ album, spine, ppm, hint }: Book3DProps) {
   /*
    * O vinco da capa mole, a 7 mm do corte — a mesma medida que `PrintGuides`
    * desenha no gabarito. É por ali que a capa dobra, e é essa linha que separa
-   * a lombada da capa aos olhos mesmo num álbum de 4 mm.
+   * a lombada da capa aos olhos mesmo num álbum fino.
    */
   const crease = (side: 'left' | 'right') => {
     const at = SPEC.hinge * ppm;
@@ -414,6 +414,9 @@ export function Book3D({ album, spine, ppm, hint }: Book3DProps) {
           <div
             style={face({
               ...board(-90),
+              // Mais luz ambiente que as outras faces: de frente para a
+              // câmera na maior parte das voltas, a lombada escura sumia.
+              filter: `brightness(${lit(-90, yaw, 0.94, 0.16).toFixed(3)})`,
               width: depth,
               height,
               transform: `translate(-50%,-50%) translateX(${-width / 2}px) rotateY(-90deg)`,
@@ -429,7 +432,7 @@ export function Book3D({ album, spine, ppm, hint }: Book3DProps) {
                 position: 'absolute',
                 inset: 0,
                 background:
-                  'linear-gradient(90deg, rgba(0,0,0,.34), rgba(255,255,255,.16) 44%, rgba(0,0,0,.36))',
+                  'linear-gradient(90deg, rgba(0,0,0,.16), rgba(255,255,255,.22) 46%, rgba(0,0,0,.16))',
                 pointerEvents: 'none',
               }}
             />

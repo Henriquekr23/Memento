@@ -13,7 +13,21 @@
 import assert from 'node:assert/strict';
 
 import { includedInOrder, pruneExcluded } from '../src/features/album-builder/selection.ts';
-import { composeFromOrder, pruneComposition } from '../src/features/album-flow/compose.ts';
+import {
+  composeFromGroups,
+  composeFromOrder,
+  groupsFromComposition,
+  pruneComposition,
+} from '../src/features/album-flow/compose.ts';
+import {
+  chunk,
+  groupsKey,
+  layoutForCount,
+  mergeOrder,
+  moveToGroup,
+  regroup,
+  syncGroups,
+} from '../src/features/album-flow/pageGroups.ts';
 import { moveNextTo } from '../src/features/album-flow/order.ts';
 import { pageCountFor, toSpreads } from '../src/features/album-flow/paginate.ts';
 import { relayoutPage } from '../src/features/album-editor/relayout.ts';
@@ -102,6 +116,61 @@ assert.equal(toSpreads([1, 2, 3, 4]).length, 2);
   const grow = relayoutPage(album, 0, 'quad');
   assert.equal(grow.movedTo, null);
   assert.equal(grow.album.pages.length, 4);
+}
+
+// Etapa 2 em páginas: grupos de até 4, a etapa 3 monta exatamente assim.
+{
+  const g = chunk(['1', '2', '3', '4', '5']);
+  assert.deepEqual(g, [['1', '2'], ['3', '4'], ['5']]);
+
+  // Levar para outra página insere na posição; a de origem encolhe.
+  assert.deepEqual(moveToGroup(g, '5', 0, 1), [['1', '5', '2'], ['3', '4']]);
+  // Página vazia some; página nova no fim.
+  // Sozinha na última página, ir para uma página nova não muda nada.
+  assert.equal(moveToGroup(g, '5', 3, 0), null);
+  assert.deepEqual(moveToGroup(g, '1', 3, 0), [['2'], ['3', '4'], ['5'], ['1']]);
+  // Mesma página: descer uma casa.
+  assert.deepEqual(moveToGroup(g, '1', 0, 2), [['2', '1'], ['3', '4'], ['5']]);
+  // Página cheia não recebe de outra.
+  const full = [['1', '2', '3', '4'], ['5']];
+  assert.equal(moveToGroup(full, '5', 0, 0), null);
+  // ...mas reordena dentro dela.
+  assert.deepEqual(moveToGroup(full, '4', 0, 0), [['4', '1', '2', '3'], ['5']]);
+
+  // Sincronia: quem sai some, página vazia some, quem volta entra ao lado da vizinha.
+  assert.deepEqual(syncGroups([['1', '2'], ['3']], ['1', '2']), [['1', '2']]);
+  assert.deepEqual(syncGroups([['1', '3']], ['1', '2', '3']), [['1', '2', '3']]);
+  // Lote novo vira páginas novas depois da vizinha.
+  assert.deepEqual(syncGroups([['1']], ['1', '2', '3', '4']), [['1'], ['2', '3'], ['4']]);
+  // Vizinha cheia: a foto que volta abre página logo depois.
+  assert.deepEqual(syncGroups([['1', '2', '3', '4']], ['1', '2', '3', '4', '5']), [
+    ['1', '2', '3', '4'],
+    ['5'],
+  ]);
+
+  // Ordenar mantém as contagens por página.
+  assert.deepEqual(regroup([['a'], ['b', 'c', 'd']], ['d', 'c', 'b', 'a']), [['d'], ['c', 'b', 'a']]);
+  assert.equal(groupsKey([['a'], ['b', 'c']]), 'a|b,c');
+  // Fora do álbum fica no lugar.
+  assert.deepEqual(mergeOrder(['a', 'x', 'b'], new Set(['x']), ['b', 'a']), ['b', 'x', 'a']);
+
+  assert.equal(layoutForCount(1), 'full');
+  assert.equal(layoutForCount(4), 'quad');
+  const composed = composeFromGroups([['1'], ['2', '3', '4'], ['5', '6']], 'Viagem');
+  assert.equal(composed.pages.length, 4);
+  assert.deepEqual(composed.pages.map((p) => p.layout), ['full', 'trio', 'duoH', 'full']);
+  assert.deepEqual(composed.pages[1].slots.slice(0, 3).map((s) => s.photoId), ['2', '3', '4']);
+  assert.equal(composeFromGroups([['1'], ['2'], ['3'], ['4'], ['5']], 'V').pages.length, 6);
+
+  // Reabrir um álbum guardado: a divisão lida das páginas é a de origem — ida e
+  // volta não muda a chave, então o fluxo não pergunta "Refazer as páginas?".
+  const groups = [['1'], ['2', '3', '4'], ['5', '6']];
+  assert.deepEqual(groupsFromComposition(composed), groups);
+  assert.equal(groupsKey(syncGroups(groupsFromComposition(composed), ['1', '2', '3', '4', '5', '6'])), groupsKey(groups));
+  // Página sem foto não vira grupo; foto repetida conta uma vez.
+  const dup = composeFromGroups([['1', '2'], ['3']], 'V');
+  dup.pages[1].slots[1].photoId = '1';
+  assert.deepEqual(groupsFromComposition(dup), [['1', '2'], ['3']]);
 }
 
 console.log('checkAlbumFlow: ok');

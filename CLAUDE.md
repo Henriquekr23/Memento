@@ -194,11 +194,16 @@ leitura de EXIF.
       lista inteira; `useAlbumSelection` guarda o conjunto de **excluídas**. Na
       etapa 2 elas aparecem embaixo, apagadas, e voltam com um toque. Editor,
       PDF e nuvem recebem só as incluídas.
-    - **Etapa 2 é ordem.** Mexer é **inserir** (`order.ts`, `moveNextTo`), ao
-      vivo: passar a foto arrastada por cima de outra já a põe no lugar dela, e
-      as outras deslizam (`useReorderMotion`, FLIP com a propriedade
-      `translate`, para o giro de cada foto continuar valendo). `lastTarget`
-      impede duas fotos de ficarem trocando sob o ponteiro.
+    - **Etapa 2 é ordem já dividida em páginas** (`pageGroups.ts`, puro): uma
+      coluna por página, no máximo 4 fotos. Mexer é **inserir** — a linha
+      mostra onde a foto entra; página cheia não recebe de outra; soltar em
+      "Nova página" abre uma. Os grupos guardam só ids e são acertados com as
+      incluídas por `syncGroups` (quem sai some, quem volta entra ao lado da
+      vizinha). As ordenações do canto (data, data inversa, nome, aleatório)
+      reordenam **mantendo as contagens**; "Personalizado" volta à última
+      divisão feita à mão. A etapa 3 nasce exatamente dessa divisão
+      (`composeFromGroups`, tipo de página por contagem). O deslize (FLIP) mede
+      por `getBoundingClientRect`, porque a foto muda de coluna (de pai).
     - **Etapas 3 e 4 são o mesmo `AlbumEditor`**, montado uma vez e recortado
       por `mode`: `pages` (a visão geral `PagesOverview`, desenhada pela
       `/album` via `renderBoard`/`BoardApi`, e a folha aberta; o inspetor de
@@ -210,7 +215,7 @@ leitura de EXIF.
       por cima de cada quadro): o que o inspetor muda aparece ali. Clicar num
       quadro escolhe o quadro (`onSelectFrame`); mover com dois cliques só no
       toque.
-    - **A composição nasce da ordem** (`composeFromOrder`) ao entrar na etapa
+    - **A composição nasce da divisão da etapa 2** (`composeFromGroups`) ao entrar na etapa
       3. Ir e voltar entre páginas, capa e finalização não refaz nada; voltar
       à ordem e seguir de novo reabre a composição como estava
       (`pruneComposition` só esvazia o quadro de quem saiu); se a ordem ou as
@@ -404,10 +409,31 @@ leitura de EXIF.
 
 ### Fase 3 · A3 — reeditar, montar junto, finalizar
 
-- **Álbum salvo reabre na mesma bancada** (`/album/{id}/editar`,
-  `album-edit/`). O editor não sabe de onde a foto veio: recebe `Photo[]` com
-  `previewUrl`, que aqui é URL assinada. Foi essa fronteira que fez a edição
-  caber num componente em vez de num segundo editor. `useAlbum` aceita uma
+- **Álbum salvo reabre no mesmo fluxo de etapas** (`/album/{id}/editar`). O
+  fluxo da `/album` mora em `album-flow/AlbumFlow.tsx`; a edição o semeia com
+  `edit` (fotos assinadas, `stored` e a composição), abre na etapa 3 e lê a
+  divisão da etapa 2 de volta das páginas (`groupsFromComposition`) — com a
+  mesma chave (`groupsKey`), andar entre as etapas sem mexer na ordem não
+  pergunta "Refazer as páginas?". Na etapa 5, "Guardar mudanças"
+  (`useAlbumEditSave`) entra no lugar de "Salvar na nuvem" e baixar não leva ao
+  `/obrigado`. Guardar envia só as **incluídas**: foto tirada na etapa 2 sai do
+  álbum e do bucket. O editor não sabe de onde a foto veio: recebe `Photo[]`
+  com `previewUrl`, que aqui é URL assinada. `AlbumEditWorkbench` ficou sem uso.
+- **A página do álbum (`/album/[id]`) veste a roupa da conta, sem as abas**
+  (`AccountShell section={null}`; desenho em `album-view/AlbumPageView`, a rota
+  só carrega). "← Meus álbuns" para quem monta, título e ações (`AlbumHeader`:
+  Editar · Baixar PDF · Montar o meu), o álbum com `layout="top"` (trilho
+  deitado acima, para o livro ficar no centro) e, para o dono, a caixa de
+  entrada e um painel só (`.av-panel`): link público, convite (segmentado +
+  campo de copiar), quem monta junto, dar por pronto. O PDF dali sai das fotos
+  guardadas (até 2000 px) e só é oferecido a quem monta.
+- **URL assinada é presa na primeira que chegou** (`AlbumViewer`): cada render
+  do servidor assina de novo, e um `router.refresh()` trocava a URL de todas as
+  fotos — o navegador baixava tudo outra vez e as páginas piscavam.
+  `album-editor/photoCache.ts` guarda o tamanho natural por `src` e aquece as
+  fotos na ordem das páginas (3 por vez, com `decode()`); `FramedPhoto` usa o
+  tamanho guardado, mede o quadro em `useLayoutEffect` e só mostra a foto já
+  enquadrada — sem o pulo de `object-fit` para a geometria final.
   semente (`AlbumSeed`) e, com ela, já nasce "ordenado à mão" — reordenar por
   data ao acrescentar uma foto desmancharia o álbum que a pessoa abriu para
   mexer num detalhe.
@@ -437,6 +463,13 @@ leitura de EXIF.
   — e a tranca não vale para ele no banco de propósito, porque destrancar é um
   clique dele mesmo; o que a tranca garante de verdade está em
   `save_album_composition`.
+- **Lombada mínima de 10 mm** (`SPEC.spineMin`, capa dura). Com os 4 mm de
+  antes a lombada mal aparecia na bancada; `.ae-spine` usa filetes finos e um
+  brilho no meio, e a face da lombada no `Book3D` tem mais luz ambiente.
+- **Visão geral das páginas tem zoom por barra** (`PagesOverview`): de 1 a 4
+  aberturas por linha, só a barra (− e + nas pontas), no canto inferior direito do visor; arrastar para a direita aproxima.
+- **"Meus álbuns" cresce a partir do centro** (`.ac-grid` em flex com
+  `justify-content: center` e cartão de 340 px).
 
 ## Estilo de código / convenções deste repo
 

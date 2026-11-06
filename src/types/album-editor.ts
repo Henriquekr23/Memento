@@ -13,8 +13,9 @@ import type { PaperId, Orientation } from '@/features/album-print/spec';
 /* ── capa ────────────────────────────────────────────────────────────────── */
 
 /** Papel do elemento. O título é único e não pode ser removido: é ele que a
- *  lombada reflete. */
-export type CoverElementRole = 'title' | 'free';
+ *  lombada reflete. `emoji` é um texto de um caractere só, desenhado pela
+ *  fonte de emoji do sistema — na tela e no canvas do PDF. */
+export type CoverElementRole = 'title' | 'free' | 'emoji';
 
 export type CoverFontId =
   | 'anton'
@@ -217,8 +218,15 @@ export interface EditorAlbum {
   name: string;
   orientation: Orientation;
   paper: PaperId;
-  /** Id de uma cor da paleta do álbum. */
+  /** Id de uma cor da paleta do álbum, ou `'custom'` (ver `customColor`). */
   color: string;
+  /**
+   * Cor escolhida à mão: `bg` é a principal (capa, contracapa, lombada) e
+   * `ink` a secundária (texto e grafismos). Só vale com `color === 'custom'`;
+   * fica guardada mesmo quando a pessoa volta para uma cor padrão, para que
+   * voltar ao "Personalizada" devolva o que ela tinha escolhido.
+   */
+  customColor?: { bg: string; ink: string } | null;
   elements: CoverElement[];
   back: BackCover;
   spine: SpineConfig;
