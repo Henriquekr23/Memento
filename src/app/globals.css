@@ -772,41 +772,117 @@ html {
     border-color 0.16s ease;
 }
 
+/* O menu da conta tem o mesmo vidro da barra de onde ele sai (`--landing-bar`
+   + desfoque): lido como continuação dela, não como um cartão creme solto por
+   cima da página. Fora da landing e da /album, onde a barra é outra, cai no
+   fundo da página. */
 .menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
   z-index: 50;
-  min-width: 208px;
-  padding: var(--space-1);
-  background: var(--color-bg);
-  border: 1px solid var(--color-divider);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  min-width: 240px;
+  padding: 6px;
+  background: var(--landing-bar, var(--color-bg));
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+  border-radius: 20px;
+  box-shadow: var(--landing-bar-shadow, var(--shadow-md));
+  color: var(--color-text);
+  transform-origin: top right;
+  animation: menu-in 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu {
+    animation: none;
+  }
+}
+
+.account-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 10px;
+}
+.account-menu-head .avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+}
+.account-menu-who {
+  display: grid;
+  min-width: 0;
+  line-height: 1.3;
+}
+.account-menu-name {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-menu-email {
+  overflow: hidden;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 10px;
   width: 100%;
-  padding: 8px 10px;
-  border-radius: var(--radius-md);
+  padding: 9px 10px;
+  border-radius: 12px;
   font-size: 14px;
   text-align: left;
   color: inherit;
+  cursor: pointer;
   transition: background 0.15s ease;
+}
+.menu-icon {
+  flex: none;
+  opacity: 0.7;
 }
 
 .menu-item:hover,
 .menu-item:focus-visible {
-  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+.menu-item:hover .menu-icon,
+.menu-item:focus-visible .menu-icon {
+  opacity: 1;
+}
+.menu-item.is-danger {
+  color: #b0342f;
+}
+.menu-item.is-danger:hover,
+.menu-item.is-danger:focus-visible {
+  background: color-mix(in srgb, #b0342f 10%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .menu-item.is-danger {
+    color: #f0948d;
+  }
+}
+:root[data-theme='dark'] .menu-item.is-danger {
+  color: #f0948d;
 }
 
 .menu-sep {
   height: 1px;
-  margin: var(--space-1) 4px;
-  background: var(--color-divider);
+  margin: 4px 10px;
+  background: color-mix(in srgb, var(--color-text) 9%, transparent);
 }
 
 .btn {
@@ -7939,6 +8015,81 @@ textarea.ae-input {
     grid-template-rows: auto minmax(0, 1fr);
     gap: 12px;
   }
+}
+
+/* Linha com interruptor: rótulo à esquerda, chave encostada à direita. */
+.ae-row.is-switch {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.ae-row.is-switch .ae-row-control {
+  justify-content: flex-end;
+}
+
+/* Etapa 3: a página muda de lugar pela alça do número. */
+.af-board-grip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 26px;
+  padding: 0 7px 0 3px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--album-muted);
+  font: inherit;
+  cursor: grab;
+  touch-action: none;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.af-board-grip svg {
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .af-board-grip:hover {
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
+  }
+  .af-board-grip:hover svg {
+    opacity: 1;
+  }
+}
+.af-board-grip:active {
+  cursor: grabbing;
+}
+.af-board-grip:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+.af-board-grip:focus-visible svg {
+  opacity: 1;
+}
+/* A página que está sendo arrastada fica apagada no lugar de origem; a de
+   destino mostra de que lado a arrastada vai entrar. */
+.af-board-page-wrap {
+  position: relative;
+}
+.af-board-page-wrap[data-dragging] .af-board-page {
+  opacity: 0.4;
+}
+.af-board-page-wrap[data-drop]::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  bottom: 28px;
+  z-index: 4;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--landing-cta);
+  pointer-events: none;
+}
+.af-board-page-wrap[data-drop='before']::before {
+  left: -3px;
+}
+.af-board-page-wrap[data-drop='after']::before {
+  right: -3px;
 }
 
 /* Fecha `@layer components`, aberto lá em cima. */

@@ -3,17 +3,18 @@
 /**
  * O álbum como arquivo de impressão.
  *
- * Segue a estrutura do gabarito R1219: capa externa, contracapa externa e
- * lombada em arquivos próprios, e o miolo uma página por página — todas com
- * 5 mm de sangria. É o que a gráfica pede; abrir no visualizador continua
- * funcionando, só que com as bordas de sangria visíveis.
+ * Na ordem de quem folheia: a capa, o miolo uma página por página e a
+ * contracapa no fim — todas com 5 mm de sangria. A lombada não entra no
+ * arquivo: sozinha, numa página de 14 mm de largura no meio do PDF, ela só
+ * atrapalhava quem abre para ler. (`drawSpine` continua em `drawPrintPage`
+ * para quando a exportação para gráfica voltar.)
  *
  * O caminho é o mesmo de antes: desenhar num canvas do tamanho do papel →
  * espremer em JPEG → embutir o JPEG cru numa página do PDF. Uma página por vez:
  * um álbum de 200 fotos com todos os canvas vivos estoura a memória da aba.
  */
 
-import { SPEC, spineTextSize, paperById, spineWidth } from '@/features/album-print/spec';
+import { SPEC } from '@/features/album-print/spec';
 import { COVER_FONTS, canvasFontFamily, colorById } from '@/features/album-editor/palette';
 import { slugify } from '@/lib/format';
 import type { EditorAlbum } from '@/types/album-editor';
@@ -25,7 +26,6 @@ import {
   drawBackCover,
   drawCover,
   drawInnerPage,
-  drawSpine,
   type LoadedImage,
   type PrintContext,
 } from './drawPrintPage';
@@ -121,13 +121,11 @@ export async function buildPrintPdf(
     await document.fonts.ready;
   }
 
-  const spine =
-    album.spine.mm ?? spineWidth(album.pages.length, paperById(album.paper).mm);
   const fileW = SPEC.trim.w + SPEC.bleed * 2;
   const fileH = SPEC.trim.h + SPEC.bleed * 2;
 
   const pdfPages: PdfPageInput[] = [];
-  const total = album.pages.length + 3;
+  const total = album.pages.length + 2;
   let processed = 0;
 
   const push = async (canvas: HTMLCanvasElement, widthMm: number, heightMm: number) => {
@@ -145,22 +143,12 @@ export async function buildPrintPdf(
     await new Promise((resolve) => setTimeout(resolve, 0));
   };
 
-  /* ── capa, contracapa e lombada ── */
+  /* ── capa ── */
+  const coverContext = contextOf(album, new Map());
   {
-    const context = contextOf(album, new Map());
     const cover = makeCanvas(fileW, fileH);
-    drawCover(cover.ctx, context, mm);
+    drawCover(cover.ctx, coverContext, mm);
     await push(cover.canvas, fileW, fileH);
-
-    const back = makeCanvas(fileW, fileH);
-    drawBackCover(back.ctx, context, mm);
-    await push(back.canvas, fileW, fileH);
-
-    // A lombada tem sangria só em cima e embaixo: dos lados é dobra.
-    const spineFileW = spine + SPEC.bleed * 2;
-    const spineCanvas = makeCanvas(spineFileW, fileH);
-    drawSpine(spineCanvas.ctx, context, mm, spineTextSize(spine, album.spine.size));
-    await push(spineCanvas.canvas, spineFileW, fileH);
   }
 
   /* ── miolo ── */
@@ -188,6 +176,13 @@ export async function buildPrintPdf(
 
     await push(page.canvas, fileW, fileH);
     for (const image of images.values()) releaseImage(image);
+  }
+
+  /* ── contracapa, fechando o álbum ── */
+  {
+    const back = makeCanvas(fileW, fileH);
+    drawBackCover(back.ctx, coverContext, mm);
+    await push(back.canvas, fileW, fileH);
   }
 
   return buildPdf(pdfPages, { title: album.name.trim() || 'Meu álbum' });

@@ -176,3 +176,15 @@ export const IconCloud = (p: IconProps) => (
     <path d="M12 15V9m0 0-2.2 2.2M12 9l2.2 2.2" />
   </Svg>
 );
+
+/** Alça de arrastar: seis pontos, duas colunas. */
+export const IconGrip = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="9" cy="6" r="1.2" fill="currentColor" />
+    <circle cx="15" cy="6" r="1.2" fill="currentColor" />
+    <circle cx="9" cy="12" r="1.2" fill="currentColor" />
+    <circle cx="15" cy="12" r="1.2" fill="currentColor" />
+    <circle cx="9" cy="18" r="1.2" fill="currentColor" />
+    <circle cx="15" cy="18" r="1.2" fill="currentColor" />
+  </Svg>
+);

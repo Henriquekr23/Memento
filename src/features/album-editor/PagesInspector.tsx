@@ -18,7 +18,7 @@ import {
 
 import type { EditorCopy } from './copy';
 import type { EditorAlbumState } from './useEditorAlbum';
-import { Group, Row, Seg, Slider } from './controls';
+import { Group, Row, Seg, Slider, Switch } from './controls';
 import {
   IconAlignCenter,
   IconAlignLeft,
@@ -235,16 +235,13 @@ export function PagesInspector({
               valor salvo continua valendo, só não se mexe mais aqui. */}
           {capacity > 1 && (
             <>
-              <Row label={copy.pageFill} help={copy.pageFillHelp} stack>
-                <Seg<boolean>
-                  full
+              {/* Ligado: os quadros vão até a borda do papel. Desligado: a
+                  página ganha margem branca em volta. */}
+              <Row label={copy.pageFill} help={copy.pageFillHelp} switchRow>
+                <Switch
                   label={copy.pageFill}
-                  value={activePage.fill}
+                  checked={activePage.fill}
                   onChange={(fill) => updatePage(activeIndex, { fill })}
-                  options={[
-                    { value: true, label: copy.fillBleed },
-                    { value: false, label: copy.fillMargin },
-                  ]}
                 />
               </Row>
             </>

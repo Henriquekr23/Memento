@@ -33,6 +33,35 @@ const MIN_PAGES = 4;
 const PAGES_PER_SHEET = 2;
 
 /**
+ * Leva a página `from` para a posição `to`; as do meio andam uma casa. A
+ * página vai inteira — fotos, enquadramento, tipo e textos —, porque tudo isso
+ * é dado da página. O lado da lombada não vai junto: ele é da posição (par à
+ * esquerda, ímpar à direita), e a página assume o do lugar novo.
+ *
+ * Página espelhada (folha de uma foto só, de álbum antigo) ocupa duas casas e
+ * não se divide: se o trecho que anda passa por uma, devolve `null` — e quem
+ * chama sabe que nada mudou.
+ */
+export function movePageIn(
+  pages: EditorPage[],
+  from: number,
+  to: number,
+): EditorPage[] | null {
+  const count = pages.length;
+  if (from === to || from < 0 || to < 0 || from >= count || to >= count) return null;
+  const lo = Math.min(from, to);
+  const hi = Math.max(from, to);
+  for (let i = lo; i <= hi; i += 1) {
+    const left = i % 2 === 1 ? pages[i - 1] : null;
+    if (pages[i].spread || left?.spread) return null;
+  }
+  const next = [...pages];
+  const [page] = next.splice(from, 1);
+  next.splice(to, 0, page);
+  return next;
+}
+
+/**
  * Estado do editor.
  *
  * Aqui mora só a **composição**. O acervo de fotos continua em `useAlbum`
@@ -185,6 +214,14 @@ export function useEditorAlbum(initial?: EditorAlbum) {
       ...current,
       pages: [...current.pages, ...Array.from({ length: PAGES_PER_SHEET }, () => makePage())],
     }));
+  }, []);
+
+  /** Leva a página `from` para a posição `to` (ver `movePageIn`). */
+  const movePage = useCallback((from: number, to: number) => {
+    setAlbum((current) => {
+      const pages = movePageIn(current.pages, from, to);
+      return pages ? { ...current, pages } : current;
+    });
   }, []);
 
   /** Remove a folha inteira — a página par e a ímpar que a formam. */
@@ -340,6 +377,7 @@ export function useEditorAlbum(initial?: EditorAlbum) {
     removeTextBlock,
     addSheet,
     removeSheet,
+    movePage,
     fillChronologically,
     swapFrames,
     dropPhoto,

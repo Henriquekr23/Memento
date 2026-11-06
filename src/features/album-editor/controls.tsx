@@ -68,16 +68,19 @@ export function Row({
   hint,
   help,
   stack = false,
+  switchRow = false,
   children,
 }: {
   label: string;
   hint?: string;
   help?: string;
   stack?: boolean;
+  /** Rótulo à esquerda e o interruptor encostado à direita. */
+  switchRow?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className={`ae-row${stack ? ' is-stack' : ''}`}>
+    <div className={`ae-row${stack ? ' is-stack' : ''}${switchRow ? ' is-switch' : ''}`}>
       <span className="ae-row-label">
         <span className="ae-row-name">
           {label}

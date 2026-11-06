@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { BoardApi, FrameRef } from '@/features/album-editor/AlbumEditor';
-import { IconPlus, IconTrash, IconX } from '@/features/album-editor/icons';
+import { IconGrip, IconPlus, IconTrash, IconX } from '@/features/album-editor/icons';
 import { PageContent, PHOTO_DND_TYPE } from '@/features/album-editor/PageContent';
 import { SPEC } from '@/features/album-print/spec';
 import { useLang } from '@/features/i18n/LangProvider';
@@ -15,6 +15,12 @@ import { toSpreads } from './paginate';
 
 /** O quadro de onde saiu o arraste, para saber que é troca e não bandeja. */
 const FRAME_DND_TYPE = 'text/memento-frame';
+/** Arraste de página inteira (pela alça do número), não de foto. */
+const PAGE_DND_TYPE = 'text/memento-page';
+
+function isPageDrag(event: React.DragEvent): boolean {
+  return Array.from(event.dataTransfer?.types ?? []).includes(PAGE_DND_TYPE);
+}
 
 function frameKey(frame: FrameRef): string {
   return `${frame.page}:${frame.slot}`;
@@ -50,6 +56,12 @@ function isPhotoDrag(event: React.DragEvent): boolean {
  * A prévia é a própria `PageContent` (sem sangria, só leitura), com o alvo de
  * arraste por cima de cada quadro: respiro, encaixe, zoom, enquadramento e
  * texto mudados no inspetor aparecem aqui na hora.
+ *
+ * A **página** muda de lugar pela alça do número (⋮⋮ 1): segurar e soltar em
+ * cima de outra página leva a arrastada para o lugar dela, e as do meio andam
+ * uma casa. O arraste de página e o de foto são tipos diferentes no
+ * `dataTransfer`, então um nunca cai no alvo do outro. Pelo teclado, a alça
+ * anda com ← e →.
  */
 export function PagesOverview({ api }: { api: BoardApi }) {
   const { lang } = useLang();
@@ -59,6 +71,9 @@ export function PagesOverview({ api }: { api: BoardApi }) {
   const [picked, setPicked] = useState<FrameRef | null>(null);
   const [dragFrom, setDragFrom] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
+  /** Página sendo arrastada pela alça e a página sob o ponteiro. */
+  const [pageFrom, setPageFrom] = useState<number | null>(null);
+  const [pageOver, setPageOver] = useState<number | null>(null);
 
   useEffect(() => {
     if (!picked) return;
@@ -183,8 +198,40 @@ export function PagesOverview({ api }: { api: BoardApi }) {
       );
     };
 
+    const dropSide =
+      pageFrom !== null && pageOver === index && pageFrom !== index
+        ? pageFrom < index
+          ? 'after'
+          : 'before'
+        : undefined;
+
     return (
-      <div className="af-board-page-wrap" key={page.id}>
+      <div
+        className="af-board-page-wrap"
+        key={page.id}
+        data-drop={dropSide}
+        data-dragging={pageFrom === index || undefined}
+        onDragOver={(event) => {
+          if (!isPageDrag(event) || pageFrom === null) return;
+          if (pageFrom !== index && !api.canMovePage(pageFrom, index)) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          if (pageOver !== index) setPageOver(index);
+        }}
+        onDragLeave={(event) => {
+          const next = event.relatedTarget as Node | null;
+          if (!next || !event.currentTarget.contains(next)) {
+            setPageOver((current) => (current === index ? null : current));
+          }
+        }}
+        onDrop={(event) => {
+          if (!isPageDrag(event) || pageFrom === null) return;
+          event.preventDefault();
+          api.onMovePage(pageFrom, index);
+          setPageFrom(null);
+          setPageOver(null);
+        }}
+      >
         <BoardPaper
           className="af-board-page"
           data-active={isActive || undefined}
@@ -218,7 +265,45 @@ export function PagesOverview({ api }: { api: BoardApi }) {
           }
         </BoardPaper>
         <div className="af-board-page-foot">
-          <span className="af-board-num">{index + 1}</span>
+          <button
+            type="button"
+            className="af-board-grip"
+            draggable
+            aria-label={t.movePageAria(index + 1)}
+            title={t.movePageTip}
+            onDragStart={(event) => {
+              event.dataTransfer.effectAllowed = 'move';
+              event.dataTransfer.setData(PAGE_DND_TYPE, String(index));
+              // O fantasma é a página, não a alça: é ela que está mudando de lugar.
+              const paper = event.currentTarget
+                .closest('.af-board-page-wrap')
+                ?.querySelector('.af-board-page');
+              if (paper) event.dataTransfer.setDragImage(paper, 24, 24);
+              setPageFrom(index);
+              setPicked(null);
+            }}
+            onDragEnd={() => {
+              setPageFrom(null);
+              setPageOver(null);
+            }}
+            onKeyDown={(event) => {
+              const step = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0;
+              if (!step) return;
+              event.preventDefault();
+              const to = index + step;
+              if (to < 0 || to >= album.pages.length || !api.canMovePage(index, to)) return;
+              api.onMovePage(index, to);
+              // O foco acompanha a página: a alça dela agora é a do lugar novo.
+              requestAnimationFrame(() => {
+                document
+                  .querySelectorAll<HTMLButtonElement>('.af-board-grip')
+                  [to]?.focus();
+              });
+            }}
+          >
+            <IconGrip size={13} />
+            <span className="af-board-num">{index + 1}</span>
+          </button>
           {isActive && (
             <button type="button" className="af-board-open" onClick={() => api.onOpenPage(index)}>
               {t.openPage}
