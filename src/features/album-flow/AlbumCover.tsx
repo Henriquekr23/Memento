@@ -51,10 +51,16 @@ export function AlbumCover({
   name,
   onName,
   variant,
+  color,
 }: {
   name: string;
   onName?: (name: string) => void;
   variant: 'hero' | 'aside';
+  /**
+   * A cor do álbum. A capa da etapa 1 é a mesma capa que se escolhe na etapa
+   * 4: voltar aqui depois de trocar a cor tem que mostrar a cor nova.
+   */
+  color?: { bg: string; ink: string };
 }) {
   const { lang } = useLang();
   const t = FLOW_COPY[lang];
@@ -72,7 +78,18 @@ export function AlbumCover({
   }, [name, t.coverPlaceholder]);
 
   return (
-    <div className={`af-cover is-${variant}`}>
+    <div
+      className={`af-cover is-${variant}`}
+      style={
+        color
+          ? ({
+              '--album-cover': color.bg,
+              '--album-cover-ink': color.ink,
+              '--album-cover-focus': color.ink,
+            } as React.CSSProperties)
+          : undefined
+      }
+    >
       {onName ? (
         <div className="af-cover-edit">
           <label htmlFor={id} className="sr-only">

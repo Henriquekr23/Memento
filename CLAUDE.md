@@ -194,11 +194,16 @@ leitura de EXIF.
       lista inteira; `useAlbumSelection` guarda o conjunto de **excluídas**. Na
       etapa 2 elas aparecem embaixo, apagadas, e voltam com um toque. Editor,
       PDF e nuvem recebem só as incluídas.
-    - **Etapa 2 é ordem.** Mexer é **inserir** (`order.ts`, `moveNextTo`), ao
-      vivo: passar a foto arrastada por cima de outra já a põe no lugar dela, e
-      as outras deslizam (`useReorderMotion`, FLIP com a propriedade
-      `translate`, para o giro de cada foto continuar valendo). `lastTarget`
-      impede duas fotos de ficarem trocando sob o ponteiro.
+    - **Etapa 2 é ordem já dividida em páginas** (`pageGroups.ts`, puro): uma
+      coluna por página, no máximo 4 fotos. Mexer é **inserir** — a linha
+      mostra onde a foto entra; página cheia não recebe de outra; soltar em
+      "Nova página" abre uma. Os grupos guardam só ids e são acertados com as
+      incluídas por `syncGroups` (quem sai some, quem volta entra ao lado da
+      vizinha). As ordenações do canto (data, data inversa, nome, aleatório)
+      reordenam **mantendo as contagens**; "Personalizado" volta à última
+      divisão feita à mão. A etapa 3 nasce exatamente dessa divisão
+      (`composeFromGroups`, tipo de página por contagem). O deslize (FLIP) mede
+      por `getBoundingClientRect`, porque a foto muda de coluna (de pai).
     - **Etapas 3 e 4 são o mesmo `AlbumEditor`**, montado uma vez e recortado
       por `mode`: `pages` (a visão geral `PagesOverview`, desenhada pela
       `/album` via `renderBoard`/`BoardApi`, e a folha aberta; o inspetor de
@@ -210,7 +215,7 @@ leitura de EXIF.
       por cima de cada quadro): o que o inspetor muda aparece ali. Clicar num
       quadro escolhe o quadro (`onSelectFrame`); mover com dois cliques só no
       toque.
-    - **A composição nasce da ordem** (`composeFromOrder`) ao entrar na etapa
+    - **A composição nasce da divisão da etapa 2** (`composeFromGroups`) ao entrar na etapa
       3. Ir e voltar entre páginas, capa e finalização não refaz nada; voltar
       à ordem e seguir de novo reabre a composição como estava
       (`pruneComposition` só esvazia o quadro de quem saiu); se a ordem ou as

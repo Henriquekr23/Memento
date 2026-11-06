@@ -7,7 +7,7 @@ import type { CoverElement, EditorAlbum } from '@/types/album-editor';
 import { titleOf } from '@/types/album-editor';
 
 import { CoverElementView, type SnapFn } from './CoverElementView';
-import { COVER_FONTS, colorById, fontById } from './palette';
+import { COVER_FONTS, colorOf, fontById } from './palette';
 import { PrintGuides, SpineGuides } from './PrintGuides';
 
 export interface SnapState {
@@ -49,7 +49,7 @@ export function CoverWrap({
   setSnap,
   titlePlaceholder,
 }: CoverWrapProps) {
-  const color = colorById(album.color);
+  const color = colorOf(album);
   const trim = SPEC.trim;
   const bleed = SPEC.bleed;
 

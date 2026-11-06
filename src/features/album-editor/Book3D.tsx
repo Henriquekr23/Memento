@@ -8,7 +8,7 @@ import { titleOf } from '@/types/album-editor';
 
 import { CoverElementView } from './CoverElementView';
 import { IconMove } from './icons';
-import { COVER_FONTS, colorById, fontById } from './palette';
+import { COVER_FONTS, colorOf, fontById } from './palette';
 import { clamp, useDrag } from './useDrag';
 
 interface Book3DProps {
@@ -103,7 +103,7 @@ export function Book3D({ album, spine, ppm, hint }: Book3DProps) {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  const color = colorById(album.color);
+  const color = colorOf(album);
   const width = SPEC.trim.w * ppm;
   const height = SPEC.trim.h * ppm;
   const depth = Math.max(spine * ppm, 5);

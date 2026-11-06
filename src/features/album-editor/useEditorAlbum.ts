@@ -113,6 +113,26 @@ export function useEditorAlbum(initial?: EditorAlbum) {
     return element.id;
   }, []);
 
+  /**
+   * Emoji na capa: um texto de um caractere, sem caixa alta nem entreletra, no
+   * terço de cima — onde a forma também nasce, mas menor que ela.
+   */
+  const addEmoji = useCallback((emoji: string) => {
+    const element = makeText({
+      role: 'emoji',
+      text: emoji,
+      size: 24,
+      width: 34,
+      y: 28,
+      font: 'dm',
+      uppercase: false,
+      tracking: 0,
+      leading: 1,
+    });
+    setAlbum((current) => ({ ...current, elements: [...current.elements, element] }));
+    return element.id;
+  }, []);
+
   const addMotif = useCallback(() => {
     const element = makeMotif({ shape: 'disc', y: 30, size: 34 });
     setAlbum((current) => ({ ...current, elements: [...current.elements, element] }));
@@ -223,6 +243,35 @@ export function useEditorAlbum(initial?: EditorAlbum) {
       return pages ? { ...current, pages } : current;
     });
   }, []);
+
+  /**
+   * Folha nova com uma foto já na primeira página dela — é o "soltar em Nova
+   * página" da visão geral. Vindo de um quadro (`from`), a foto **muda** de
+   * lugar: o quadro de origem esvazia, com o enquadramento indo junto.
+   */
+  const addSheetWithPhoto = useCallback(
+    (photoId: string, from: { page: number; slot: number } | null) => {
+      setAlbum((current) => {
+        const source = from ? current.pages[from.page]?.slots[from.slot] : null;
+        const pages = current.pages.map((page, i) =>
+          from && i === from.page
+            ? {
+                ...page,
+                slots: page.slots.map((slot, k) =>
+                  k === from.slot ? { ...slot, photoId: null } : slot,
+                ),
+              }
+            : page,
+        );
+        const first = makePage();
+        first.slots[0] = source && source.photoId === photoId
+          ? { ...source }
+          : { ...first.slots[0], photoId };
+        return { ...current, pages: [...pages, first, makePage()] };
+      });
+    },
+    [],
+  );
 
   /** Remove a folha inteira — a página par e a ímpar que a formam. */
   const removeSheet = useCallback((pageIndex: number) => {
@@ -368,6 +417,7 @@ export function useEditorAlbum(initial?: EditorAlbum) {
     updateElement,
     removeElement,
     addText,
+    addEmoji,
     addMotif,
     updatePage,
     changeLayout,
@@ -376,6 +426,7 @@ export function useEditorAlbum(initial?: EditorAlbum) {
     updateTextBlock,
     removeTextBlock,
     addSheet,
+    addSheetWithPhoto,
     removeSheet,
     movePage,
     fillChronologically,

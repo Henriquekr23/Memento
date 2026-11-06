@@ -11,7 +11,8 @@
 import { emptyAlbum } from '@/features/album-editor/emptyAlbum';
 import { MAX_SLOTS, makePage, type EditorAlbum } from '@/types/album-editor';
 
-import { LAYOUT_FOR, pageCountFor, type PerPage } from './paginate';
+import { layoutForCount, type PageGroups } from './pageGroups';
+import { LAYOUT_FOR, MIN_PAGES, pageCountFor, type PerPage } from './paginate';
 
 /**
  * A composição com as fotos na ordem dada.
@@ -33,6 +34,31 @@ export function composeFromOrder(
     }
     return page;
   });
+  return { ...start, name, pages };
+}
+
+/**
+ * A composição com as páginas que a pessoa dividiu na etapa 2: um grupo, uma
+ * página, com o tipo que cabe à contagem (`layoutForCount`). O álbum completa
+ * com páginas vazias até fechar a folha e chegar ao piso de páginas.
+ *
+ * Com `base`, como em `composeFromOrder`: só as páginas são refeitas.
+ */
+export function composeFromGroups(
+  groups: PageGroups,
+  name: string,
+  base?: EditorAlbum | null,
+): EditorAlbum {
+  const start = base ?? emptyAlbum();
+  const pages = groups.map((group) => {
+    const page = makePage({ layout: layoutForCount(group.length) });
+    group.slice(0, MAX_SLOTS).forEach((id, slot) => {
+      page.slots[slot].photoId = id;
+    });
+    return page;
+  });
+  const total = Math.max(MIN_PAGES, pages.length + (pages.length % 2));
+  while (pages.length < total) pages.push(makePage());
   return { ...start, name, pages };
 }
 

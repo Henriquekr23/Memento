@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 
 import { round } from './useDrag';
 
@@ -22,31 +22,76 @@ export function Help({ text }: { text: string }) {
   );
 }
 
-/** Bloco do inspetor, com título, ajuda opcional e ação opcional à direita. */
+/**
+ * Bloco do inspetor, com título, ajuda opcional e ação opcional à direita.
+ *
+ * `collapsible`: o título vira botão e o bloco fecha e abre — a lateral da
+ * capa tem muitos blocos, e quem já escolheu a cor não precisa vê-la o tempo
+ * todo. Fechado, sobra só o cabeçalho; a ação da direita continua à mão.
+ */
 export function Group({
   title,
   help,
   right,
+  collapsible = false,
+  defaultOpen = true,
   children,
 }: {
   title: string;
   help?: string;
   right?: React.ReactNode;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
   /** Sem conteúdo (um interruptor desligado), o bloco é só o cabeçalho. */
   children?: React.ReactNode;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const bodyId = useId();
+  const showBody = (!collapsible || open) && children;
+
   return (
-    <section className="ae-group">
+    <section className={`ae-group${collapsible ? ' is-collapsible' : ''}${open ? '' : ' is-closed'}`}>
       <header className="ae-group-head">
         {/* Título e "?" numa peça só, centrados entre si: soltos no cabeçalho,
             o "?" seguia a linha de base do título e caía abaixo do meio dele. */}
         <span className="ae-group-title">
-          <h3>{title}</h3>
+          {collapsible ? (
+            <button
+              type="button"
+              className="ae-group-toggle"
+              aria-expanded={open}
+              aria-controls={bodyId}
+              onClick={() => setOpen((value) => !value)}
+            >
+              <svg
+                className="ae-group-chevron"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+              <h3>{title}</h3>
+            </button>
+          ) : (
+            <h3>{title}</h3>
+          )}
           {help && <Help text={help} />}
         </span>
         {right && <span className="ae-group-right">{right}</span>}
       </header>
-      {children ? <div className="ae-group-body">{children}</div> : null}
+      {showBody ? (
+        <div className="ae-group-body" id={bodyId}>
+          {children}
+        </div>
+      ) : null}
     </section>
   );
 }

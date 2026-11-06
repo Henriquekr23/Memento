@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { BoardApi, FrameRef } from '@/features/album-editor/AlbumEditor';
-import { IconGrip, IconPlus, IconTrash, IconX } from '@/features/album-editor/icons';
+import { IconEdit, IconGrip, IconPlus, IconTrash, IconX } from '@/features/album-editor/icons';
 import { PageContent, PHOTO_DND_TYPE } from '@/features/album-editor/PageContent';
 import { SPEC } from '@/features/album-print/spec';
 import { useLang } from '@/features/i18n/LangProvider';
@@ -17,6 +17,10 @@ import { toSpreads } from './paginate';
 const FRAME_DND_TYPE = 'text/memento-frame';
 /** Arraste de página inteira (pela alça do número), não de foto. */
 const PAGE_DND_TYPE = 'text/memento-page';
+
+/** Páginas por linha na visão geral — sempre abertura inteira (par). */
+type PerRow = 2 | 4 | 6;
+const PER_ROW: readonly PerRow[] = [2, 4, 6];
 
 function isPageDrag(event: React.DragEvent): boolean {
   return Array.from(event.dataTransfer?.types ?? []).includes(PAGE_DND_TYPE);
@@ -74,6 +78,8 @@ export function PagesOverview({ api }: { api: BoardApi }) {
   /** Página sendo arrastada pela alça e a página sob o ponteiro. */
   const [pageFrom, setPageFrom] = useState<number | null>(null);
   const [pageOver, setPageOver] = useState<number | null>(null);
+  const [newOver, setNewOver] = useState(false);
+  const [perRow, setPerRow] = useState<PerRow>(4);
 
   useEffect(() => {
     if (!picked) return;
@@ -305,8 +311,14 @@ export function PagesOverview({ api }: { api: BoardApi }) {
             <span className="af-board-num">{index + 1}</span>
           </button>
           {isActive && (
-            <button type="button" className="af-board-open" onClick={() => api.onOpenPage(index)}>
-              {t.openPage}
+            <button
+              type="button"
+              className="af-board-open"
+              aria-label={t.editPageAria(index + 1)}
+              title={t.openPage}
+              onClick={() => api.onOpenPage(index)}
+            >
+              <IconEdit size={14} />
             </button>
           )}
         </div>
@@ -315,7 +327,29 @@ export function PagesOverview({ api }: { api: BoardApi }) {
   };
 
   return (
-    <div className="af-board" data-picking={picked ? true : undefined}>
+    <div
+      className="af-board"
+      data-picking={picked ? true : undefined}
+      style={{ '--board-cols': perRow / 2 } as React.CSSProperties}
+    >
+      {/* Quantas páginas por linha: menos páginas, cada uma maior para
+          enquadrar; mais, para ver o álbum inteiro de uma vez. */}
+      <div className="af-board-bar">
+        <div className="af-board-perrow" role="group" aria-label={t.perRowLabel}>
+          <span className="af-board-perrow-label">{t.perRowLabel}</span>
+          {PER_ROW.map((n) => (
+            <button
+              key={n}
+              type="button"
+              aria-pressed={perRow === n}
+              aria-label={t.perRowAria(n)}
+              onClick={() => setPerRow(n)}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="af-board-spreads">
         {spreads.map(([left, right], spreadIndex) => (
           <div className="af-board-spread-wrap" key={left.page.id}>
@@ -339,9 +373,33 @@ export function PagesOverview({ api }: { api: BoardApi }) {
             </button>
           </div>
         ))}
-        <button type="button" className="af-board-add" onClick={api.onAddSheet}>
+        {/* Clicar abre uma folha vazia; soltar uma foto aqui abre a folha já
+            com ela na primeira página. */}
+        <button
+          type="button"
+          className="af-board-add"
+          data-over={newOver || undefined}
+          onClick={api.onAddSheet}
+          onDragOver={(event) => {
+            if (!isPhotoDrag(event)) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            if (!newOver) setNewOver(true);
+          }}
+          onDragLeave={() => setNewOver(false)}
+          onDrop={(event) => {
+            if (!isPhotoDrag(event)) return;
+            event.preventDefault();
+            setNewOver(false);
+            setOver(null);
+            setDragFrom(null);
+            const from = readFrame(event.dataTransfer.getData(FRAME_DND_TYPE));
+            const photoId = event.dataTransfer.getData(PHOTO_DND_TYPE);
+            if (photoId) api.onDropToNewSheet(photoId, from);
+          }}
+        >
           <IconPlus size={18} />
-          <span>{t.addSpread}</span>
+          <span>{newOver ? t.addSpreadDrop : t.addSpread}</span>
         </button>
       </div>
     </div>

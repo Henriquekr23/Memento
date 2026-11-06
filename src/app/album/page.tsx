@@ -10,10 +10,20 @@ import { buildShareCard } from '@/features/share/shareCard';
 import { saveThankYouHandoff } from '@/features/thank-you/handoff';
 import { AlbumEditor, type BoardApi } from '@/features/album-editor/AlbumEditor';
 import { AlbumTopBar } from '@/features/album-flow/AlbumTopBar';
-import { composeFromOrder, pruneComposition } from '@/features/album-flow/compose';
+import { composeFromGroups, pruneComposition } from '@/features/album-flow/compose';
 import { FLOW_COPY } from '@/features/album-flow/copy';
-import { moveNextTo, type Side } from '@/features/album-flow/order';
-import { DEFAULT_PER_PAGE } from '@/features/album-flow/paginate';
+import {
+  chunk,
+  flatten,
+  groupsKey,
+  mergeOrder,
+  moveToGroup,
+  regroup,
+  sortedIds,
+  syncGroups,
+  type PageGroups,
+  type SortMode,
+} from '@/features/album-flow/pageGroups';
 import { PagesOverview } from '@/features/album-flow/PagesOverview';
 import { StepFinish } from '@/features/album-flow/StepFinish';
 import { StepNav, type Step } from '@/features/album-flow/StepNav';
@@ -27,6 +37,7 @@ import { useAlbum } from '@/features/album-builder/useAlbum';
 import { useAlbumSelection } from '@/features/album-builder/useAlbumSelection';
 import { useAlbumExport } from '@/features/album-export/useAlbumExport';
 import { useLang } from '@/features/i18n/LangProvider';
+import { colorOf, DEFAULT_COLOR } from '@/features/album-editor/palette';
 import type { EditorAlbum } from '@/types/album-editor';
 
 /** As etapas que dependem da composição: páginas, capa e finalização. */
@@ -47,7 +58,8 @@ const renderBoard = (api: BoardApi) => <PagesOverview api={api} />;
  * A etapa 2 mexe na **ordem** (inserir). As etapas 3 e 4 são o mesmo editor
  * (`AlbumEditor`), montado uma vez e recortado por `mode`: na 3 as páginas (a
  * visão geral `PagesOverview` e a folha aberta, com o inspetor de páginas), na
- * 4 a capa e o livro. A composição nasce da ordem (`composeFromOrder`) ao
+ * 4 a capa e o livro. A etapa 2 já divide a ordem em páginas (`pageGroups`),
+ * e a composição nasce dessa divisão (`composeFromGroups`) ao
  * entrar na 3; voltar à ordem e seguir de novo **não** desmancha o que foi
  * montado — só se a ordem ou as fotos mudaram, e aí a página pergunta antes.
  */
@@ -85,7 +97,15 @@ export default function AlbumPage() {
   /** Para onde ir depois de responder "Refazer as páginas?". */
   const [rebuildTarget, setRebuildTarget] = useState<BuildStep>(3);
 
-  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  /**
+   * A divisão em páginas da etapa 2. `null` até a pessoa mexer: aí vale a
+   * partida (duas fotos por página, na ordem do acervo).
+   */
+  const [groupsState, setGroupsState] = useState<PageGroups | null>(null);
+  /** A ordenação escolhida no canto da etapa 2. Mexer à mão vira `custom`. */
+  const [sortMode, setSortMode] = useState<SortMode>('date');
+  /** A última divisão feita à mão — "Personalizado" volta para ela. */
+  const [customGroups, setCustomGroups] = useState<PageGroups | null>(null);
   const [isRebuildOpen, setIsRebuildOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
@@ -95,8 +115,16 @@ export default function AlbumPage() {
     () => album.photos.filter((photo) => selection.excluded.has(photo.id)),
     [album.photos, selection.excluded],
   );
-  const plan = includedIds.join(',');
+  const groups = useMemo(
+    () => syncGroups(groupsState ?? chunk(includedIds), includedIds),
+    [groupsState, includedIds],
+  );
+  // A ordem e a divisão: se qualquer uma mudar, as páginas montadas deixam de
+  // corresponder à etapa 2.
+  const plan = groupsKey(groups);
   const hasPhotos = album.photos.length > 0;
+  /** A cor do álbum para a capa da etapa 1: a escolhida, ou a padrão. */
+  const coverColor = colorOf(composition ?? { color: DEFAULT_COLOR });
   const canBuild = included.length > 0;
   const isEditorStep = step === 3 || step === 4;
   const isBuilding = isEditorStep && editorSeed !== null;
@@ -120,7 +148,7 @@ export default function AlbumPage() {
     (target: BuildStep) => {
       if (!canBuild) return;
       if (!composition || builtPlan === null) {
-        enter(composeFromOrder(includedIds, DEFAULT_PER_PAGE, album.name), target);
+        enter(composeFromGroups(groups, album.name), target);
         setBuiltPlan(plan);
         return;
       }
@@ -131,7 +159,7 @@ export default function AlbumPage() {
       setRebuildTarget(target);
       setIsRebuildOpen(true);
     },
-    [album.name, builtPlan, canBuild, composition, enter, includedIds, plan],
+    [album.name, builtPlan, canBuild, composition, enter, groups, includedIds, plan],
   );
 
   const goTo = useCallback(
@@ -172,19 +200,48 @@ export default function AlbumPage() {
   /* ── etapa 2: a ordem ─────────────────────────────────────────────── */
 
   const { exclude, include } = selection;
-  const { reorderIncluded, sortByDate } = album;
+  const { reorderIncluded } = album;
 
-  const move = useCallback(
-    (id: string, targetId: string, side: Side) => {
-      const ids = album.photos.map((photo) => photo.id);
-      reorderIncluded(moveNextTo(ids, id, targetId, side));
+  /** A divisão nova vale para a etapa 2 e vira a ordem do acervo. */
+  const applyGroups = useCallback(
+    (next: PageGroups) => {
+      setGroupsState(next);
+      reorderIncluded(
+        mergeOrder(
+          album.photos.map((photo) => photo.id),
+          selection.excluded,
+          flatten(next),
+        ),
+      );
     },
-    [album.photos, reorderIncluded],
+    [album.photos, reorderIncluded, selection.excluded],
   );
 
-  const backToDateOrder = useCallback(() => {
-    sortByDate();
-  }, [sortByDate]);
+  const moveTo = useCallback(
+    (id: string, group: number, index: number) => {
+      const next = moveToGroup(groups, id, group, index);
+      if (!next) return;
+      applyGroups(next);
+      setSortMode('custom');
+      setCustomGroups(next);
+    },
+    [applyGroups, groups],
+  );
+
+  const sortBy = useCallback(
+    (mode: SortMode) => {
+      if (mode === 'custom') {
+        if (customGroups) applyGroups(syncGroups(customGroups, includedIds));
+        setSortMode('custom');
+        return;
+      }
+      // Sair do "Personalizado" guarda a divisão feita à mão para poder voltar.
+      if (sortMode === 'custom') setCustomGroups(groups);
+      applyGroups(regroup(groups, sortedIds(included, mode)));
+      setSortMode(mode);
+    },
+    [applyGroups, customGroups, groups, included, includedIds, sortMode],
+  );
 
   /** O X da etapa 2: tira do álbum, com "Desfazer" (devolve no mesmo lugar). */
   const remove = useCallback(
@@ -245,17 +302,6 @@ export default function AlbumPage() {
     [album.name, included, exportAlbum, lang, router],
   );
 
-  const discard = () => {
-    album.clear();
-    selection.reset();
-    setUndoId(null);
-    setComposition(null);
-    setEditorSeed(null);
-    setBuiltPlan(null);
-    setStep(1);
-    setIsClearConfirmOpen(false);
-  };
-
   const notes = (
     <>
       {album.status.rejectedFileNames.length > 0 && (
@@ -308,17 +354,6 @@ export default function AlbumPage() {
       />
 
       <ConfirmDialog
-        open={isClearConfirmOpen}
-        title={t.discardTitle}
-        description={t.discardBody(album.photos.length)}
-        confirmLabel={t.discardConfirm}
-        cancelLabel={t.cancel}
-        destructive
-        onConfirm={discard}
-        onCancel={() => setIsClearConfirmOpen(false)}
-      />
-
-      <ConfirmDialog
         open={isRebuildOpen}
         title={t.rebuildTitle}
         description={t.rebuildBody}
@@ -326,7 +361,7 @@ export default function AlbumPage() {
         cancelLabel={t.rebuildKeep}
         onConfirm={() => {
           setIsRebuildOpen(false);
-          enter(composeFromOrder(includedIds, DEFAULT_PER_PAGE, album.name, composition), rebuildTarget);
+          enter(composeFromGroups(groups, album.name, composition), rebuildTarget);
           setBuiltPlan(plan);
         }}
         onCancel={() => {
@@ -350,21 +385,22 @@ export default function AlbumPage() {
               onFiles={handleFiles}
               onContinue={() => goTo(2)}
               notes={notes}
+              coverColor={coverColor}
             />
           )}
 
           {step === 2 && (
             <StepOrder
               photos={included}
+              groups={groups}
               outside={outside}
-              isManuallyOrdered={album.isManuallyOrdered}
-              onMove={move}
+              sortMode={sortMode}
+              onSort={sortBy}
+              onMoveTo={moveTo}
               onRemove={remove}
               onRestore={include}
-              onSortByDate={backToDateOrder}
               onFiles={handleFiles}
               onContinue={() => goTo(3)}
-              onRestart={() => setIsClearConfirmOpen(true)}
               notes={notes}
               toast={toast}
             />

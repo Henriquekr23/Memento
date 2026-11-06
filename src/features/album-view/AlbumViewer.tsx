@@ -7,7 +7,7 @@ import { Book3D } from '@/features/album-editor/Book3D';
 import type { PhotoResolver } from '@/features/album-editor/PageContent';
 import { SheetStage } from '@/features/album-editor/SheetStage';
 import { useSheetTurn } from '@/features/album-editor/useSheetTurn';
-import { accentFor, colorById } from '@/features/album-editor/palette';
+import { accentFor, colorOf } from '@/features/album-editor/palette';
 import { EDITOR_COPY } from '@/features/album-editor/copy';
 import { clamp } from '@/features/album-editor/useDrag';
 import { useStageZoom } from '@/features/album-editor/useStageZoom';
@@ -70,7 +70,7 @@ export function AlbumViewer({
      álbum inteiro na tela" em qualquer janela. */
   const ppm = fitPpm * zoom.zoom;
 
-  const color = colorById(album.color);
+  const color = colorOf(album);
   const spine = album.spine.mm ?? spineWidth(album.pages.length, paperById(album.paper).mm);
 
   const photoUrls = useMemo(

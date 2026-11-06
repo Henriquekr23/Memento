@@ -37,8 +37,43 @@ export const ALBUM_COLORS: AlbumColor[] = [
 
 export const DEFAULT_COLOR = 'sky';
 
+/** Id da cor escolhida à mão (`EditorAlbum.customColor`). */
+export const CUSTOM_COLOR = 'custom';
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+export function isHexColor(value: unknown): value is string {
+  return typeof value === 'string' && HEX.test(value);
+}
+
 export function colorById(id: string): AlbumColor {
   return ALBUM_COLORS.find((c) => c.id === id) ?? ALBUM_COLORS[0];
+}
+
+/**
+ * A cor do álbum, padrão ou personalizada. É por aqui que todo desenho do
+ * álbum (capa, livro, folhas, PDF, a capa da etapa 1) lê a cor — nunca
+ * `colorById(album.color)` direto, que não conhece a personalizada.
+ */
+export function colorOf(album: {
+  color: string;
+  customColor?: { bg: string; ink: string } | null;
+}): AlbumColor {
+  const custom = album.customColor;
+  if (album.color === CUSTOM_COLOR && custom && isHexColor(custom.bg) && isHexColor(custom.ink)) {
+    return { id: CUSTOM_COLOR, labelKey: 'colorCustom', bg: custom.bg, ink: custom.ink };
+  }
+  return colorById(album.color);
+}
+
+/**
+ * Contraste entre as duas cores (razão WCAG, 1 a 21). Abaixo de 3 o título da
+ * capa some no fundo — a tela avisa, mas deixa a pessoa decidir.
+ */
+export function contrastRatio(a: string, b: string): number {
+  const la = luminance(a);
+  const lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
 /**

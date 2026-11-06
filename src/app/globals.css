@@ -6702,7 +6702,8 @@ textarea.ae-input {
 }
 .af-board-spreads {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  /* Aberturas por linha: o "páginas por linha" da visão geral (2, 4 ou 6). */
+  grid-template-columns: repeat(var(--board-cols, 2), minmax(0, 1fr));
   gap: 26px 24px;
   align-items: start;
 }
@@ -8713,6 +8714,511 @@ textarea.ae-input {
   }
 }
 
+/* ══ Etapas 2 a 4 — rodada de novembro ════════════════════════════════ */
+
+/* ── etapa 2: uma coluna por página ── */
+.af-step-foot .af-step-foot-cta {
+  margin-left: auto;
+}
+.af-pages-sort .af-sort-head {
+  align-items: flex-start;
+}
+.af-pages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  align-items: start;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.af-page-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 220px;
+  padding: 12px 12px 16px;
+  border: 1.5px solid transparent;
+  border-radius: 22px;
+  background: var(--album-mesa);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+.af-page-col[data-over] {
+  border-color: var(--album-drop-line);
+  background: var(--album-drop-bg);
+}
+.af-page-col[data-refused] {
+  border-color: color-mix(in srgb, #b0342f 45%, transparent);
+}
+.af-page-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 0;
+}
+.af-page-col-title {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--album-ink);
+}
+.af-page-col-count {
+  font-family: var(--font-landing-mono), ui-monospace, monospace;
+  font-size: 11.5px;
+  color: var(--album-muted);
+}
+.af-page-col-count[data-full] {
+  color: var(--album-accent-ink);
+}
+.af-page-col[data-refused] .af-page-col-count {
+  color: #b0342f;
+  font-weight: 600;
+}
+.af-page-photos {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.af-page-photo {
+  /* Sem o giro da mesa: na coluna, a foto está numa página. */
+  transform: none;
+}
+/* A moldura tem tamanho próprio (4:3, pela largura da coluna) e a foto é
+   posta **dentro** dela, em posição absoluta. Antes a foto tinha `height:
+   100%` de uma caixa cuja altura vinha do `aspect-ratio`: a altura dependia da
+   própria foto, o 4:3 era ignorado nas fotos em pé e, no WebKit, a conta se
+   realimentava a cada repintura do hover — a foto crescia sem parar. */
+.af-page-photo .af-sort-print {
+  aspect-ratio: 4 / 3;
+  height: auto;
+  padding: 0;
+  overflow: hidden;
+}
+.af-page-photo .af-sort-print img {
+  position: absolute;
+  inset: 5px;
+  width: calc(100% - 10px);
+  height: calc(100% - 10px);
+  max-width: none;
+}
+.af-page-photo .af-sort-hit {
+  gap: 6px;
+}
+/* Linha de onde a foto arrastada vai entrar. */
+.af-page-photo[data-line]::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  z-index: 3;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--landing-cta);
+  pointer-events: none;
+}
+.af-page-photo[data-line='before']::before {
+  top: -9px;
+}
+.af-page-photo[data-line='after']::before {
+  bottom: -9px;
+}
+.af-page-append {
+  display: grid;
+  place-items: center;
+  height: 40px;
+  margin-top: auto;
+  border: 1.5px dashed var(--album-drop-line);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--album-accent-ink);
+  cursor: pointer;
+}
+.af-page-new {
+  padding: 0;
+  border: 1.5px dashed var(--album-empty-line);
+  background: var(--album-empty);
+}
+.af-page-new-hit {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 20px 12px;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--album-muted);
+  font-family: inherit;
+  cursor: default;
+}
+.af-pages-sort[data-selecting] .af-page-new-hit:not(:disabled) {
+  color: var(--album-accent-ink);
+  cursor: pointer;
+}
+.af-page-new-title {
+  font-size: 14px;
+  font-weight: 650;
+}
+.af-page-new-hint {
+  font-size: 12px;
+}
+/* Menu de ordenação no canto da área. */
+.af-sortmenu {
+  position: relative;
+  flex: none;
+}
+.af-sortmenu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--album-line-2);
+  border-radius: 999px;
+  background: var(--color-surface-2);
+  color: var(--album-ink);
+  font-family: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.af-sortmenu-label {
+  color: var(--album-muted);
+}
+.af-sortmenu-value {
+  font-weight: 650;
+}
+.af-sortmenu-btn:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+.af-sortmenu-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  min-width: 250px;
+  padding: 6px;
+  border: 1px solid var(--album-line);
+  border-radius: 18px;
+  background: var(--landing-bar, var(--color-surface-2));
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 44px var(--album-shadow);
+}
+.af-sortmenu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--album-ink);
+  font-family: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.af-sortmenu-item[aria-checked='true'] {
+  color: var(--landing-pill-ink);
+  font-weight: 600;
+}
+.af-sortmenu-item:hover,
+.af-sortmenu-item:focus-visible {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+/* ── etapa 3 ── */
+/* O trilho ficou mais largo: "Visão geral" encostava na borda da pílula. */
+@media (min-width: 961px) {
+  .ae-rail {
+    width: 104px;
+  }
+  .ae-rail button {
+    height: 72px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+}
+.af-board-open {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+}
+.af-board-bar {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  justify-content: flex-end;
+  margin: -14px 0 14px;
+  pointer-events: none;
+}
+.af-board-perrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 3px 3px 12px;
+  border: 1px solid var(--album-line);
+  border-radius: 999px;
+  background: var(--color-surface-2);
+  box-shadow: 0 6px 18px var(--album-shadow);
+  pointer-events: auto;
+}
+.af-board-perrow-label {
+  margin-right: 6px;
+  font-size: 12px;
+  color: var(--album-muted);
+}
+.af-board-perrow button {
+  width: 30px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--album-ink-2);
+  font-family: var(--font-landing-mono), ui-monospace, monospace;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.af-board-perrow button[aria-pressed='true'] {
+  background: var(--landing-pill);
+  color: var(--landing-pill-ink);
+  font-weight: 600;
+}
+.af-board-add[data-over] {
+  border-color: var(--album-drop-line);
+  background: var(--album-drop-bg);
+  color: var(--album-accent-ink);
+}
+@media (max-width: 760px) {
+  .af-board-spreads {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .af-board-bar {
+    display: none;
+  }
+}
+.ae-zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.ae-zoom-row .ae-slider {
+  flex: 1;
+  min-width: 0;
+}
+.ae-icon-chip {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--ae-line);
+  border-radius: 999px;
+  color: var(--ae-ink-2);
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.ae-icon-chip:hover {
+  color: var(--ae-ink);
+  border-color: var(--ae-ink-3);
+}
+.ae-icon-chip:focus-visible {
+  outline: 2px solid var(--ae-accent);
+  outline-offset: 2px;
+}
+
+/* ── etapa 4: blocos que fecham ── */
+.ae-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px -6px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  color: inherit;
+  cursor: pointer;
+}
+.ae-group-toggle:hover {
+  background: color-mix(in srgb, var(--ae-ink) 6%, transparent);
+}
+.ae-group-toggle:focus-visible {
+  outline: 2px solid var(--ae-accent);
+  outline-offset: 1px;
+}
+.ae-group-chevron {
+  flex: none;
+  color: var(--ae-ink-3);
+  transition: transform 0.18s ease;
+}
+.ae-group.is-closed .ae-group-chevron {
+  transform: rotate(-90deg);
+}
+.ae-split .ae-group.is-closed .ae-group-head {
+  padding-bottom: 18px;
+}
+
+/* Cor personalizada: principal e secundária. */
+.ae-custom-colors {
+  display: grid;
+  gap: 10px;
+}
+.ae-color-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 86px;
+  align-items: center;
+  gap: 10px;
+}
+.ae-color-swatch {
+  position: relative;
+  display: block;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border: 1px solid rgb(0 0 0 / 0.12);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.ae-color-swatch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.ae-color-swatch:focus-within {
+  outline: 2px solid var(--ae-accent);
+  outline-offset: 2px;
+}
+.ae-color-text {
+  display: grid;
+  min-width: 0;
+}
+.ae-color-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ae-ink);
+}
+.ae-color-hex {
+  font-family: var(--font-landing-mono), ui-monospace, monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+.ae-color-preview {
+  display: grid;
+  place-items: center;
+  height: 54px;
+  border-radius: 12px;
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+
+/* Emoji na capa. */
+.ae-emoji {
+  display: grid;
+  gap: 10px;
+}
+.ae-emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 2px;
+}
+.ae-emoji-grid button {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  font-size: 19px;
+  line-height: 1;
+  transition:
+    background 0.12s ease,
+    transform 0.12s ease;
+}
+.ae-emoji-grid button:hover {
+  background: color-mix(in srgb, var(--ae-ink) 7%, transparent);
+  transform: scale(1.12);
+}
+.ae-emoji-grid button.is-on {
+  background: color-mix(in srgb, var(--ae-accent) 16%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--ae-accent);
+}
+.ae-emoji-grid button:focus-visible {
+  outline: 2px solid var(--ae-accent);
+  outline-offset: 1px;
+}
+.ae-emoji-other {
+  display: flex;
+  gap: 6px;
+}
+.ae-emoji-other .ae-input {
+  flex: 1;
+  min-width: 0;
+}
+.ae-layer-emoji {
+  font-size: 14px;
+  line-height: 1;
+}
+.ae-layer-add {
+  flex-wrap: wrap;
+}
+
+/* ── capa escura no tema escuro ──
+   Uma capa preta ou azul-noite sobre o fundo escuro da bancada some: a borda
+   dela vira o próprio fundo. Um filete claro em volta da capa, do livro e da
+   capa da etapa 1, e uma luz atrás do livro, devolvem o contorno — sem mexer
+   na cor do álbum. (No livro 3D o filete é `outline` nas faces: `outline` não
+   agrupa, então o `preserve-3d` continua valendo — ver CLAUDE.md, decisão 16.) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .ae-wrap {
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.16),
+      0 14px 30px -14px rgb(0 0 0 / 0.6);
+  }
+  :root:not([data-theme='light']) .ae-3d-box > div {
+    outline: 1px solid rgb(255 255 255 / 0.1);
+    outline-offset: -1px;
+  }
+  :root:not([data-theme='light']) .ae-3d-stage {
+    background: radial-gradient(ellipse 46% 52% at 50% 46%, rgb(255 255 255 / 0.07), transparent 72%);
+  }
+  :root:not([data-theme='light']) .af-cover {
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.16), 0 24px 48px -20px rgb(0 0 0 / 0.6);
+  }
+}
+:root[data-theme='dark'] .ae-wrap {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.16),
+    0 14px 30px -14px rgb(0 0 0 / 0.6);
+}
+:root[data-theme='dark'] .ae-3d-box > div {
+  outline: 1px solid rgb(255 255 255 / 0.1);
+  outline-offset: -1px;
+}
+:root[data-theme='dark'] .ae-3d-stage {
+  background: radial-gradient(ellipse 46% 52% at 50% 46%, rgb(255 255 255 / 0.07), transparent 72%);
+}
+:root[data-theme='dark'] .af-cover {
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.16), 0 24px 48px -20px rgb(0 0 0 / 0.6);
+}
+
 /* Fecha `@layer components`, aberto lá em cima. */
 }
 
@@ -8720,7 +9226,7 @@ textarea.ae-input {
    entrelinha de título) é sem camada e venceria qualquer classe de dentro de
    `@layer components`. Com aquela margem o título do bloco ficava 4 px acima
    do meio da linha, e o "?" e o que mora à direita pareciam caídos. */
-.ae-group-title > h3 {
+.ae-group-title h3 {
   margin: 0;
   line-height: 1.2;
 }

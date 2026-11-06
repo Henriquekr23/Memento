@@ -177,6 +177,22 @@ export const IconCloud = (p: IconProps) => (
   </Svg>
 );
 
+/** Lápis: abrir para editar. */
+export const IconEdit = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 20h4L19 9l-4-4L4 16v4z" />
+    <path d="M13.5 6.5l4 4" />
+  </Svg>
+);
+
+/** Mira: centralizar de novo. */
+export const IconRecenter = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+  </Svg>
+);
+
 /** Alça de arrastar: seis pontos, duas colunas. */
 export const IconGrip = (p: IconProps) => (
   <Svg {...p}>

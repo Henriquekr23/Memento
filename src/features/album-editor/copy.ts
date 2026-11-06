@@ -45,6 +45,22 @@ export interface EditorCopy {
 
   /* capa */
   colorGroup: string;
+  colorPresets: string;
+  colorCustomMode: string;
+  colorCustom: string;
+  colorPrimary: string;
+  colorPrimaryNote: string;
+  colorSecondary: string;
+  colorSecondaryNote: string;
+  colorContrastWarn: string;
+  colorModeAria: string;
+  addEmoji: string;
+  emojiGroup: string;
+  emojiPick: string;
+  emojiOther: string;
+  emojiOtherPlaceholder: string;
+  emojiAria: (emoji: string) => string;
+  emojiSwapAria: (emoji: string) => string;
   colorNote: string;
   elementsGroup: string;
   addText: string;
@@ -133,6 +149,8 @@ export interface EditorCopy {
   fillMargin: string;
   pageGap: string;
   fieldFit: string;
+  fitFill: string;
+  fitFillNote: string;
   fitCover: string;
   fitContain: string;
   fitNote: string;
@@ -270,6 +288,22 @@ const PT: EditorCopy = {
   paperC250: 'Couché 250g',
 
   colorGroup: 'Cor do álbum',
+  colorPresets: 'Padrão',
+  colorCustomMode: 'Personalizada',
+  colorCustom: 'Personalizada',
+  colorPrimary: 'Cor principal',
+  colorPrimaryNote: 'Capa, contracapa e lombada.',
+  colorSecondary: 'Cor secundária',
+  colorSecondaryNote: 'Título, textos e formas.',
+  colorContrastWarn: 'Pouco contraste: o título pode sumir na capa.',
+  colorModeAria: 'Tipo de cor',
+  addEmoji: '+ Emoji',
+  emojiGroup: 'Emoji',
+  emojiPick: 'Escolha um emoji',
+  emojiOther: 'Outro emoji',
+  emojiOtherPlaceholder: 'Cole ou digite',
+  emojiAria: (emoji: string) => `Pôr ${emoji} na capa`,
+  emojiSwapAria: (emoji: string) => `Trocar por ${emoji}`,
   colorNote:
     'Cor chapada na capa, contracapa e lombada. A segunda cor é usada no texto e nos grafismos.',
   elementsGroup: 'Elementos da capa',
@@ -361,6 +395,8 @@ const PT: EditorCopy = {
   fillMargin: 'Com margem',
   pageGap: 'Respiro',
   fieldFit: 'Encaixe',
+  fitFill: 'Preencher',
+  fitFillNote: 'Ligado: a foto ocupa o quadro todo e o que sobra é cortado. Desligado: a foto aparece inteira, com papel em volta.',
   fitCover: 'Preencher',
   fitContain: 'Foto inteira',
   fitNote:
@@ -488,6 +524,22 @@ const EN: EditorCopy = {
   paperC250: 'Coated 250gsm',
 
   colorGroup: 'Album colour',
+  colorPresets: 'Presets',
+  colorCustomMode: 'Custom',
+  colorCustom: 'Custom',
+  colorPrimary: 'Main colour',
+  colorPrimaryNote: 'Cover, back cover and spine.',
+  colorSecondary: 'Second colour',
+  colorSecondaryNote: 'Title, text and shapes.',
+  colorContrastWarn: 'Low contrast: the title may fade into the cover.',
+  colorModeAria: 'Colour type',
+  addEmoji: '+ Emoji',
+  emojiGroup: 'Emoji',
+  emojiPick: 'Pick an emoji',
+  emojiOther: 'Another emoji',
+  emojiOtherPlaceholder: 'Paste or type',
+  emojiAria: (emoji: string) => `Put ${emoji} on the cover`,
+  emojiSwapAria: (emoji: string) => `Swap for ${emoji}`,
   colorNote:
     'Flat colour on the cover, back and spine. The second colour carries the type and the shapes.',
   elementsGroup: 'Cover elements',
@@ -579,6 +631,8 @@ const EN: EditorCopy = {
   fillMargin: 'With margin',
   pageGap: 'Gap',
   fieldFit: 'Fit',
+  fitFill: 'Fill',
+  fitFillNote: 'On: the photo fills the frame and the rest is cropped. Off: the whole photo shows, with paper around it.',
   fitCover: 'Fill frame',
   fitContain: 'Whole photo',
   fitNote:

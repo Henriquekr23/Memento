@@ -39,7 +39,7 @@ import { SheetStage } from './SheetStage';
 import { useSheetTurn } from './useSheetTurn';
 import { useStageZoom } from './useStageZoom';
 import { ZoomControls } from './ZoomControls';
-import { accentFor, colorById } from './palette';
+import { accentFor, colorOf } from './palette';
 import { clamp } from './useDrag';
 import { movePageIn, useEditorAlbum } from './useEditorAlbum';
 
@@ -84,6 +84,11 @@ export interface BoardApi {
   /** Tira a foto do quadro; ela volta para a bandeja. */
   onClearFrame: (frame: FrameRef) => void;
   onAddSheet: () => void;
+  /**
+   * Folha nova com esta foto na primeira página. `from` é o quadro de onde ela
+   * saiu (arraste de quadro); `null` quando vem da bandeja.
+   */
+  onDropToNewSheet: (photoId: string, from: FrameRef | null) => void;
   onRemoveSheet: (pageIndex: number) => void;
   /** Leva a página para outra posição; `false` se não dá (página espelhada no caminho). */
   canMovePage: (from: number, to: number) => boolean;
@@ -183,7 +188,7 @@ export function AlbumEditor({
      janela não perde a aproximação escolhida. */
   const ppm = fitPpm * zoom.zoom;
 
-  const color = colorById(album.color);
+  const color = colorOf(album);
   const accent = accentFor(color);
 
   /* O nome do álbum é o texto do título da capa — e, por tabela, da lombada. */
@@ -358,6 +363,11 @@ export function AlbumEditor({
     onPlacePhoto: (to, photoId) => onDropPhoto(to.page, to.slot, photoId),
     onClearFrame: (frame) => updateFrame(frame.page, frame.slot, { photoId: null }),
     onAddSheet: addSheet,
+    onDropToNewSheet: (photoId, from) => {
+      const page = album.pages.length;
+      state.addSheetWithPhoto(photoId, from);
+      selectPage(page);
+    },
     onRemoveSheet: removeSheet,
     canMovePage: (from, to) => movePageIn(album.pages, from, to) !== null,
     onMovePage: (from, to) => {

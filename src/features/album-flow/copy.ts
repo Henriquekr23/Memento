@@ -4,6 +4,7 @@
  * O editor (etapa 4 por dentro) continua com os dele, em `album-editor/copy.ts`.
  */
 
+import type { SortMode } from './pageGroups';
 import type { Lang } from '@/features/i18n/lang';
 
 export interface FlowCopy {
@@ -44,6 +45,17 @@ export interface FlowCopy {
   outHelp: string;
   restoreAria: (name: string) => string;
   orderEmpty: string;
+  pageColumn: (page: number) => string;
+  pagesCount: (pages: number) => string;
+  pageFull: string;
+  newPageColumn: string;
+  newPageHint: string;
+  newPageAria: string;
+  appendToPageAria: (page: number) => string;
+  sortLabel: string;
+  sortShort: Record<SortMode, string>;
+  sortLong: Record<SortMode, string>;
+  sortCustomEmpty: string;
 
   /* comuns às etapas 2 e 3 */
   removeAria: (name: string) => string;
@@ -64,6 +76,10 @@ export interface FlowCopy {
   movePageTip: string;
   removeSpreadAria: (first: number, second: number) => string;
   addSpread: string;
+  addSpreadDrop: string;
+  perRowLabel: string;
+  perRowAria: (pages: number) => string;
+  editPageAria: (page: number) => string;
 
   /* etapa 4: a capa */
   coverTitle: string;
@@ -124,8 +140,8 @@ const pt: FlowCopy = {
 
   orderTitle: 'Confira a ordem.',
   inAlbum: (n) => (n === 1 ? '1 foto no álbum' : `${n} fotos no álbum`),
-  orderHelpPointer: 'Arraste uma foto para onde ela deve entrar.',
-  orderHelpTouch: 'Toque numa foto e depois onde ela deve entrar.',
+  orderHelpPointer: 'Cada coluna é uma página, com até 4 fotos. Arraste uma foto para outro lugar ou outra página.',
+  orderHelpTouch: 'Cada coluna é uma página, com até 4 fotos. Toque numa foto e depois onde ela deve entrar.',
   sortByDate: 'Voltar à ordem por data',
   noTime: 'sem data',
   orderPhotoAria: (position, name, when, selected) =>
@@ -137,6 +153,29 @@ const pt: FlowCopy = {
   outHelp: 'Toque numa foto para devolvê-la.',
   restoreAria: (name) => `Devolver ${name} ao álbum`,
   orderEmpty: 'Todas as fotos estão fora do álbum. Toque numa delas abaixo para devolver.',
+  pageColumn: (page) => `Página ${page}`,
+  pagesCount: (pages) => (pages === 1 ? '1 página' : `${pages} páginas`),
+  pageFull: 'Cheia',
+  newPageColumn: 'Nova página',
+  newPageHint: 'Solte uma foto aqui',
+  newPageAria: 'Levar a foto escolhida para uma página nova',
+  appendToPageAria: (page) => `Levar a foto escolhida para o fim da página ${page}`,
+  sortLabel: 'Ordenar',
+  sortShort: {
+    date: 'Por data',
+    dateDesc: 'Mais recentes',
+    name: 'Por nome',
+    random: 'Aleatório',
+    custom: 'Personalizado',
+  },
+  sortLong: {
+    date: 'Data — mais antigas primeiro',
+    dateDesc: 'Data — mais recentes primeiro',
+    name: 'Nome do arquivo',
+    random: 'Aleatório',
+    custom: 'Personalizado',
+  },
+  sortCustomEmpty: 'Arraste uma foto para criar a sua ordem.',
 
   removeAria: (name) => `Tirar ${name} do álbum`,
   removed: 'Foto tirada do álbum.',
@@ -155,7 +194,11 @@ const pt: FlowCopy = {
   movePageAria: (page) => `Mover a página ${page}`,
   movePageTip: 'Segure e arraste para mudar a página de lugar. No teclado, setas ← e →.',
   removeSpreadAria: (first, second) => `Remover as páginas ${first} e ${second}`,
-  addSpread: 'Nova folha',
+  addSpread: 'Nova página',
+  addSpreadDrop: 'Solte para criar a página',
+  perRowLabel: 'Páginas por linha',
+  perRowAria: (pages) => `${pages} páginas por linha`,
+  editPageAria: (page) => `Ajustar as fotos da página ${page}`,
 
   coverTitle: 'Monte a capa.',
   finish: 'Finalizar',
@@ -214,8 +257,8 @@ const en: FlowCopy = {
 
   orderTitle: 'Check the order.',
   inAlbum: (n) => (n === 1 ? '1 photo in the album' : `${n} photos in the album`),
-  orderHelpPointer: 'Drag a photo to where it should go.',
-  orderHelpTouch: 'Tap a photo, then where it should go.',
+  orderHelpPointer: 'Each column is a page, with up to 4 photos. Drag a photo to another spot or another page.',
+  orderHelpTouch: 'Each column is a page, with up to 4 photos. Tap a photo, then where it should go.',
   sortByDate: 'Back to date order',
   noTime: 'no date',
   orderPhotoAria: (position, name, when, selected) =>
@@ -227,6 +270,29 @@ const en: FlowCopy = {
   outHelp: 'Tap a photo to bring it back.',
   restoreAria: (name) => `Bring ${name} back to the album`,
   orderEmpty: 'Every photo is out of the album. Tap one below to bring it back.',
+  pageColumn: (page) => `Page ${page}`,
+  pagesCount: (pages) => (pages === 1 ? '1 page' : `${pages} pages`),
+  pageFull: 'Full',
+  newPageColumn: 'New page',
+  newPageHint: 'Drop a photo here',
+  newPageAria: 'Move the chosen photo to a new page',
+  appendToPageAria: (page) => `Move the chosen photo to the end of page ${page}`,
+  sortLabel: 'Sort',
+  sortShort: {
+    date: 'By date',
+    dateDesc: 'Newest',
+    name: 'By name',
+    random: 'Shuffle',
+    custom: 'Custom',
+  },
+  sortLong: {
+    date: 'Date — oldest first',
+    dateDesc: 'Date — newest first',
+    name: 'File name',
+    random: 'Shuffle',
+    custom: 'Custom',
+  },
+  sortCustomEmpty: 'Drag a photo to make your own order.',
 
   removeAria: (name) => `Take ${name} out of the album`,
   removed: 'Photo taken out of the album.',
@@ -245,7 +311,11 @@ const en: FlowCopy = {
   movePageAria: (page) => `Move page ${page}`,
   movePageTip: 'Hold and drag to move the page. With the keyboard, ← and → arrows.',
   removeSpreadAria: (first, second) => `Remove pages ${first} and ${second}`,
-  addSpread: 'New sheet',
+  addSpread: 'New page',
+  addSpreadDrop: 'Drop to make the page',
+  perRowLabel: 'Pages per row',
+  perRowAria: (pages) => `${pages} pages per row`,
+  editPageAria: (page) => `Adjust the photos on page ${page}`,
 
   coverTitle: 'Build the cover.',
   finish: 'Finish',
