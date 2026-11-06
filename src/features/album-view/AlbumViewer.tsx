@@ -13,10 +13,15 @@ import { clamp } from '@/features/album-editor/useDrag';
 import { useStageZoom } from '@/features/album-editor/useStageZoom';
 import { ZoomControls } from '@/features/album-editor/ZoomControls';
 import { useLang } from '@/features/i18n/LangProvider';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useTrackDrag } from '@/features/album-editor/controls';
 import { IconBook, IconLayers } from '@/features/album-editor/icons';
 import type { AlbumComposition } from '@/features/album-save/composition';
 import { paperById, spineWidth } from '@/features/album-print/spec';
 import type { Photo } from '@/types/photo';
+
+/** A ordem do trilho das visões — é ela que o arraste percorre. */
+const VIEWS = ['book', 'pages'] as const;
 
 /**
  * O álbum salvo, só para ler.
@@ -30,10 +35,17 @@ export function AlbumViewer({
   title,
   photos,
   composition,
+  layout = 'card',
 }: {
   title: string;
   photos: Photo[];
   composition: AlbumComposition;
+  /**
+   * `card`: bloco com as abas no topo (a página pública). `rail`: só o álbum,
+   * solto na página, com as visões num trilho ao lado — o mesmo das etapas de
+   * montar, para a última etapa da /album ler como continuação delas.
+   */
+  layout?: 'card' | 'rail';
 }) {
   const { lang } = useLang();
   const copy = EDITOR_COPY[lang];
@@ -45,6 +57,14 @@ export function AlbumViewer({
   const viewportRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const zoom = useStageZoom(stageRef);
+
+  const railRef = useRef<HTMLElement>(null);
+  const railFlat = useMediaQuery('(max-width: 960px)');
+  const pickView = useCallback((next: number) => setView(VIEWS[next]), []);
+  const railTrack = useTrackDrag(railRef, VIEWS.length, VIEWS.indexOf(view), pickView, {
+    axis: railFlat ? 'x' : 'y',
+    pad: railFlat ? 6 : 8,
+  });
 
   /* Mesma régua do editor: o zoom multiplica o encaixe, e 100% quer dizer "o
      álbum inteiro na tela" em qualquer janela. */
@@ -115,6 +135,77 @@ export function AlbumViewer({
 
   const named = { ...album, name: album.name || title };
 
+  const stage = (
+    <div className="ae-main">
+      <div className="ae-viewport" ref={viewportRef}>
+        <div className="ae-stage" ref={stageRef}>
+          {view === 'book' ? (
+            <Book3D album={named} spine={spine} ppm={ppm} hint={copy.orbitHint} />
+          ) : (
+            album.pages[leftIndex] &&
+            album.pages[rightIndex] && (
+              /* A mesma folha da bancada, só que sem alça nenhuma: em
+                 `readOnly` a metade inteira pega o arraste de virar, porque
+                 aqui não há enquadramento de foto para disputar o gesto. */
+              <SheetStage
+                album={named}
+                sheets={sheets}
+                sheetIndex={safeSheet}
+                turn={turn}
+                ppm={ppm}
+                guides={false}
+                ink={color.ink}
+                resolve={resolve}
+                readOnly
+                hideNumber={!album.showPageNumbers}
+                hint={copy.flipHintRead}
+              />
+            )
+          )}
+        </div>
+        <ZoomControls zoom={zoom} copy={copy} />
+      </div>
+    </div>
+  );
+
+  if (layout === 'rail') {
+    const tabs = [
+      { id: 'book' as const, label: copy.tabBook, icon: <IconBook size={13} /> },
+      { id: 'pages' as const, label: copy.tabPages, icon: <IconLayers size={13} /> },
+    ];
+    return (
+      <div
+        className="ae is-read is-rail"
+        style={{ '--ae-accent': accentFor(color) } as React.CSSProperties}
+      >
+        <nav
+          ref={railRef}
+          className={`ae-rail${railTrack.dragging ? ' is-dragging' : ''}`}
+          aria-label={copy.views}
+          onPointerDown={railTrack.onPointerDown}
+          onKeyDown={railTrack.onKeyDown}
+        >
+          <span className="ae-rail-knob" aria-hidden style={railTrack.knobStyle} />
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={view === tab.id ? 'is-on' : ''}
+              aria-pressed={view === tab.id}
+              aria-label={tab.label}
+              title={tab.label}
+              onClick={() => setView(tab.id)}
+            >
+              {tab.icon}
+              <span className="ae-rail-text">{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+        {stage}
+      </div>
+    );
+  }
+
   return (
     <div className="ae is-read" style={{ '--ae-accent': accentFor(color) } as React.CSSProperties}>
       <div className="ae-top">
@@ -140,36 +231,7 @@ export function AlbumViewer({
         )}
       </div>
 
-      <div className="ae-main">
-        <div className="ae-viewport" ref={viewportRef}>
-          <div className="ae-stage" ref={stageRef}>
-            {view === 'book' ? (
-              <Book3D album={named} spine={spine} ppm={ppm} hint={copy.orbitHint} />
-            ) : (
-              album.pages[leftIndex] &&
-              album.pages[rightIndex] && (
-                /* A mesma folha da bancada, só que sem alça nenhuma: em
-                   `readOnly` a metade inteira pega o arraste de virar, porque
-                   aqui não há enquadramento de foto para disputar o gesto. */
-                <SheetStage
-                  album={named}
-                  sheets={sheets}
-                  sheetIndex={safeSheet}
-                  turn={turn}
-                  ppm={ppm}
-                  guides={false}
-                  ink={color.ink}
-                  resolve={resolve}
-                  readOnly
-                  hideNumber={!album.showPageNumbers}
-                  hint={copy.flipHintRead}
-                />
-              )
-            )}
-          </div>
-          <ZoomControls zoom={zoom} copy={copy} />
-        </div>
-      </div>
+      {stage}
     </div>
   );
 }

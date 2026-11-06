@@ -32,16 +32,21 @@ export function Group({
   title: string;
   help?: string;
   right?: React.ReactNode;
-  children: React.ReactNode;
+  /** Sem conteúdo (um interruptor desligado), o bloco é só o cabeçalho. */
+  children?: React.ReactNode;
 }) {
   return (
     <section className="ae-group">
       <header className="ae-group-head">
-        <h3>{title}</h3>
-        {help && <Help text={help} />}
+        {/* Título e "?" numa peça só, centrados entre si: soltos no cabeçalho,
+            o "?" seguia a linha de base do título e caía abaixo do meio dele. */}
+        <span className="ae-group-title">
+          <h3>{title}</h3>
+          {help && <Help text={help} />}
+        </span>
         {right && <span className="ae-group-right">{right}</span>}
       </header>
-      <div className="ae-group-body">{children}</div>
+      {children ? <div className="ae-group-body">{children}</div> : null}
     </section>
   );
 }
@@ -85,6 +90,33 @@ export function Row({
   );
 }
 
+/**
+ * Interruptor liga/desliga. É para o que só tem dois estados e um deles é
+ * "nada" (contracapa, lombada): o que ele liga aparece embaixo dele.
+ */
+export function Switch({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      className={`ae-switch${checked ? ' is-on' : ''}`}
+      onClick={() => onChange(!checked)}
+    >
+      <span className="ae-switch-knob" aria-hidden />
+    </button>
+  );
+}
+
 export interface SegOption<T> {
   value: T;
   label?: string;
@@ -120,10 +152,15 @@ export function useTrackDrag(
    * exatamente o que a regra `react-hooks/refs` proíbe — e com razão, porque
    * ninguém sabe dizer, olhando a chamada, que aquele campo não é um valor.
    */
-  trackRef: React.RefObject<HTMLDivElement | null>,
+  trackRef: React.RefObject<HTMLElement | null>,
   count: number,
   index: number,
   onPick: (next: number) => void,
+  /**
+   * `axis: 'y'` é o trilho em pé (as visões do lado da bancada); `pad` é o
+   * respiro do trilho em pixels, que tem que bater com o `padding` do CSS.
+   */
+  { axis = 'x', pad = 3 }: { axis?: 'x' | 'y'; pad?: number } = {},
 ): TrackDrag {
   /**
    * Cursor durante o gesto: posição e largura em pixels, medidas no
@@ -135,28 +172,28 @@ export function useTrackDrag(
   // Última casa entregue neste gesto: evita disparar `onPick` a cada pixel.
   const lastRef = useRef(index);
 
-  /** Trilho em pixels. O respiro de 3 px é o mesmo do CSS. */
+  /** Trilho em pixels, no eixo do gesto. O respiro é o mesmo do CSS. */
   const geometry = useCallback(() => {
     const node = trackRef.current;
     if (!node) return null;
     const rect = node.getBoundingClientRect();
-    const pad = 3;
-    const inner = Math.max(0, rect.width - pad * 2);
-    return { left: rect.left, pad, inner, seg: inner / count };
-  }, [count, trackRef]);
+    const length = axis === 'y' ? rect.height : rect.width;
+    const inner = Math.max(0, length - pad * 2);
+    return { left: axis === 'y' ? rect.top : rect.left, pad, inner, seg: inner / count };
+  }, [axis, count, pad, trackRef]);
 
   const follow = useCallback(
-    (clientX: number) => {
+    (pos: number) => {
       const geo = geometry();
       if (!geo) return;
 
       // O cursor segue o ponteiro, preso ao trilho.
-      const loose = clientX - geo.left - geo.pad - geo.seg / 2;
+      const loose = pos - geo.left - geo.pad - geo.seg / 2;
       setDrag({ x: Math.min(geo.inner - geo.seg, Math.max(0, loose)), seg: geo.seg });
 
       const next = Math.min(
         count - 1,
-        Math.max(0, Math.floor((clientX - geo.left - geo.pad) / geo.seg)),
+        Math.max(0, Math.floor((pos - geo.left - geo.pad) / geo.seg)),
       );
       if (next === lastRef.current) return;
       lastRef.current = next;
@@ -169,9 +206,11 @@ export function useTrackDrag(
     if (event.button !== 0) return;
     event.preventDefault();
     lastRef.current = index;
-    follow(event.clientX);
+    const at = (ev: { clientX: number; clientY: number }) =>
+      axis === 'y' ? ev.clientY : ev.clientX;
+    follow(at(event));
 
-    const move = (ev: PointerEvent) => follow(ev.clientX);
+    const move = (ev: PointerEvent) => follow(at(ev));
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
@@ -184,7 +223,9 @@ export function useTrackDrag(
   };
 
   const onKeyDown = (event: React.KeyboardEvent) => {
-    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    const forward = axis === 'y' ? 'ArrowDown' : 'ArrowRight';
+    const back = axis === 'y' ? 'ArrowUp' : 'ArrowLeft';
+    const step = event.key === forward ? 1 : event.key === back ? -1 : 0;
     if (!step) return;
     event.preventDefault();
     const next = Math.min(count - 1, Math.max(0, index + step));
@@ -194,12 +235,20 @@ export function useTrackDrag(
 
   return {
     dragging: drag !== null,
-    knobStyle: drag
-      ? { width: drag.seg, transform: `translateX(${drag.x}px)` }
-      : {
-          width: `calc((100% - 6px) / ${count})`,
-          transform: `translateX(${index * 100}%)`,
-        },
+    knobStyle:
+      axis === 'y'
+        ? drag
+          ? { height: drag.seg, transform: `translateY(${drag.x}px)` }
+          : {
+              height: `calc((100% - ${pad * 2}px) / ${count})`,
+              transform: `translateY(${index * 100}%)`,
+            }
+        : drag
+          ? { width: drag.seg, transform: `translateX(${drag.x}px)` }
+          : {
+              width: `calc((100% - ${pad * 2}px) / ${count})`,
+              transform: `translateX(${index * 100}%)`,
+            },
     onPointerDown,
     onKeyDown,
   };

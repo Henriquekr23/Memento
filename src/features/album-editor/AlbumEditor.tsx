@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useLang } from '@/features/i18n/LangProvider';
 import { SPEC } from '@/features/album-print/spec';
 import { formatMm } from '@/lib/format';
@@ -65,9 +66,15 @@ function tabsFor(mode: EditorMode, hasBoard: boolean): View[] {
 export interface BoardApi {
   album: EditorAlbum;
   resolve: PhotoResolver;
+  /** Tinta da página (a da cor de capa), para os textos da prévia. */
+  ink: string;
   /** Página escolhida: é ela que o inspetor ao lado edita. */
   activePage: number;
+  /** Quadro escolhido da página ativa — o que o inspetor enquadra. */
+  selectedSlot: number;
   onSelectPage: (pageIndex: number) => void;
+  /** Escolhe página e quadro de uma vez: o inspetor passa a editar aquele quadro. */
+  onSelectFrame: (frame: FrameRef) => void;
   /** Abre a folha da página para o ajuste fino (enquadramento, zoom, texto). */
   onOpenPage: (pageIndex: number) => void;
   /** Troca o conteúdo de dois quadros (um deles pode estar vazio). */
@@ -160,6 +167,10 @@ export function AlbumEditor({
   const [fitPpm, setFitPpm] = useState(1.7);
 
   const tabsRef = useRef<HTMLDivElement>(null);
+  const railRef = useRef<HTMLElement>(null);
+  /* O trilho das visões fica em pé ao lado da bancada e deita abaixo de
+     960 px — o mesmo corte do CSS (`.ae-rail`). O gesto segue o eixo dele. */
+  const railFlat = useMediaQuery('(max-width: 960px)');
   const viewportRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const zoom = useStageZoom(stageRef);
@@ -324,8 +335,14 @@ export function AlbumEditor({
   const boardApi: BoardApi = {
     album,
     resolve,
+    ink: color.ink,
     activePage,
+    selectedSlot,
     onSelectPage: selectPage,
+    onSelectFrame: (frame) => {
+      selectPage(frame.page);
+      setSelectedSlot(frame.slot);
+    },
     onOpenPage: (pageIndex) => {
       selectPage(pageIndex);
       setView('pages');
@@ -373,10 +390,19 @@ export function AlbumEditor({
     Math.max(0, tabIds.indexOf(view)),
     pickTab,
   );
+  /* O trilho do lado (etapas 3 e 4) é o mesmo interruptor, em pé: segurar a
+     pílula e arrastar até a outra visão. O respiro de 8 px é o do CSS. */
+  const railTrack = useTrackDrag(
+    railRef,
+    tabIds.length,
+    Math.max(0, tabIds.indexOf(view)),
+    pickTab,
+    { axis: railFlat ? 'x' : 'y', pad: railFlat ? 6 : 8 },
+  );
 
   return (
     <div
-      className={`ae${simple ? ' ae-split' : ''}`}
+      className={`ae${simple ? ` ae-split ae-mode-${mode}` : ''}`}
       style={{ '--ae-accent': accent } as React.CSSProperties}
     >
       {!simple && (
@@ -472,7 +498,14 @@ export function AlbumEditor({
             se vê (centro) e o que se muda (direita) não dividem mais a barra
             do topo com o nome do álbum. */}
         {simple && (
-          <nav className="ae-rail" aria-label={copy.views}>
+          <nav
+            ref={railRef}
+            className={`ae-rail${railTrack.dragging ? ' is-dragging' : ''}`}
+            aria-label={copy.views}
+            onPointerDown={railTrack.onPointerDown}
+            onKeyDown={railTrack.onKeyDown}
+          >
+            <span className="ae-rail-knob" aria-hidden style={railTrack.knobStyle} />
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -513,6 +546,7 @@ export function AlbumEditor({
                   onChange={state.updateElement}
                   snap={snap}
                   setSnap={setSnap}
+                  titlePlaceholder={copy.coverTitlePlaceholder}
                 />
               )}
 
@@ -692,6 +726,8 @@ export function AlbumEditor({
               copy={copy}
               selectedId={selectedId}
               onSelect={setSelectedId}
+              name={name}
+              onName={onName}
             />
           )}
 
@@ -707,6 +743,10 @@ export function AlbumEditor({
               onSelectSlot={setSelectedSlot}
               selectedTextId={selectedTextId}
               onSelectText={setSelectedTextId}
+              context={view === 'board' ? 'board' : 'sheet'}
+              photos={photos}
+              resolve={resolve}
+              onGoToPage={selectPage}
             />
           )}
         </aside>

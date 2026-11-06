@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { BoardApi, FrameRef } from '@/features/album-editor/AlbumEditor';
 import { IconPlus, IconTrash, IconX } from '@/features/album-editor/icons';
-import { PHOTO_DND_TYPE } from '@/features/album-editor/PageContent';
+import { PageContent, PHOTO_DND_TYPE } from '@/features/album-editor/PageContent';
+import { SPEC } from '@/features/album-print/spec';
 import { useLang } from '@/features/i18n/LangProvider';
+import { useIsTouch } from '@/hooks/useMediaQuery';
 import { layoutById, type EditorPage } from '@/types/album-editor';
 
 import { FLOW_COPY } from './copy';
@@ -38,13 +40,22 @@ function isPhotoDrag(event: React.DragEvent): boolean {
  *
  * Mover é **soltar em cima**: o quadro inteiro é o alvo, e soltar troca o
  * conteúdo dos dois (se o de destino estiver vazio, a foto só muda de lugar).
- * Foto vinda da bandeja do inspetor ocupa o quadro onde cair. No toque e no
- * teclado: escolher a foto, depois o quadro de destino.
+ * Foto vinda da bandeja do inspetor ocupa o quadro onde cair.
+ *
+ * Clicar num quadro **escolhe** o quadro: é ele que o inspetor passa a
+ * enquadrar. Mover com cliques (escolher a foto, depois o destino) fica só no
+ * toque, onde não há arraste nativo — com mouse, o segundo clique trocava duas
+ * fotos de quem só queria escolher outro quadro.
+ *
+ * A prévia é a própria `PageContent` (sem sangria, só leitura), com o alvo de
+ * arraste por cima de cada quadro: respiro, encaixe, zoom, enquadramento e
+ * texto mudados no inspetor aparecem aqui na hora.
  */
 export function PagesOverview({ api }: { api: BoardApi }) {
   const { lang } = useLang();
   const t = FLOW_COPY[lang];
-  const { album, resolve, activePage } = api;
+  const { album, resolve, activePage, selectedSlot } = api;
+  const isTouch = useIsTouch();
   const [picked, setPicked] = useState<FrameRef | null>(null);
   const [dragFrom, setDragFrom] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
@@ -82,108 +93,130 @@ export function PagesOverview({ api }: { api: BoardApi }) {
       setPicked(null);
       return;
     }
-    api.onSelectPage(frame.page);
-    if (hasPhoto) setPicked(frame);
+    api.onSelectFrame(frame);
+    if (hasPhoto && isTouch) setPicked(frame);
   };
 
   const renderPage = ({ page, index }: { page: EditorPage; index: number }) => {
     const capacity = layoutById(page.layout).slots;
     const isActive = index === activePage;
+    // Na abertura a lombada fica do lado de dentro: à direita da página par.
+    const spineSide = index % 2 === 0 ? 'right' : 'left';
+
+    const overlay = (slot: number) => {
+      if (slot >= capacity) return null;
+      const frame = page.slots[slot];
+      const ref = { page: index, slot };
+      const key = frameKey(ref);
+      const src = resolve(frame.photoId);
+      const isPicked = picked !== null && frameKey(picked) === key;
+      const isCurrent = isActive && slot === selectedSlot && !page.spread;
+      return (
+      <div
+        key={key}
+        className={`af-board-frame${src ? '' : ' is-empty'}`}
+        data-over={(over === key && dragFrom !== key) || undefined}
+        data-sel={isPicked || undefined}
+        data-current={isCurrent || undefined}
+        onDragOver={(event) => {
+          if (!isPhotoDrag(event)) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          if (over !== key) setOver(key);
+        }}
+        onDragLeave={(event) => {
+          const next = event.relatedTarget as Node | null;
+          if (!next || !event.currentTarget.contains(next)) {
+            setOver((current) => (current === key ? null : current));
+          }
+        }}
+        onDrop={(event) => drop(ref, event)}
+      >
+        <button
+          type="button"
+          className="af-board-hit"
+          draggable={!!src}
+          aria-pressed={isPicked}
+          aria-label={
+            src
+              ? t.boardPhotoAria(index + 1, slot + 1, !!picked && !isPicked)
+              : t.boardEmptyAria(index + 1, slot + 1)
+          }
+          onClick={() => pickFrame(ref, !!src)}
+          onDragStart={(event) => {
+            if (!frame.photoId) return;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData(FRAME_DND_TYPE, key);
+            event.dataTransfer.setData(PHOTO_DND_TYPE, frame.photoId);
+            // O botão é transparente: o fantasma do arraste é o
+            // quadro de baixo, com a foto enquadrada.
+            const slotNode = event.currentTarget.closest('.ae-slot');
+            if (slotNode) {
+              event.dataTransfer.setDragImage(
+                slotNode,
+                event.nativeEvent.offsetX,
+                event.nativeEvent.offsetY,
+              );
+            }
+            setDragFrom(key);
+            setPicked(null);
+          }}
+          onDragEnd={() => {
+            setDragFrom(null);
+            setOver(null);
+          }}
+        />
+        {src && (
+          <button
+            type="button"
+            className="af-slot-x af-board-x"
+            aria-label={t.boardClearAria(index + 1, slot + 1)}
+            onClick={() => {
+              setPicked(null);
+              api.onClearFrame(ref);
+            }}
+          >
+            <IconX size={12} />
+          </button>
+        )}
+      </div>
+      );
+    };
+
     return (
       <div className="af-board-page-wrap" key={page.id}>
-        <div
+        <BoardPaper
           className="af-board-page"
-          data-layout={page.layout}
-          data-fill={page.fill || undefined}
           data-active={isActive || undefined}
           role="group"
           aria-label={t.pageAria(index + 1)}
           onClick={(event) => {
-            if (event.target === event.currentTarget) api.onSelectPage(index);
+            // O clique num quadro já escolheu o quadro; aqui só o papel.
+            if (!(event.target as HTMLElement).closest('.af-board-frame')) {
+              api.onSelectPage(index);
+            }
           }}
           onDoubleClick={() => api.onOpenPage(index)}
         >
-          {capacity === 0 ? (
-            <button
-              type="button"
-              className="af-board-text"
-              onClick={() => api.onSelectPage(index)}
-            >
-              <span>{pageText(page) || t.textPage}</span>
-            </button>
-          ) : (
-            page.slots.slice(0, capacity).map((frame, slot) => {
-              const ref = { page: index, slot };
-              const key = frameKey(ref);
-              const src = resolve(frame.photoId);
-              const isPicked = picked !== null && frameKey(picked) === key;
-              return (
-                <div
-                  key={key}
-                  className={`af-board-frame${src ? '' : ' is-empty'}`}
-                  data-over={(over === key && dragFrom !== key) || undefined}
-                  data-sel={isPicked || undefined}
-                  onDragOver={(event) => {
-                    if (!isPhotoDrag(event)) return;
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = 'move';
-                    if (over !== key) setOver(key);
-                  }}
-                  onDragLeave={(event) => {
-                    const next = event.relatedTarget as Node | null;
-                    if (!next || !event.currentTarget.contains(next)) {
-                      setOver((current) => (current === key ? null : current));
-                    }
-                  }}
-                  onDrop={(event) => drop(ref, event)}
-                >
-                  <button
-                    type="button"
-                    className="af-board-hit"
-                    draggable={!!src}
-                    aria-pressed={isPicked}
-                    aria-label={
-                      src
-                        ? t.boardPhotoAria(index + 1, slot + 1, !!picked && !isPicked)
-                        : t.boardEmptyAria(index + 1, slot + 1)
-                    }
-                    onClick={() => pickFrame(ref, !!src)}
-                    onDragStart={(event) => {
-                      if (!frame.photoId) return;
-                      event.dataTransfer.effectAllowed = 'move';
-                      event.dataTransfer.setData(FRAME_DND_TYPE, key);
-                      event.dataTransfer.setData(PHOTO_DND_TYPE, frame.photoId);
-                      setDragFrom(key);
-                      setPicked(null);
-                    }}
-                    onDragEnd={() => {
-                      setDragFrom(null);
-                      setOver(null);
-                    }}
-                  >
-                    {src && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={src} alt="" draggable={false} loading="lazy" />
-                    )}
-                  </button>
-                  {src && (
-                    <button
-                      type="button"
-                      className="af-slot-x af-board-x"
-                      aria-label={t.boardClearAria(index + 1, slot + 1)}
-                      onClick={() => {
-                        setPicked(null);
-                        api.onClearFrame(ref);
-                      }}
-                    >
-                      <IconX size={12} />
-                    </button>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
+          {(ppm) =>
+            ppm > 0 && (
+              <>
+                <PageContent
+                  page={page}
+                  ppm={ppm}
+                  ink={api.ink}
+                  resolve={resolve}
+                  bleedMm={0}
+                  spineSide={spineSide}
+                  slotOverlay={overlay}
+                />
+                {capacity === 0 && !pageText(page) && (
+                  <span className="af-board-text">{t.textPage}</span>
+                )}
+              </>
+            )
+          }
+        </BoardPaper>
         <div className="af-board-page-foot">
           <span className="af-board-num">{index + 1}</span>
           {isActive && (
@@ -234,4 +267,39 @@ export function PagesOverview({ api }: { api: BoardApi }) {
 function pageText(page: EditorPage): string {
   const fromBlocks = page.textBlocks.map((block) => block.text).find((text) => text.trim());
   return (page.heading || fromBlocks || page.body || '').trim();
+}
+
+/**
+ * O papel da página na visão geral, medido: a `PageContent` desenha em
+ * milímetros × `ppm`, e aqui o `ppm` é a largura que a grade deu à página
+ * dividida pela largura do corte.
+ */
+function BoardPaper({
+  children,
+  ...rest
+}: Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & {
+  children: (ppm: number) => React.ReactNode;
+  'data-active'?: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [ppm, setPpm] = useState(0);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const measure = () => {
+      const next = node.clientWidth / SPEC.trim.w;
+      setPpm((current) => (Math.abs(current - next) < 0.001 ? current : next));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} {...rest}>
+      {children(ppm)}
+    </div>
+  );
 }

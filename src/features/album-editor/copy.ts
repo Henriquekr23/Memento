@@ -142,6 +142,21 @@ export interface EditorCopy {
   addOverlay: string;
   addHeader: string;
   textNew: string;
+
+  /* capa, revisada */
+  coverTitlePlaceholder: string;
+  titleMore: string;
+  titleStyleGroup: string;
+  done: string;
+  moreAdjust: string;
+  positionNote: string;
+  positionLabel: (key: string) => string;
+  spineNote: string;
+  spineShowTitle: string;
+  show: string;
+  hide: string;
+  spinePrint: string;
+  spineManualNote: string;
   pageTextNote: string;
   fieldColor: string;
   colorInk: string;
@@ -161,6 +176,13 @@ export interface EditorCopy {
   trayUsed: string;
   trayNote: string;
   trayEmpty: string;
+  /** Página de texto escolhida: não há quadro onde pôr a foto. */
+  trayNoFrame: string;
+  trayPlaceAria: (name: string) => string;
+  /** Trocar de tipo empurrou fotos para o fim do álbum. */
+  layoutMoved: (count: number, page: number) => string;
+  layoutMovedGo: string;
+  frameEmptyNote: string;
   innerGroup: string;
   removeSheet: string;
   innerNote: (mm: string) => string;
@@ -349,6 +371,20 @@ const PT: EditorCopy = {
   addOverlay: '+ Sobre a foto',
   addHeader: '+ Topo',
   textNew: 'Escreva aqui',
+
+  coverTitlePlaceholder: 'Nome do álbum',
+  titleMore: 'Posição e mais ajustes',
+  titleStyleGroup: 'Ajustes do título',
+  done: 'Pronto',
+  moreAdjust: 'Mais ajustes',
+  positionNote: 'Atalhos de posição. Na capa, arraste o elemento para qualquer lugar; as setas do teclado fazem o ajuste fino.',
+  positionLabel: (key) => ({ topLeft: 'Em cima, à esquerda', top: 'Em cima, no centro', topRight: 'Em cima, à direita', left: 'No meio, à esquerda', center: 'No centro', right: 'No meio, à direita', bottomLeft: 'Embaixo, à esquerda', bottom: 'Embaixo, no centro', bottomRight: 'Embaixo, à direita' } as Record<string, string>)[key] ?? key,
+  spineNote: 'A lombada repete o título do álbum, na mesma fonte da capa.',
+  spineShowTitle: 'Título na lombada',
+  show: 'Mostrar',
+  hide: 'Ocultar',
+  spinePrint: 'Ajustes de impressão',
+  spineManualNote: 'Espessura informada por você — use o valor que a gráfica passar.',
   pageTextNote:
     'Arraste o texto na página para posicionar. Dois cliques nele abrem a digitação; as alças mudam a largura e o corpo.',
   fieldColor: 'Cor',
@@ -364,11 +400,19 @@ const PT: EditorCopy = {
   depthBehind: 'Atrás',
   removeText: 'Remover texto',
   pageNumbers: 'Número da página',
-  trayGroup: 'Bandeja',
+  trayGroup: 'Fotos fora das páginas',
   trayUpload: 'Enviar',
   trayUsed: 'já está numa página',
   trayNote: 'Clique para colocar no quadro selecionado, ou arraste até a página.',
   trayEmpty: 'Nenhuma foto ainda. Envie as fotos da viagem para começar.',
+  trayNoFrame: 'Esta página é só texto. Escolha uma página com quadros, ou arraste a foto até ela.',
+  trayPlaceAria: (name) => (name ? `Colocar ${name} no quadro selecionado` : 'Colocar no quadro selecionado'),
+  layoutMoved: (count, page) =>
+    count === 1
+      ? `A foto que não coube foi para a página ${page}.`
+      : `As ${count} fotos que não couberam foram para a página ${page}.`,
+  layoutMovedGo: 'Ver',
+  frameEmptyNote: 'Quadro vazio. Arraste uma foto até ele, ou escolha uma das fotos fora das páginas.',
   innerGroup: 'Miolo',
   removeSheet: 'Remover esta folha',
   innerNote: (mm) =>
@@ -545,6 +589,20 @@ const EN: EditorCopy = {
   addOverlay: '+ Over the photo',
   addHeader: '+ Top',
   textNew: 'Write here',
+
+  coverTitlePlaceholder: 'Album name',
+  titleMore: 'Position and more',
+  titleStyleGroup: 'Title settings',
+  done: 'Done',
+  moreAdjust: 'More settings',
+  positionNote: 'Position shortcuts. On the cover, drag the element anywhere; the arrow keys nudge it.',
+  positionLabel: (key) => ({ topLeft: 'Top left', top: 'Top center', topRight: 'Top right', left: 'Middle left', center: 'Center', right: 'Middle right', bottomLeft: 'Bottom left', bottom: 'Bottom center', bottomRight: 'Bottom right' } as Record<string, string>)[key] ?? key,
+  spineNote: 'The spine repeats the album title, in the same font as the cover.',
+  spineShowTitle: 'Title on spine',
+  show: 'Show',
+  hide: 'Hide',
+  spinePrint: 'Print settings',
+  spineManualNote: 'Thickness set by you — use the value your printer gives you.',
   pageTextNote:
     'Drag the text on the page to place it. Double-click it to type; the handles change the width and the size.',
   fieldColor: 'Colour',
@@ -560,11 +618,19 @@ const EN: EditorCopy = {
   depthBehind: 'Behind',
   removeText: 'Remove text',
   pageNumbers: 'Page number',
-  trayGroup: 'Tray',
+  trayGroup: 'Photos off the pages',
   trayUpload: 'Upload',
   trayUsed: 'already on a page',
   trayNote: 'Click to place in the selected frame, or drag onto the page.',
   trayEmpty: 'No photos yet. Upload the trip photos to start.',
+  trayNoFrame: 'This is a text-only page. Pick a page with frames, or drag the photo onto one.',
+  trayPlaceAria: (name) => (name ? `Place ${name} in the selected frame` : 'Place in the selected frame'),
+  layoutMoved: (count, page) =>
+    count === 1
+      ? `The photo that didn't fit moved to page ${page}.`
+      : `The ${count} photos that didn't fit moved to page ${page}.`,
+  layoutMovedGo: 'View',
+  frameEmptyNote: 'Empty frame. Drag a photo onto it, or pick one of the photos off the pages.',
   innerGroup: 'Inner pages',
   removeSheet: 'Remove this sheet',
   innerNote: (mm) =>

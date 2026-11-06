@@ -6,6 +6,7 @@ import { paperById, spineWidth } from '@/features/album-print/spec';
 import type {
   CoverElement,
   EditorAlbum,
+  EditorLayoutId,
   EditorPage,
   PageTextBlock,
   PhotoFrame,
@@ -20,6 +21,7 @@ import {
 import type { Photo } from '@/types/photo';
 
 import { emptyAlbum } from './emptyAlbum';
+import { relayoutPage } from './relayout';
 
 /** Número mínimo de páginas: um álbum precisa de pelo menos uma folha aberta. */
 const MIN_PAGES = 4;
@@ -68,10 +70,12 @@ export function useEditorAlbum(initial?: EditorAlbum) {
   }, []);
 
   const addText = useCallback((text: string) => {
+    // Entra embaixo do título, como subtítulo — no y 30 de antes ele caía em
+    // cima da forma nova, que também nasce ali.
     const element = makeText({
       text,
-      size: 10,
-      y: 30,
+      size: 7,
+      y: 84,
       font: 'grotesk',
       uppercase: false,
       tracking: 0,
@@ -94,6 +98,20 @@ export function useEditorAlbum(initial?: EditorAlbum) {
       pages: current.pages.map((page, i) => (i === index ? { ...page, ...changes } : page)),
     }));
   }, []);
+
+  /**
+   * Troca o tipo da página. A foto que o tipo novo não mostra **não fica
+   * escondida**: vai para o fim do álbum (`relayoutPage`). Devolve a página
+   * para onde ela foi, para quem chamou poder avisar.
+   */
+  const changeLayout = useCallback(
+    (index: number, layout: EditorLayoutId) => {
+      const result = relayoutPage(album, index, layout);
+      setAlbum(result.album);
+      return result;
+    },
+    [album],
+  );
 
   const updateFrame = useCallback(
     (pageIndex: number, slotIndex: number, changes: Partial<PhotoFrame>) => {
@@ -315,6 +333,7 @@ export function useEditorAlbum(initial?: EditorAlbum) {
     addText,
     addMotif,
     updatePage,
+    changeLayout,
     updateFrame,
     addTextBlock,
     updateTextBlock,

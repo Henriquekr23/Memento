@@ -52,11 +52,14 @@ export function StepFinish({
         <p className="af-lead">{t.finishLead}</p>
       </div>
 
-      <div className="af-editor-card af-viewer">
+      {/* Só o álbum, solto na página, com as visões no trilho do lado — como
+          nas etapas de montar. Sem o cartão em volta: aqui o objeto é o livro. */}
+      <div className="af-viewer af-viewer-bare">
         <AlbumViewer
           title={name}
           photos={photos}
           composition={{ version: COMPOSITION_VERSION, album }}
+          layout="rail"
         />
       </div>
 

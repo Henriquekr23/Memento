@@ -124,9 +124,15 @@ leitura de EXIF.
    capa não sangra do lado da lombada, a contracapa não sangra do outro, e a
    lombada não sangra em lado nenhum — ali é dobra, não corte. Guia desenhada
    igual nos quatro lados mente sobre onde a faca passa.
-4. **Nada que o usuário criou pode sumir.** Trocar de layout não apaga a foto
-   do quadro 4: a página guarda sempre `MAX_SLOTS` quadros. Remover uma folha
-   remove as duas páginas dela; a foto continua no acervo.
+4. **Nada que o usuário criou pode sumir.** Trocar para um layout com menos
+   quadros não esconde a foto que sobra: ela anda para o fim do álbum
+   (`relayout.ts`, `relayoutPage` — primeira página em branco depois da
+   última com conteúdo, ou uma folha nova), com o enquadramento junto, e o
+   inspetor avisa para qual página foi. Esconder no quadro 4 parecia, para
+   quem olhava, que a foto tinha sumido. A página continua guardando
+   `MAX_SLOTS` quadros. Foto tirada de um quadro vai para "Fotos fora das
+   páginas" no inspetor. Remover uma folha remove as duas páginas dela; a
+   foto continua no acervo.
 5. **`Slot` dentro de `PageContent` é função, não componente.** Chamada como
    `slot(0, style)`. Virando `<Slot />`, o React remonta o `<img>` a cada
    render e o arraste de enquadramento pisca. Já foi corrigido uma vez.
@@ -198,7 +204,11 @@ leitura de EXIF.
       páginas edita a página escolhida — tipo, borda, respiro, texto,
       enquadramento, zoom) e `cover` (capa e livro). Na visão geral o quadro
       inteiro é o alvo: soltar troca o conteúdo dos dois quadros
-      (`swapFrames`, foto e enquadramento juntos).
+      (`swapFrames`, foto e enquadramento juntos). A prévia da visão geral é a
+      própria `PageContent` (só leitura, `slotOverlay` põe o alvo de arraste
+      por cima de cada quadro): o que o inspetor muda aparece ali. Clicar num
+      quadro escolhe o quadro (`onSelectFrame`); mover com dois cliques só no
+      toque.
     - **A composição nasce da ordem** (`composeFromOrder`) ao entrar na etapa
       3. Ir e voltar entre páginas, capa e finalização não refaz nada; voltar
       à ordem e seguir de novo reabre a composição como estava
@@ -271,7 +281,9 @@ leitura de EXIF.
     Guardar na página, e não numa camada indexada por página, é o que faz
     remover uma folha remover o texto dela sem código nenhum a mais.
 26. **Controle de casas com cursor deslizante é um gesto só** (`useTrackDrag`),
-    usado pelo segmentado do inspetor e pelas abas do editor. O nó do trilho é
+    usado pelo segmentado do inspetor, pelas abas do editor e pelo trilho de
+    visões das etapas 3 e 4 (`.ae-rail`, em pé: `axis: 'y'`, deita abaixo de
+    960 px). O nó do trilho é
     criado por quem chama: uma referência devolvida de dentro de um hook e lida
     na renderização é o que a regra `react-hooks/refs` proíbe.
 
