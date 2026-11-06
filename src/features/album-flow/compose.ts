@@ -87,3 +87,27 @@ export function pruneComposition(
   });
   return changed ? { ...album, pages } : album;
 }
+
+/**
+ * A divisão da etapa 2 lida de volta de uma composição já montada — o caminho
+ * contrário de `composeFromGroups`, para reabrir um álbum guardado no fluxo.
+ *
+ * Uma página com foto, um grupo, na ordem das páginas. Página de texto ou
+ * vazia não vira grupo (a etapa 2 só fala de fotos), e a mesma foto em dois
+ * quadros conta uma vez só. É o ponto de partida: se a pessoa não mexer na
+ * ordem, `groupsKey` disto bate com o da composição e nada é refeito.
+ */
+export function groupsFromComposition(album: EditorAlbum): PageGroups {
+  const seen = new Set<string>();
+  const groups: PageGroups = [];
+  for (const page of album.pages) {
+    const group: string[] = [];
+    for (const slot of page.slots) {
+      if (slot.photoId === null || seen.has(slot.photoId)) continue;
+      seen.add(slot.photoId);
+      group.push(slot.photoId);
+    }
+    if (group.length > 0) groups.push(group.slice(0, MAX_SLOTS));
+  }
+  return groups;
+}

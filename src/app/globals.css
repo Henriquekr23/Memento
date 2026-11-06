@@ -4565,7 +4565,17 @@ html {
   position: relative;
   overflow: hidden;
   flex: none;
-  box-shadow: inset 3px 0 8px -4px rgb(0 0 0 / 0.35), inset -3px 0 8px -4px rgb(0 0 0 / 0.35);
+  /* As dobras como dois filetes finos e um brilho no meio, em vez da sombra
+     larga de antes: ela escurecia a lombada inteira e ela sumia na bancada. */
+  background-image: linear-gradient(
+    90deg,
+    rgb(0 0 0 / 0.07),
+    rgb(255 255 255 / 0.16) 50%,
+    rgb(0 0 0 / 0.07)
+  );
+  box-shadow:
+    inset 1px 0 0 rgb(0 0 0 / 0.14),
+    inset -1px 0 0 rgb(0 0 0 / 0.14);
 }
 .ae-spine-text {
   position: absolute;
@@ -8108,7 +8118,7 @@ textarea.ae-input {
   padding: 0 16px 0 12px;
   text-decoration: none;
 }
-.ac-tab[aria-current='page'] {
+.ac-tab[aria-current] {
   background: var(--landing-pill);
   color: var(--landing-pill-ink);
   cursor: default;
@@ -8127,7 +8137,7 @@ textarea.ae-input {
 .ac-tab {
   --lp-ink: var(--album-muted);
 }
-.ac-tab[aria-current='page'] {
+.ac-tab[aria-current] {
   --lp-ink: var(--landing-pill-ink);
 }
 .ac-head-cta {
@@ -8173,13 +8183,26 @@ textarea.ae-input {
 }
 
 /* ── Meus álbuns ── */
+/* Os álbuns crescem a partir do centro: um só fica no meio, e a última linha
+   incompleta também se centra — em vez de tudo encostar à esquerda. Largura
+   fixa por cartão, para a fila não esticar o álbum sozinho até a borda. */
 .ac-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 24px;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+.ac-grid > li {
+  flex: 0 1 340px;
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .ac-grid > li {
+    flex-basis: 100%;
+  }
 }
 .ac-album {
   display: flex;
@@ -8957,46 +8980,88 @@ textarea.ae-input {
   height: 30px;
   padding: 0;
 }
+/* No canto de baixo do visor, parada enquanto as páginas rolam por baixo —
+   no mesmo lugar do zoom das outras visões. O `.ae-board` que rola não é
+   posicionado, então a barra se ancora no `.ae-viewport` e não rola junto. */
 .af-board-bar {
-  position: sticky;
-  top: 0;
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
   z-index: 6;
-  display: flex;
-  justify-content: flex-end;
-  margin: -14px 0 14px;
   pointer-events: none;
 }
 .af-board-perrow {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 3px 3px 3px 12px;
+  gap: 6px;
+  padding: 4px;
   border: 1px solid var(--album-line);
   border-radius: 999px;
   background: var(--color-surface-2);
   box-shadow: 0 6px 18px var(--album-shadow);
   pointer-events: auto;
 }
-.af-board-perrow-label {
-  margin-right: 6px;
-  font-size: 12px;
-  color: var(--album-muted);
+/* A barra de zoom da visão geral: arrastar para a direita aproxima (menos
+   páginas por linha, maiores); os botões dos lados andam uma casa. */
+.af-board-zoom {
+  width: 128px;
+  height: 4px;
+  margin: 0 2px;
+  appearance: none;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--landing-cta) 0 var(--fill, 0%),
+    var(--album-line) var(--fill, 0%) 100%
+  );
+  cursor: pointer;
 }
-.af-board-perrow button {
-  width: 30px;
+.af-board-zoom::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--landing-cta);
+  border-radius: 999px;
+  background: var(--color-surface-2);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.2);
+  cursor: grab;
+}
+.af-board-zoom::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--landing-cta);
+  border-radius: 999px;
+  background: var(--color-surface-2);
+  cursor: grab;
+}
+.af-board-zoom:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+.af-board-zoom:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 6px;
+}
+.af-board-zoom-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
   height: 28px;
   border: 0;
   border-radius: 999px;
   background: transparent;
   color: var(--album-ink-2);
-  font-family: var(--font-landing-mono), ui-monospace, monospace;
-  font-size: 12.5px;
   cursor: pointer;
+  transition: background-color 160ms ease;
 }
-.af-board-perrow button[aria-pressed='true'] {
-  background: var(--landing-pill);
-  color: var(--landing-pill-ink);
-  font-weight: 600;
+.af-board-zoom-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  .af-board-zoom-btn:hover:not(:disabled) {
+    background: var(--landing-pill);
+    color: var(--landing-pill-ink);
+  }
 }
 .af-board-add[data-over] {
   border-color: var(--album-drop-line);
@@ -9217,6 +9282,439 @@ textarea.ae-input {
 }
 :root[data-theme='dark'] .af-cover {
   box-shadow: 0 0 0 1px rgb(255 255 255 / 0.16), 0 24px 48px -20px rgb(0 0 0 / 0.6);
+}
+
+/* ══ Página de um álbum guardado (/album/[id]) na roupa da /album ═══════════
+   "← Meus álbuns" no alto, título e ações, o álbum no meio da página e, para o
+   dono, um painel só com o que se faz com ele — as mesmas peças de "Meus
+   álbuns" e "Minha conta" (`.ac-card`, `.af-btn`). */
+.av-section {
+  gap: 36px;
+}
+.av-topline {
+  display: flex;
+  margin-bottom: -20px;
+}
+.av-back {
+  --lp-ink: var(--album-ink-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 16px 0 10px;
+  border: 1.5px solid var(--album-ghost-line);
+  border-radius: 999px;
+  color: var(--album-ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 160ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .av-back:hover {
+    background: var(--landing-pill);
+  }
+}
+.av-back:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+.av-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 8px;
+}
+.av-meta .ac-badge {
+  margin-left: 0;
+}
+.av-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+/* Links com cara de botão: a cor vem por `--lp-ink` (porta fora de camada). */
+.av-cta {
+  --lp-ink: var(--landing-on-cta);
+  text-decoration: none;
+}
+.av-ghost-link {
+  --lp-ink: var(--landing-pill-ink);
+  text-decoration: none;
+}
+
+/* O trilho das visões deitado e centrado acima do álbum (`layout="top"`): sem
+   coluna ao lado, o livro fica no meio da página. */
+.ae.is-read.is-top {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+}
+.ae.is-top .ae-rail {
+  flex-direction: row;
+  justify-self: center;
+  align-self: start;
+  width: auto;
+  padding: 6px;
+  border-radius: 999px;
+}
+.ae.is-top .ae-rail-knob {
+  top: 6px;
+  bottom: 6px;
+  left: 6px;
+  right: auto;
+  border-radius: 999px;
+}
+.ae.is-top .ae-rail button {
+  flex: none;
+  flex-direction: row;
+  gap: 8px;
+  width: 124px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+.ae.is-top .ae-rail button svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* ── o que o dono faz com o álbum ── */
+.av-owner {
+  display: grid;
+  gap: 24px;
+  width: 100%;
+  max-width: 880px;
+  margin-inline: auto;
+}
+.av-card {
+  padding: 24px 28px;
+}
+.av-panel {
+  display: grid;
+  padding: 8px 28px;
+}
+.av-panel-head {
+  padding: 18px 0 2px;
+}
+/* Cada assunto do painel é uma faixa; o filete entre elas é o único divisor. */
+.av-panel > .av-item,
+.av-panel > .av-group {
+  padding: 22px 0;
+}
+.av-panel > * + * {
+  border-top: 1px solid var(--album-line);
+}
+.av-panel > .av-panel-head + * {
+  border-top: 0;
+}
+.av-group {
+  display: grid;
+  gap: 18px;
+}
+.av-item {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.av-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.av-item-text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.av-item-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--album-ink);
+}
+.av-item-head .af-btn {
+  flex: none;
+}
+.av-item-cta {
+  justify-self: start;
+}
+
+/* Endereço com o botão de copiar colado nele. */
+.av-copy {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 4px 4px 16px;
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 5%, var(--color-surface-2));
+  transition: border-color 160ms ease;
+}
+.av-copy:focus-within {
+  border-color: var(--album-ghost-line);
+}
+.av-copy-text {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--album-ink-2);
+  font-family: var(--font-landing-mono), ui-monospace, monospace;
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  outline: none;
+}
+.av-copy-btn {
+  flex: none;
+  height: 36px;
+}
+.av-copy[data-copied] .av-copy-btn {
+  background: var(--landing-pill);
+  color: var(--landing-pill-ink);
+}
+.av-minor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: -4px;
+  color: var(--album-muted);
+  font-size: 13px;
+}
+.av-minor .af-link {
+  align-self: auto;
+  padding: 2px 0;
+  font-size: 13px;
+}
+
+/* As duas portas do convite: um segmentado, não dois cartões enormes. */
+.av-seg {
+  display: inline-flex;
+  justify-self: start;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 5%, var(--color-surface-2));
+}
+.av-seg button {
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--album-muted);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+.av-seg button[aria-pressed='true'] {
+  background: var(--color-surface-2);
+  color: var(--landing-pill-ink);
+  box-shadow: 0 1px 3px var(--album-shadow), 0 0 0 1px var(--album-line);
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  .av-seg button[aria-pressed='false']:hover:not(:disabled) {
+    color: var(--album-ink);
+  }
+}
+.av-seg button:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+.av-seg button:disabled {
+  cursor: default;
+}
+
+/* Quem monta junto: dentro da faixa do convite, que é por onde se entra. */
+.av-sub {
+  display: grid;
+  gap: 8px;
+}
+.av-sublabel {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--album-muted);
+}
+.av-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.av-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 4px 12px 4px 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 5%, var(--color-surface-2));
+}
+.av-person-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--landing-pill);
+  color: var(--landing-pill-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.av-person-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13.5px;
+  color: var(--album-ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.av-person .av-person-out {
+  align-self: auto;
+  padding: 0;
+  font-size: 12.5px;
+}
+
+/* Caixa de entrada: as fotos que chegaram, cada uma com as duas decisões. */
+.av-inbox {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.av-inbox-item {
+  overflow: hidden;
+  border: 1px solid var(--album-line);
+  border-radius: 20px;
+  background: var(--color-surface-2);
+}
+.av-inbox-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+.av-inbox-body {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px 12px;
+}
+.av-inbox-who,
+.av-inbox-when {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.av-inbox-who {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--album-ink);
+}
+.av-inbox-when {
+  font-size: 12px;
+  color: var(--album-muted);
+}
+.av-inbox-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+.av-inbox-actions .af-btn {
+  height: 34px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+.av-gap {
+  margin-top: 14px;
+}
+
+/* Reeditar um álbum guardado no fluxo: uma linha sob as etapas lembra onde se
+   está e dá o caminho de volta. */
+.af-edit-ctx {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px 12px;
+  max-width: var(--af-width);
+  margin: 8px auto 0;
+  padding: 0 24px;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--album-muted);
+}
+.af-edit-back {
+  --lp-ink: var(--album-ink);
+  color: var(--album-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.af-edit-back:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (max-width: 640px) {
+  .av-panel {
+    padding: 4px 20px;
+  }
+  .av-card {
+    padding: 20px;
+  }
+  /* Com botão, o botão desce e ocupa a linha; com o interruptor, fica ao lado. */
+  .av-item-head:has(> .af-btn) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .av-item-head .af-btn,
+  .av-item-cta {
+    width: 100%;
+  }
+  .av-actions .af-btn {
+    flex: 1 1 100%;
+  }
+  .av-seg {
+    display: flex;
+  }
+  .av-seg button {
+    flex: 1;
+    padding: 0 8px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .ae.is-top .ae-rail button {
+    width: 112px;
+  }
 }
 
 /* Fecha `@layer components`, aberto lá em cima. */

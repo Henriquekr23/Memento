@@ -150,7 +150,9 @@ export function CoverWrap({
       {/* lombada */}
       <div
         className="ae-spine"
-        style={{ width: spineW, height: pageH + bleed * 2 * ppm, background: color.bg }}
+        // `backgroundColor`, não `background`: o atalho apagaria o brilho de
+        // `.ae-spine`, que é o que separa a lombada das duas capas.
+        style={{ width: spineW, height: pageH + bleed * 2 * ppm, backgroundColor: color.bg }}
       >
         {spineText}
         <SpineGuides ppm={ppm} show={guides} />

@@ -4,6 +4,9 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
 import { setAlbumVisibility } from '@/features/album-save/actions';
+import { useOrigin } from '@/hooks/useOrigin';
+
+import { CopyField } from './CopyField';
 
 /**
  * O interruptor do link público, visível só para o dono.
@@ -12,19 +15,28 @@ import { setAlbumVisibility } from '@/features/album-save/actions';
  * endereço abre — sem conta e sem cadastro. É o modelo do link de arquivo
  * compartilhado, não o de rede social: quem tem o link, entra; ninguém
  * descobre o álbum por busca (as páginas de álbum saem do índice).
+ *
+ * Duas roupas: `inline` (o cartão de "Meus álbuns": só o interruptor e o
+ * "Copiar link") e `row` (uma linha do painel da página do álbum, com a frase
+ * do que está valendo agora e o endereço à vista para copiar).
  */
 export function ShareControls({
   albumId,
   isPublic: initial,
+  variant = 'inline',
 }: {
   albumId: string;
   isPublic: boolean;
+  variant?: 'inline' | 'row';
 }) {
   const router = useRouter();
+  const origin = useOrigin();
   const [isPublic, setIsPublic] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
+
+  const link = `${origin}/album/${albumId}`;
 
   function toggle(next: boolean) {
     // Otimista: o interruptor responde na hora e volta atrás se o servidor
@@ -44,14 +56,60 @@ export function ShareControls({
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(
-        `${window.location.origin}/album/${albumId}`,
-      );
+      await navigator.clipboard.writeText(link);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       setError('O navegador não deixou copiar. Copie da barra de endereços.');
     }
+  }
+
+  // Interruptor, e não caixa de seleção: liga e desliga uma coisa que
+  // acontece agora, e é o mesmo controle das etapas de montar.
+  const toggleButton = (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={isPublic}
+      aria-label="Link público"
+      disabled={pending}
+      onClick={() => toggle(!isPublic)}
+      className="ac-switch"
+    >
+      <span aria-hidden className="ac-switch-knob" />
+    </button>
+  );
+
+  if (variant === 'row') {
+    return (
+      <div className="av-item">
+        <div className="av-item-head">
+          <div className="av-item-text">
+            <h3 className="av-item-title">Link público</h3>
+            <p className="ac-hint">
+              {isPublic
+                ? 'Quem tiver o link folheia o álbum, sem precisar de conta. Ninguém encontra o álbum por busca.'
+                : 'Desligado: só você e quem monta junto veem o álbum.'}
+            </p>
+          </div>
+          {toggleButton}
+        </div>
+        {isPublic && (
+          <CopyField
+            value={link}
+            label={copied ? 'Copiado' : 'Copiar link'}
+            copied={copied}
+            disabled={pending}
+            onCopy={copyLink}
+          />
+        )}
+        {error && (
+          <p role="alert" className="ac-error">
+            {error}
+          </p>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -63,19 +121,7 @@ export function ShareControls({
             {isPublic ? 'Quem tiver o link abre o álbum.' : 'Só você vê este álbum.'}
           </span>
         </span>
-        {/* Interruptor, e não caixa de seleção: liga e desliga uma coisa que
-            acontece agora, e é o mesmo controle das etapas de montar. */}
-        <button
-          type="button"
-          role="switch"
-          aria-checked={isPublic}
-          aria-label="Link público"
-          disabled={pending}
-          onClick={() => toggle(!isPublic)}
-          className="ac-switch"
-        >
-          <span aria-hidden className="ac-switch-knob" />
-        </button>
+        {toggleButton}
       </div>
 
       {isPublic && (

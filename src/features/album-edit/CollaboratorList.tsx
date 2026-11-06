@@ -39,41 +39,34 @@ export function CollaboratorList({
   }
 
   return (
-    <section className="card p-5">
-      <h2 className="font-[family-name:var(--font-heading)] text-lg">
-        Montando junto com você
-      </h2>
-      <p className="muted mt-1 text-sm">
-        {collaborators.length}{' '}
-        {collaborators.length === 1 ? 'pessoa entrou' : 'pessoas entraram'} pelo
-        convite de edição. Tirar alguém daqui fecha a bancada para essa pessoa
-        na hora; o que ela já montou continua no álbum.
+    <div className="av-sub">
+      <p className="av-sublabel">
+        Montando junto com você · {collaborators.length}
       </p>
-
-      <ul className="mt-4 space-y-2">
+      <ul className="av-people">
         {collaborators.map((person) => (
-          <li
-            key={person.userId}
-            className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] bg-[var(--color-surface)] px-3 py-2"
-          >
-            <span className="truncate text-sm">{person.name || 'Alguém'}</span>
+          <li key={person.userId} className="av-person">
+            <span aria-hidden className="av-person-avatar">
+              {(person.name || 'A').trim().charAt(0).toUpperCase()}
+            </span>
+            <span className="av-person-name">{person.name || 'Alguém'}</span>
             <button
               type="button"
               onClick={() => remove(person.userId)}
               disabled={pending}
-              className="btn btn-secondary btn-sm"
+              className="af-link av-person-out"
+              title="Fecha a bancada para essa pessoa na hora. O que ela montou continua no álbum."
             >
               Tirar
             </button>
           </li>
         ))}
       </ul>
-
       {error && (
-        <p role="alert" className="mt-3 text-sm text-[var(--color-accent-700)]">
+        <p role="alert" className="ac-error">
           {error}
         </p>
       )}
-    </section>
+    </div>
   );
 }

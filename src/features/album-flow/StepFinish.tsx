@@ -2,18 +2,34 @@
 
 import { IconCloud, IconDownload } from '@/features/album-editor/icons';
 import { COMPOSITION_VERSION } from '@/features/album-save/composition';
-import type { useAlbumSave } from '@/features/album-save/useAlbumSave';
 import { AlbumViewer } from '@/features/album-view/AlbumViewer';
 import { useLang } from '@/features/i18n/LangProvider';
-import { isSupabaseConfigured } from '@/lib/supabase/env';
 import type { EditorAlbum } from '@/types/album-editor';
 import type { Photo } from '@/types/photo';
 
 import { FLOW_COPY } from './copy';
 
 /**
+ * A segunda saída da etapa 5, ao lado do PDF: guardar na nuvem.
+ *
+ * Quem monta um álbum novo **cria** (`useAlbumSave`); quem reabre um guardado
+ * **reescreve** (`useAlbumEditSave`). Para esta tela é o mesmo botão, com
+ * outro nome e outra mensagem de progresso — por isso ela recebe a descrição
+ * pronta, e não o hook.
+ */
+export interface FinishSave {
+  label: string;
+  busyLabel: string;
+  isSaving: boolean;
+  /** Frase de progresso já escrita, ou `null` quando nada está subindo. */
+  progressText: string | null;
+  error: string | null;
+  onSave: () => void;
+}
+
+/**
  * Etapa 5, "Seu álbum está pronto.": o álbum montado, só para ver, e as duas
- * saídas — baixar o PDF e salvar na nuvem.
+ * saídas — baixar o PDF e guardar na nuvem.
  *
  * A vista é o `AlbumViewer` da página pública (`/album/[id]`): o mesmo livro e
  * as mesmas folhas, sem alças. Ver o álbum como ele vai ficar antes de baixar
@@ -23,33 +39,38 @@ export function StepFinish({
   name,
   photos,
   album,
+  title,
+  lead,
   isExporting,
   exportProgress,
   exportError,
-  cloud,
+  save,
   onDownload,
-  onSave,
   onBack,
 }: {
   name: string;
   photos: Photo[];
   album: EditorAlbum;
+  /** Título e linha de apoio; sem eles, os do álbum novo. */
+  title?: string;
+  lead?: string;
   isExporting: boolean;
   exportProgress: { processed: number; total: number } | null;
   exportError: string | null;
-  cloud: ReturnType<typeof useAlbumSave>;
+  /** `null` sem Supabase: só sobra o PDF. */
+  save: FinishSave | null;
   onDownload: () => void;
-  onSave: () => void;
   onBack: () => void;
 }) {
   const { lang } = useLang();
   const t = FLOW_COPY[lang];
+  const isSaving = save?.isSaving ?? false;
 
   return (
     <section className="af-section af-section-finish">
       <div className="af-head">
-        <h1 className="lp-h af-title">{t.finishTitle}</h1>
-        <p className="af-lead">{t.finishLead}</p>
+        <h1 className="lp-h af-title">{title ?? t.finishTitle}</h1>
+        <p className="af-lead">{lead ?? t.finishLead}</p>
       </div>
 
       {/* Só o álbum, solto na página, com as visões no trilho do lado — como
@@ -69,9 +90,9 @@ export function StepFinish({
             {t.exporting(exportProgress.processed, exportProgress.total)}
           </p>
         )}
-        {cloud.progress && (
+        {save?.progressText && (
           <p className="af-note" role="status">
-            {t.cloudProgress(cloud.progress.processed, cloud.progress.total)}
+            {save.progressText}
           </p>
         )}
         {exportError && (
@@ -79,9 +100,9 @@ export function StepFinish({
             {exportError}
           </p>
         )}
-        {cloud.error && (
+        {save?.error && (
           <p className="af-note is-error" role="alert">
-            {cloud.error}
+            {save.error}
           </p>
         )}
       </div>
@@ -91,21 +112,21 @@ export function StepFinish({
           {t.backToEdit}
         </button>
         <div className="af-finish-actions">
-          {isSupabaseConfigured && (
+          {save && (
             <button
               type="button"
               className="af-btn af-btn-ghost af-btn-xl"
-              disabled={cloud.isSaving || isExporting}
-              onClick={onSave}
+              disabled={isSaving || isExporting}
+              onClick={save.onSave}
             >
               <IconCloud size={17} />
-              {cloud.isSaving ? t.saving : t.saveCloud}
+              {isSaving ? save.busyLabel : save.label}
             </button>
           )}
           <button
             type="button"
             className="af-btn af-btn-primary af-btn-xl"
-            disabled={isExporting || cloud.isSaving}
+            disabled={isExporting || isSaving}
             onClick={onDownload}
           >
             <IconDownload size={17} />

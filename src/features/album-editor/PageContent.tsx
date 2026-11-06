@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import type { EditorPage, PageTextBlock, PhotoFrame } from '@/types/album-editor';
 
 import { cropRatios, clampOffset } from './frameCrop';
 import { IconImage } from './icons';
 import { pageInsets } from './pageLayout';
+import { knownSize, rememberSize } from './photoCache';
 import { PageTextView } from './PageTextView';
 import { round, useDrag } from './useDrag';
 import type { SpineSide } from './PrintGuides';
@@ -62,7 +63,9 @@ export function FramedPhoto({
   /** Tamanho natural da foto carregada — a chave evita usar a medida da anterior. */
   const [loaded, setLoaded] = useState<{ src: string; w: number; h: number } | null>(null);
 
-  useEffect(() => {
+  // Antes da pintura: medida depois dela deixava um quadro com `object-fit` e,
+  // no seguinte, a foto já enquadrada — o pulo que se via ao virar a folha.
+  useLayoutEffect(() => {
     const node = boxRef.current;
     if (!node) return;
     const measure = () => {
@@ -80,7 +83,10 @@ export function FramedPhoto({
   }, []);
 
   const src = resolve(frame.photoId);
-  const natural = loaded && loaded.src === src ? loaded : null;
+  /** A medida de onde vier: desta montagem ou de qualquer outra que já viu a foto. */
+  const natural = (loaded && loaded.src === src ? loaded : null) ?? knownSize(src);
+  /** A foto só aparece pronta: sem o meio-termo em que ela muda de geometria. */
+  const [failed, setFailed] = useState<string | null>(null);
 
   const ratios = cropRatios(
     aspect,
@@ -154,15 +160,17 @@ export function FramedPhoto({
         alt={alt}
         draggable={false}
         onPointerDown={pan}
-        onLoad={(event) =>
-          setLoaded({
-            src,
-            w: event.currentTarget.naturalWidth,
-            h: event.currentTarget.naturalHeight,
-          })
-        }
+        decoding="async"
+        onLoad={(event) => {
+          const { naturalWidth: w, naturalHeight: h } = event.currentTarget;
+          rememberSize(src, w, h);
+          setLoaded({ src, w, h });
+        }}
+        onError={() => setFailed(src)}
         style={{
           ...geometry,
+          opacity: natural || failed === src ? 1 : 0,
+          transition: 'opacity 180ms ease',
           display: 'block',
           maxWidth: 'none',
           touchAction: 'none',

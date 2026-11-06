@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
+import { CopyField } from '@/features/album-view/CopyField';
+import { useOrigin } from '@/hooks/useOrigin';
 import type { AlbumInviteRole } from '@/lib/supabase/types';
 
 import { closeInvite, openInvite } from './actions';
@@ -47,9 +49,8 @@ export function InviteControls({
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const link = token
-    ? `${typeof window === 'undefined' ? '' : window.location.origin}/contribuir/${token}`
-    : '';
+  const origin = useOrigin();
+  const link = token ? `${origin}/contribuir/${token}` : '';
 
   function open(wanted: AlbumInviteRole) {
     setError(null);
@@ -88,99 +89,82 @@ export function InviteControls({
     }
   }
 
+  /** Escolher o papel: com convite aberto, troca o link (o anterior morre). */
+  function pick(next: AlbumInviteRole) {
+    if (next === role || pending) return;
+    if (token) open(next);
+    else setRole(next);
+  }
+
   return (
-    <section className="card p-5">
-      <h2 className="font-[family-name:var(--font-heading)] text-lg">
-        Pedir fotos para quem estava junto
-      </h2>
-      <p className="muted mt-1 text-sm">
-        {token
-          ? role === 'edit'
-            ? 'Quem abrir este link e entrar na conta monta o álbum com você: mesma bancada, mesmas fotos. Dê este link só para quem você quer de fato dentro do álbum.'
-            : 'Quem abrir este link e entrar na conta pode mandar fotos para cá. Elas ficam esperando a sua aprovação — ninguém mexe no álbum além de você.'
-          : 'Um link para chamar quem estava junto. Você escolhe se ele só recebe fotos — que ficam esperando a sua aprovação — ou se abre a montagem do álbum.'}
+    <div className="av-item">
+      <div className="av-item-text">
+        <h3 className="av-item-title">Convidar quem estava junto</h3>
+        <p className="ac-hint">
+          Um link para trazer as fotos dos outros — ou para montar o álbum a várias mãos.
+        </p>
+      </div>
+
+      {/* Duas portas, um link por vez: escolher a outra com o convite aberto
+          gera outro endereço, e o texto embaixo diz isso. A escolha fica
+          visível o tempo todo, porque é assim que se troca de papel. */}
+      <div className="av-seg" role="group" aria-label="O que este convite dá">
+        <button
+          type="button"
+          aria-pressed={role === 'contribute'}
+          disabled={pending}
+          onClick={() => pick('contribute')}
+        >
+          Só mandar fotos
+        </button>
+        <button
+          type="button"
+          aria-pressed={role === 'edit'}
+          disabled={pending}
+          onClick={() => pick('edit')}
+        >
+          Mandar e montar
+        </button>
+      </div>
+      <p className="ac-hint">
+        {role === 'edit'
+          ? 'Quem entrar pelo link monta o álbum junto com você, na mesma bancada. Dê só para quem você quer de fato dentro.'
+          : 'Quem entrar pelo link manda fotos. Elas esperam a sua aprovação antes de entrar no álbum.'}
+        {token ? ' Trocar a opção gera outro link.' : ''}
       </p>
 
-      {/* A escolha do papel fica visível mesmo com o convite aberto: é assim
-          que se troca de papel, e o texto do botão diz que isso gera outro
-          link. Esconder a opção depois de criado obrigaria a encerrar o
-          convite só para descobrir que ela existia.
-
-          São dois botões inteiros, lado a lado, e não um segmentado: as duas
-          opções não são graus do mesmo ajuste, são portas com consequências
-          diferentes — e cada uma cabe explicar em uma linha embaixo do nome. */}
-      <fieldset className="mt-5 mb-7 border-0 p-0">
-        <legend className="muted mb-2.5 text-xs tracking-[0.08em] uppercase">
-          O que este convite dá
-        </legend>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            className="opt-card"
-            aria-pressed={role === 'contribute'}
-            disabled={pending}
-            onClick={() => (token ? open('contribute') : setRole('contribute'))}
-          >
-            <span className="opt-card-mark" aria-hidden />
-            <span className="opt-card-title">Só mandar fotos</span>
-            <span className="opt-card-hint">
-              As fotos chegam na sua caixa de entrada e esperam você aprovar.
-            </span>
-          </button>
-          <button
-            type="button"
-            className="opt-card"
-            aria-pressed={role === 'edit'}
-            disabled={pending}
-            onClick={() => (token ? open('edit') : setRole('edit'))}
-          >
-            <span className="opt-card-mark" aria-hidden />
-            <span className="opt-card-title">Mandar e montar</span>
-            <span className="opt-card-hint">
-              Abre a bancada: quem entrar monta o álbum junto com você.
-            </span>
-          </button>
-        </div>
-      </fieldset>
-
       {locked && (
-        <p className="mt-3 text-sm text-[var(--color-accent-700)]">
-          Este álbum está finalizado: o link existe, mas ninguém consegue mandar
-          foto nem abrir a montagem enquanto ele não for reaberto.
+        <p className="ac-hint is-warn">
+          O álbum está finalizado: o link existe, mas ninguém manda foto nem abre a
+          montagem até você reabrir.
         </p>
       )}
 
       {token ? (
         <>
-          <p
-            className="truncate rounded-[var(--radius-sm)] border border-[var(--color-divider)] bg-[var(--color-surface-2)] px-3 py-2 font-mono text-xs"
-            title={link}
-          >
-            {link}
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={copy}
-              disabled={pending}
-              className="btn btn-primary btn-sm"
-            >
-              {copied ? 'Link copiado' : 'Copiar convite'}
-            </button>
+          <CopyField
+            value={link}
+            label={copied ? 'Copiado' : 'Copiar convite'}
+            copied={copied}
+            disabled={pending}
+            onCopy={copy}
+          />
+          <div className="av-minor">
             <button
               type="button"
               onClick={() => open(role)}
               disabled={pending}
-              className="btn btn-secondary btn-sm"
+              className="af-link"
               title="Cria um link novo. O anterior para de funcionar na hora."
             >
               Gerar outro link
             </button>
+            <span aria-hidden>·</span>
             <button
               type="button"
               onClick={close}
               disabled={pending}
-              className="btn btn-secondary btn-sm"
+              className="af-link"
               title="Fecha a porta. O que já chegou continua esperando você."
             >
               Encerrar convite
@@ -192,21 +176,17 @@ export function InviteControls({
           type="button"
           onClick={() => open(role)}
           disabled={pending}
-          className="btn btn-primary btn-sm"
+          className="af-btn af-btn-primary af-btn-sm av-item-cta"
         >
-          {pending
-            ? 'Criando…'
-            : role === 'edit'
-              ? 'Criar convite de montagem'
-              : 'Criar convite de fotos'}
+          {pending ? 'Criando…' : 'Criar link de convite'}
         </button>
       )}
 
       {error && (
-        <p role="alert" className="mt-3 text-sm text-[var(--color-accent-700)]">
+        <p role="alert" className="ac-error">
           {error}
         </p>
       )}
-    </section>
+    </div>
   );
 }

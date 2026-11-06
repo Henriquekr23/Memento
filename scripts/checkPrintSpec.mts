@@ -37,10 +37,13 @@ assert.deepEqual(fileSize('landscape'), { w: 220, h: 158 });
 assert.equal(SPEC.safe.spine, 12, 'o lado da lombada tem área segura maior que as bordas');
 assert.ok(SPEC.safe.spine > SPEC.safe.outer);
 
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 // ── Lombada ────────────────────────────────────────────────────────────────
-// 64 páginas = 32 folhas. Em couché 170 g (0,16 mm): 32 × 0,16 + 0,6 = 5,72 mm.
-assert.equal(spineWidth(64, 0.16), 5.72, 'espessura = folhas × papel + capa');
-assert.equal(spineWidth(64, 0.16), 32 * 0.16 + COVER_MM);
+// 128 páginas = 64 folhas. Em couché 170 g (0,16 mm): 64 × 0,16 + 0,6 = 10,84 mm.
+assert.equal(spineWidth(128, 0.16), 10.84, 'espessura = folhas × papel + capa');
+assert.equal(spineWidth(128, 0.16), round2(64 * 0.16 + COVER_MM));
+assert.equal(spineWidth(64, 0.16), SPEC.spineMin, 'abaixo do mínimo, vale o mínimo de capa dura');
 assert.equal(spineWidth(2, 0.14), SPEC.spineMin, 'álbum fino respeita o mínimo do gabarito');
 assert.equal(spineWidth(0, 0.24), SPEC.spineMin, 'álbum sem páginas não tem lombada negativa');
 assert.equal(

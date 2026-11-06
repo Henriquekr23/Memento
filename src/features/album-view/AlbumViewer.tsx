@@ -16,6 +16,7 @@ import { useLang } from '@/features/i18n/LangProvider';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useTrackDrag } from '@/features/album-editor/controls';
 import { IconBook, IconLayers } from '@/features/album-editor/icons';
+import { warmPhotos } from '@/features/album-editor/photoCache';
 import type { AlbumComposition } from '@/features/album-save/composition';
 import { paperById, spineWidth } from '@/features/album-print/spec';
 import type { Photo } from '@/types/photo';
@@ -43,9 +44,11 @@ export function AlbumViewer({
   /**
    * `card`: bloco com as abas no topo (a página pública). `rail`: só o álbum,
    * solto na página, com as visões num trilho ao lado — o mesmo das etapas de
-   * montar, para a última etapa da /album ler como continuação delas.
+   * montar, para a última etapa da /album ler como continuação delas. `top`:
+   * o mesmo trilho deitado e centrado acima do álbum — sem coluna ao lado, o
+   * livro fica no meio da página (a página do álbum guardado).
    */
-  layout?: 'card' | 'rail';
+  layout?: 'card' | 'rail' | 'top';
 }) {
   const { lang } = useLang();
   const copy = EDITOR_COPY[lang];
@@ -59,7 +62,8 @@ export function AlbumViewer({
   const zoom = useStageZoom(stageRef);
 
   const railRef = useRef<HTMLElement>(null);
-  const railFlat = useMediaQuery('(max-width: 960px)');
+  const narrow = useMediaQuery('(max-width: 960px)');
+  const railFlat = layout === 'top' || narrow;
   const pickView = useCallback((next: number) => setView(VIEWS[next]), []);
   const railTrack = useTrackDrag(railRef, VIEWS.length, VIEWS.indexOf(view), pickView, {
     axis: railFlat ? 'x' : 'y',
@@ -73,10 +77,28 @@ export function AlbumViewer({
   const color = colorOf(album);
   const spine = album.spine.mm ?? spineWidth(album.pages.length, paperById(album.paper).mm);
 
-  const photoUrls = useMemo(
+  /**
+   * A URL de cada foto, **presa à primeira que chegou**.
+   *
+   * Num álbum guardado o `previewUrl` é URL assinada, e cada render do servidor
+   * assina de novo: qualquer `router.refresh()` da página (ligar o link
+   * público, mexer no convite) trazia URLs novas para as mesmas fotos — o
+   * navegador baixava tudo outra vez e as páginas piscavam em branco. A
+   * assinatura vale uma hora (`SIGNED_URL_TTL_SECONDS`); a página não fica
+   * aberta tanto tempo sem recarregar de verdade.
+   */
+  const [photoUrls, setPhotoUrls] = useState(
     () => new Map(photos.map((photo) => [photo.id, photo.previewUrl])),
-    [photos],
   );
+  // Foto que chegou depois (uma contribuição aprovada) entra; as que já
+  // estavam ficam com a URL de antes. Ajuste durante o render, sem efeito.
+  if (photos.some((photo) => !photoUrls.has(photo.id))) {
+    const next = new Map(photoUrls);
+    for (const photo of photos) {
+      if (!next.has(photo.id)) next.set(photo.id, photo.previewUrl);
+    }
+    setPhotoUrls(next);
+  }
   const resolve = useCallback<PhotoResolver>(
     (photoId) => (photoId ? photoUrls.get(photoId) ?? null : null),
     [photoUrls],
@@ -87,6 +109,24 @@ export function AlbumViewer({
     for (let i = 0; i < album.pages.length; i += 2) out.push([i, i + 1]);
     return out;
   }, [album.pages.length]);
+
+  /* As fotos na ordem em que aparecem — capa, depois página a página —,
+     baixadas e decodificadas antes de a folha chegar nelas. Sem isto cada
+     virada esperava a rede e a decodificação de duas fotos de 2000 px. */
+  useEffect(() => {
+    let cancelled = false;
+    const order: string[] = [];
+    for (const page of album.pages) {
+      for (const slot of page.slots) {
+        const url = slot.photoId ? photoUrls.get(slot.photoId) : undefined;
+        if (url) order.push(url);
+      }
+    }
+    void warmPhotos(order, () => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [album.pages, photoUrls]);
 
   const safeSheet = clamp(sheetIndex, 0, Math.max(0, sheets.length - 1));
   const [leftIndex, rightIndex] = sheets[safeSheet] ?? [0, 1];
@@ -168,14 +208,14 @@ export function AlbumViewer({
     </div>
   );
 
-  if (layout === 'rail') {
+  if (layout === 'rail' || layout === 'top') {
     const tabs = [
       { id: 'book' as const, label: copy.tabBook, icon: <IconBook size={13} /> },
       { id: 'pages' as const, label: copy.tabPages, icon: <IconLayers size={13} /> },
     ];
     return (
       <div
-        className="ae is-read is-rail"
+        className={`ae is-read is-rail${layout === 'top' ? ' is-top' : ''}`}
         style={{ '--ae-accent': accentFor(color) } as React.CSSProperties}
       >
         <nav

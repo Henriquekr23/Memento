@@ -79,6 +79,8 @@ export interface FlowCopy {
   addSpreadDrop: string;
   perRowLabel: string;
   perRowAria: (pages: number) => string;
+  perRowMore: string;
+  perRowFewer: string;
   editPageAria: (page: number) => string;
 
   /* etapa 4: a capa */
@@ -104,6 +106,15 @@ export interface FlowCopy {
   rebuildBody: string;
   rebuildConfirm: string;
   rebuildKeep: string;
+
+  /* reeditar um álbum guardado (/album/[id]/editar) */
+  editContext: string;
+  editContextGuest: string;
+  backToAlbum: string;
+  editFinishTitle: string;
+  editFinishLead: string;
+  saveEdits: string;
+  uploadingNew: (done: number, total: number) => string;
 
   /** Locale das datas e horas. */
   locale: string;
@@ -198,6 +209,8 @@ const pt: FlowCopy = {
   addSpreadDrop: 'Solte para criar a página',
   perRowLabel: 'Páginas por linha',
   perRowAria: (pages) => `${pages} páginas por linha`,
+  perRowMore: 'Mais páginas por linha',
+  perRowFewer: 'Páginas maiores',
   editPageAria: (page) => `Ajustar as fotos da página ${page}`,
 
   coverTitle: 'Monte a capa.',
@@ -222,6 +235,16 @@ const pt: FlowCopy = {
     'A ordem ou as fotos mudaram desde que as páginas foram montadas. Refazer monta as páginas de novo com a ordem nova e desfaz o que foi arrumado nelas; a capa continua como está.',
   rebuildConfirm: 'Refazer as páginas',
   rebuildKeep: 'Manter o que montei',
+
+  editContext: 'Editando um álbum guardado. As mudanças só valem depois de guardar.',
+  editContextGuest:
+    'Você foi convidado a montar este álbum. As mudanças só valem depois de guardar.',
+  backToAlbum: 'Voltar para o álbum',
+  editFinishTitle: 'Confira as mudanças.',
+  editFinishLead:
+    'Folheie antes de guardar. Guardado, o álbum muda no link e para quem monta junto.',
+  saveEdits: 'Guardar mudanças',
+  uploadingNew: (done, total) => `Enviando as fotos novas… ${done}/${total}`,
 
   locale: 'pt-BR',
 };
@@ -315,6 +338,8 @@ const en: FlowCopy = {
   addSpreadDrop: 'Drop to make the page',
   perRowLabel: 'Pages per row',
   perRowAria: (pages) => `${pages} pages per row`,
+  perRowMore: 'More pages per row',
+  perRowFewer: 'Bigger pages',
   editPageAria: (page) => `Adjust the photos on page ${page}`,
 
   coverTitle: 'Build the cover.',
@@ -339,6 +364,15 @@ const en: FlowCopy = {
     'The order or the photos changed since the pages were laid out. Rebuilding lays out the pages again with the new order and undoes what you arranged on them; the cover stays as it is.',
   rebuildConfirm: 'Rebuild the pages',
   rebuildKeep: 'Keep what I built',
+
+  editContext: 'Editing a saved album. Changes only count once you save them.',
+  editContextGuest: 'You were invited to build this album. Changes only count once you save them.',
+  backToAlbum: 'Back to the album',
+  editFinishTitle: 'Check your changes.',
+  editFinishLead:
+    'Flip through before saving. Once saved, the album changes on its link and for whoever builds it with you.',
+  saveEdits: 'Save changes',
+  uploadingNew: (done, total) => `Uploading the new photos… ${done}/${total}`,
 
   locale: 'en-US',
 };

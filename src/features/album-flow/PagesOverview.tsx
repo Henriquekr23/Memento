@@ -3,7 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { BoardApi, FrameRef } from '@/features/album-editor/AlbumEditor';
-import { IconEdit, IconGrip, IconPlus, IconTrash, IconX } from '@/features/album-editor/icons';
+import {
+  IconEdit,
+  IconGrip,
+  IconMinus,
+  IconPlus,
+  IconTrash,
+  IconX,
+} from '@/features/album-editor/icons';
 import { PageContent, PHOTO_DND_TYPE } from '@/features/album-editor/PageContent';
 import { SPEC } from '@/features/album-print/spec';
 import { useLang } from '@/features/i18n/LangProvider';
@@ -18,9 +25,15 @@ const FRAME_DND_TYPE = 'text/memento-frame';
 /** Arraste de página inteira (pela alça do número), não de foto. */
 const PAGE_DND_TYPE = 'text/memento-page';
 
-/** Páginas por linha na visão geral — sempre abertura inteira (par). */
-type PerRow = 2 | 4 | 6;
-const PER_ROW: readonly PerRow[] = [2, 4, 6];
+/**
+ * O "zoom" da visão geral: quantas aberturas (duas páginas) cabem por linha.
+ * A barra anda do mais afastado (4 aberturas, 8 páginas) ao mais perto (1
+ * abertura, 2 páginas) — arrastar para a direita aproxima, como num zoom.
+ */
+const MIN_COLS = 1;
+const MAX_COLS = 4;
+/** Posição da barra (1 = mais afastado) ⇄ aberturas por linha. */
+const colsFromZoom = (zoom: number) => MAX_COLS + MIN_COLS - zoom;
 
 function isPageDrag(event: React.DragEvent): boolean {
   return Array.from(event.dataTransfer?.types ?? []).includes(PAGE_DND_TYPE);
@@ -79,7 +92,12 @@ export function PagesOverview({ api }: { api: BoardApi }) {
   const [pageFrom, setPageFrom] = useState<number | null>(null);
   const [pageOver, setPageOver] = useState<number | null>(null);
   const [newOver, setNewOver] = useState(false);
-  const [perRow, setPerRow] = useState<PerRow>(4);
+  /** Aberturas por linha; a partida é a de antes (4 páginas). */
+  const [cols, setCols] = useState(2);
+  const zoom = colsFromZoom(cols);
+  const setZoom = (next: number) =>
+    setCols(colsFromZoom(Math.min(MAX_COLS, Math.max(MIN_COLS, next))));
+  const zoomFill = ((zoom - MIN_COLS) / (MAX_COLS - MIN_COLS)) * 100;
 
   useEffect(() => {
     if (!picked) return;
@@ -330,26 +348,8 @@ export function PagesOverview({ api }: { api: BoardApi }) {
     <div
       className="af-board"
       data-picking={picked ? true : undefined}
-      style={{ '--board-cols': perRow / 2 } as React.CSSProperties}
+      style={{ '--board-cols': cols } as React.CSSProperties}
     >
-      {/* Quantas páginas por linha: menos páginas, cada uma maior para
-          enquadrar; mais, para ver o álbum inteiro de uma vez. */}
-      <div className="af-board-bar">
-        <div className="af-board-perrow" role="group" aria-label={t.perRowLabel}>
-          <span className="af-board-perrow-label">{t.perRowLabel}</span>
-          {PER_ROW.map((n) => (
-            <button
-              key={n}
-              type="button"
-              aria-pressed={perRow === n}
-              aria-label={t.perRowAria(n)}
-              onClick={() => setPerRow(n)}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-      </div>
       <div className="af-board-spreads">
         {spreads.map(([left, right], spreadIndex) => (
           <div className="af-board-spread-wrap" key={left.page.id}>
@@ -401,6 +401,45 @@ export function PagesOverview({ api }: { api: BoardApi }) {
           <IconPlus size={18} />
           <span>{newOver ? t.addSpreadDrop : t.addSpread}</span>
         </button>
+      </div>
+      {/* Quantas páginas por linha: menos páginas, cada uma maior para
+          enquadrar; mais, para ver o álbum inteiro de uma vez. No canto de
+          baixo, grudada, como o zoom das outras visões — e só a barra. */}
+      <div className="af-board-bar">
+        <div className="af-board-perrow" role="group" aria-label={t.perRowLabel}>
+          <button
+            type="button"
+            className="af-board-zoom-btn"
+            aria-label={t.perRowMore}
+            title={t.perRowMore}
+            disabled={zoom <= MIN_COLS}
+            onClick={() => setZoom(zoom - 1)}
+          >
+            <IconMinus size={14} />
+          </button>
+          <input
+            type="range"
+            className="af-board-zoom"
+            min={MIN_COLS}
+            max={MAX_COLS}
+            step={1}
+            value={zoom}
+            aria-label={t.perRowLabel}
+            aria-valuetext={t.perRowAria(cols * 2)}
+            style={{ '--fill': `${zoomFill}%` } as React.CSSProperties}
+            onChange={(event) => setZoom(Number(event.target.value))}
+          />
+          <button
+            type="button"
+            className="af-board-zoom-btn"
+            aria-label={t.perRowFewer}
+            title={t.perRowFewer}
+            disabled={zoom >= MAX_COLS}
+            onClick={() => setZoom(zoom + 1)}
+          >
+            <IconPlus size={14} />
+          </button>
+        </div>
       </div>
     </div>
   );

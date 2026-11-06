@@ -67,29 +67,26 @@ export function ContributionInbox({
 
   if (visible.length === 0) {
     return (
-      <section className="card p-5">
-        <p className="text-sm">Caixa de entrada vazia — você viu tudo que chegou.</p>
+      <section className="ac-card ac-form-card av-card">
+        <p className="ac-hint">Caixa de entrada vazia — você viu tudo que chegou.</p>
       </section>
     );
   }
 
   return (
-    <section className="card p-5">
-      <h2 className="font-[family-name:var(--font-heading)] text-lg">
-        Chegaram pelo convite
-      </h2>
-      <p className="muted mt-1 text-sm">
+    <section className="ac-card ac-form-card av-card">
+      <header className="ac-card-head">
+        <h2 className="ac-card-title">Chegaram pelo convite</h2>
+        <p className="ac-hint">
         {visible.length} {visible.length === 1 ? 'foto esperando' : 'fotos esperando'}
         {contributorCount > 1 ? `, de ${contributorCount} pessoas` : ''}. O que
         você aprovar entra no álbum no dia em que a foto foi tirada.
-      </p>
+        </p>
+      </header>
 
-      <ul className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <ul className="av-inbox">
         {visible.map((item) => (
-          <li
-            key={item.id}
-            className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-divider)]"
-          >
+          <li key={item.id} className="av-inbox-item">
             {/* `img` cru, não `next/image`: a URL é assinada e expira em uma
                 hora, então o otimizador do Next guardaria em cache um endereço
                 que morre antes do cache. É a mesma escolha do álbum. */}
@@ -97,13 +94,13 @@ export function ContributionInbox({
               src={item.previewUrl}
               alt={item.fileName}
               loading="lazy"
-              className="aspect-square w-full object-cover"
+              className="av-inbox-photo"
             />
-            <div className="p-2">
-              <p className="truncate text-xs" title={item.contributorName}>
+            <div className="av-inbox-body">
+              <p className="av-inbox-who" title={item.contributorName}>
                 {item.contributorName || 'Alguém'}
               </p>
-              <p className="muted truncate text-[11px]">
+              <p className="av-inbox-when">
                 {item.takenAt
                   ? new Date(item.takenAt).toLocaleDateString('pt-BR', {
                       day: '2-digit',
@@ -112,12 +109,12 @@ export function ContributionInbox({
                     })
                   : 'sem data'}
               </p>
-              <div className="mt-2 flex gap-1">
+              <div className="av-inbox-actions">
                 <button
                   type="button"
                   onClick={() => act(item.id, 'approve')}
                   disabled={busyId === item.id}
-                  className="btn btn-primary btn-sm flex-1"
+                  className="af-btn af-btn-primary af-btn-sm"
                 >
                   Usar
                 </button>
@@ -125,7 +122,7 @@ export function ContributionInbox({
                   type="button"
                   onClick={() => act(item.id, 'discard')}
                   disabled={busyId === item.id}
-                  className="btn btn-secondary btn-sm flex-1"
+                  className="af-btn af-btn-ghost af-btn-sm"
                   title="Apaga a foto de vez — do álbum e do servidor."
                 >
                   Descartar
@@ -137,7 +134,7 @@ export function ContributionInbox({
       </ul>
 
       {error && (
-        <p role="alert" className="mt-3 text-sm text-[var(--color-accent-700)]">
+        <p role="alert" className="ac-error av-gap">
           {error}
         </p>
       )}

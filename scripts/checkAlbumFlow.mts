@@ -16,6 +16,7 @@ import { includedInOrder, pruneExcluded } from '../src/features/album-builder/se
 import {
   composeFromGroups,
   composeFromOrder,
+  groupsFromComposition,
   pruneComposition,
 } from '../src/features/album-flow/compose.ts';
 import {
@@ -160,6 +161,16 @@ assert.equal(toSpreads([1, 2, 3, 4]).length, 2);
   assert.deepEqual(composed.pages.map((p) => p.layout), ['full', 'trio', 'duoH', 'full']);
   assert.deepEqual(composed.pages[1].slots.slice(0, 3).map((s) => s.photoId), ['2', '3', '4']);
   assert.equal(composeFromGroups([['1'], ['2'], ['3'], ['4'], ['5']], 'V').pages.length, 6);
+
+  // Reabrir um álbum guardado: a divisão lida das páginas é a de origem — ida e
+  // volta não muda a chave, então o fluxo não pergunta "Refazer as páginas?".
+  const groups = [['1'], ['2', '3', '4'], ['5', '6']];
+  assert.deepEqual(groupsFromComposition(composed), groups);
+  assert.equal(groupsKey(syncGroups(groupsFromComposition(composed), ['1', '2', '3', '4', '5', '6'])), groupsKey(groups));
+  // Página sem foto não vira grupo; foto repetida conta uma vez.
+  const dup = composeFromGroups([['1', '2'], ['3']], 'V');
+  dup.pages[1].slots[1].photoId = '1';
+  assert.deepEqual(groupsFromComposition(dup), [['1', '2'], ['3']]);
 }
 
 console.log('checkAlbumFlow: ok');

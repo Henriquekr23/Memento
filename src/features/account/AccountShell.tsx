@@ -34,7 +34,11 @@ export function AccountShell({
   section,
   children,
 }: {
-  section: AccountSection;
+  /**
+   * A aba acesa. `null` tira as abas: a página de um álbum veste a mesma roupa,
+   * mas é uma página do álbum, não uma tela da conta.
+   */
+  section: AccountSection | null;
   children: React.ReactNode;
 }) {
   return (
@@ -45,32 +49,34 @@ export function AccountShell({
 
       <div className="lp-remap af-chrome">
         <AlbumTopBar />
-        <nav aria-label="Conta" className="af-steps ac-tabs">
-          {TABS.map((tab) => (
-            <Link
-              key={tab.id}
-              href={tab.href}
-              className="af-step ac-tab"
-              aria-current={tab.id === section ? 'page' : undefined}
-            >
-              <svg
-                width="17"
-                height="17"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.7}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                focusable="false"
+        {section && (
+          <nav aria-label="Conta" className="af-steps ac-tabs">
+            {TABS.map((tab) => (
+              <Link
+                key={tab.id}
+                href={tab.href}
+                className="af-step ac-tab"
+                aria-current={tab.id === section ? 'page' : undefined}
               >
-                <path d={tab.icon} />
-              </svg>
-              {tab.label}
-            </Link>
-          ))}
-        </nav>
+                <svg
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.7}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d={tab.icon} />
+                </svg>
+                {tab.label}
+              </Link>
+            ))}
+          </nav>
+        )}
       </div>
 
       <main className="af-main">

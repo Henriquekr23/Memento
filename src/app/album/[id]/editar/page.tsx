@@ -2,20 +2,24 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
-import { SiteFooter } from '@/components/SiteFooter';
-import { SiteNav } from '@/components/SiteNav';
-import { AlbumEditWorkbench } from '@/features/album-edit/AlbumEditWorkbench';
+import { AccountShell } from '@/features/account/AccountShell';
+import { AlbumFlow } from '@/features/album-flow/AlbumFlow';
 import { loadAlbum } from '@/features/album-view/loadAlbum';
 import { getSessionUser } from '@/lib/supabase/server';
 
 /**
- * A bancada de um álbum guardado.
+ * Reeditar um álbum guardado — no mesmo fluxo de etapas da `/album`.
  *
  * Server component só para decidir e carregar: quem pode editar, e com que
  * fotos. A decisão de verdade continua sendo da RLS — se esta página se
  * enganasse e deixasse a tela abrir, `save_album_composition` recusaria a
  * gravação do mesmo jeito. O que ela evita é oferecer um botão que o banco vai
  * negar.
+ *
+ * A montagem é o `AlbumFlow` da `/album`, semeado com o álbum: abre nas
+ * páginas, e nome/fotos, ordem, capa e finalizar estão a um clique nas etapas
+ * do alto. A diferença está só na última etapa: "Guardar mudanças" reescreve
+ * este álbum em vez de criar outro.
  */
 
 export const metadata: Metadata = {
@@ -47,45 +51,40 @@ export default async function AlbumEditPage({
   // uma sugestão. Quem pode reabrir é o dono, na página do álbum.
   if (!album.canEdit) {
     return (
-      <main className="page-shell page-body">
-        <SiteNav variant="inner" />
-        <hr className="hr" />
-        <section className="card mx-auto mt-10 max-w-[520px] p-6 text-center">
-          <h1 className="font-[family-name:var(--font-heading)] text-2xl">
-            Álbum finalizado
-          </h1>
-          <p className="muted mt-2 text-sm">
-            {album.isOwner
-              ? 'Você deu este álbum por pronto. Para mexer nele de novo, reabra a edição na página do álbum.'
-              : 'Quem montou este álbum deu ele por pronto. Ninguém mais pode mudá-lo.'}
-          </p>
-          <Link href={`/album/${id}`} className="btn btn-primary btn-sm mt-5">
-            Ver o álbum
-          </Link>
+      <AccountShell section={null}>
+        <section className="af-section ac-section">
+          <div className="ac-empty">
+            <span aria-hidden className="ac-empty-art">
+              <span />
+              <span />
+              <span />
+            </span>
+            <h1 className="lp-h ac-empty-title">Álbum finalizado</h1>
+            <p className="ac-empty-text">
+              {album.isOwner
+                ? 'Você deu este álbum por pronto. Para mexer nele de novo, reabra a edição na página do álbum.'
+                : 'Quem montou este álbum deu ele por pronto. Ninguém mais pode mudá-lo.'}
+            </p>
+            <Link href={`/album/${id}`} className="af-btn af-btn-primary ac-btn ac-head-cta">
+              Ver o álbum
+            </Link>
+          </div>
         </section>
-        <SiteFooter />
-      </main>
+      </AccountShell>
     );
   }
 
   return (
-    // `is-wide` como em `/album`: a bancada tem 1054 px e a régua normal da
-    // página a empurraria para fora.
-    <main className="page-shell page-body is-wide">
-      <SiteNav variant="inner" tagline="Guarde a memória" />
-      <hr className="hr" />
-
-      <AlbumEditWorkbench
-        albumId={album.id}
-        ownerId={album.ownerId}
-        title={album.title}
-        photos={album.photos}
-        stored={album.stored}
-        composition={album.composition}
-        isOwner={album.isOwner}
-      />
-
-      <SiteFooter />
-    </main>
+    <AlbumFlow
+      edit={{
+        albumId: album.id,
+        ownerId: album.ownerId,
+        isOwner: album.isOwner,
+        title: album.title,
+        photos: album.photos,
+        stored: album.stored,
+        composition: album.composition.album,
+      }}
+    />
   );
 }
