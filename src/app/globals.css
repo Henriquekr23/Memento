@@ -6940,7 +6940,6 @@ textarea.ae-input {
   gap: 16px;
 }
 .ae-rail,
-.ae-split .ae-main,
 .ae-split .ae-inspector {
   border: 1px solid var(--album-line);
   border-radius: 28px;
@@ -7012,12 +7011,55 @@ textarea.ae-input {
     color: var(--color-text);
   }
 }
+/* O álbum fica solto na página, sem cartão em volta: na capa e nas páginas o
+   objeto é o próprio álbum, e uma moldura ao redor dele lia como "uma tela
+   dentro da tela". Sem fundo e sem a trama de pontos — o fundo é o da etapa. */
 .ae-split .ae-main {
-  overflow: hidden;
-  background: var(--ae-canvas);
+  gap: 14px;
+  background: transparent;
 }
 .ae-split .ae-stage {
   border-top: 0;
+  background-image: none;
+}
+/* A tira de folhas, também solta: uma pílula flutuando embaixo do álbum. */
+.ae-split .ae-strip {
+  justify-self: center;
+  max-width: 100%;
+  gap: 6px;
+  padding: 7px 8px;
+  border: 1px solid var(--album-line);
+  border-radius: 999px;
+  background: var(--color-surface-2);
+  box-shadow: 0 14px 34px var(--album-shadow);
+  scrollbar-width: none;
+}
+.ae-split .ae-strip::-webkit-scrollbar {
+  display: none;
+}
+.ae-split .ae-strip .ae-btn.is-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+}
+.ae-split .ae-thumb-wrap {
+  width: clamp(56px, 5.4vw, 74px);
+}
+.ae-split .ae-thumb {
+  border-radius: 6px;
+  border-color: transparent;
+  background: var(--album-paper);
+}
+.ae-split .ae-thumb.is-on {
+  border-color: var(--landing-cta);
+  outline-color: color-mix(in srgb, var(--landing-cta) 28%, transparent);
+}
+.ae-split .ae-thumb-label {
+  display: none;
+}
+.ae-split .ae-zoom {
+  background: var(--color-surface-2);
+  border-color: var(--album-line);
 }
 .ae-split .ae-inspector {
   border-left: 1px solid var(--album-line);
@@ -7183,6 +7225,210 @@ textarea.ae-input {
   color: inherit;
 }
 
+/* ── capa: lateral revisada ── */
+.ae-input.ae-input-lg {
+  padding: 11px 13px;
+  font-size: 15px;
+  font-weight: 600;
+}
+/* Fontes como amostras: "Aa" desenhado na própria fonte. */
+.ae-fonts {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.ae-fonts button {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: var(--ae-panel-2);
+  color: var(--ae-ink-2);
+  font-size: 17px;
+  line-height: 1;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  transition:
+    color 0.15s,
+    outline-color 0.15s;
+}
+.ae-fonts button:hover {
+  color: var(--ae-ink);
+}
+.ae-fonts button.is-on {
+  color: var(--ae-ink);
+  outline-color: var(--ae-accent);
+}
+/* Elementos da capa como lista, um por linha, com a lixeira à mão. */
+.ae-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ae-layer {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 10px;
+  background: var(--ae-panel-2);
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  transition: outline-color 0.15s;
+}
+.ae-layer.is-on {
+  outline-color: var(--ae-accent);
+}
+.ae-layer-pick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  text-align: left;
+  color: var(--ae-ink);
+}
+.ae-layer-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--ae-panel);
+  color: var(--ae-ink-2);
+}
+.ae-layer-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+.ae-layer-tag {
+  flex: none;
+  font-size: 10.5px;
+  color: var(--ae-ink-3);
+}
+.ae-layer-del {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin-right: 4px;
+  border-radius: 8px;
+  color: var(--ae-ink-3);
+  transition:
+    color 0.13s,
+    background 0.13s;
+}
+.ae-layer-del:hover {
+  color: #b0342f;
+  background: var(--ae-panel);
+}
+.ae-layer-add {
+  display: flex;
+  gap: 6px;
+}
+/* Formas como desenho, não como nome. */
+.ae-shapes {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.ae-shapes button {
+  aspect-ratio: 1;
+  padding: 7px;
+  border-radius: 10px;
+  background: var(--ae-panel-2);
+  color: var(--ae-ink-2);
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  transition:
+    color 0.15s,
+    outline-color 0.15s;
+}
+.ae-shapes button.is-on {
+  color: var(--ae-ink);
+  outline-color: var(--ae-accent);
+}
+/* Grade 3×3 de posições: o ponto aceso é onde o elemento está. */
+.ae-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  width: 96px;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--ae-panel-2);
+}
+.ae-pad button {
+  display: grid;
+  place-items: center;
+  height: 24px;
+  border-radius: 6px;
+}
+.ae-pad button span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ae-ink-3);
+  transition:
+    transform 0.15s,
+    background 0.15s;
+}
+.ae-pad button:hover span {
+  background: var(--ae-ink);
+}
+.ae-pad button.is-on span {
+  transform: scale(1.6);
+  background: var(--ae-accent);
+}
+/* O que é ajuste fino (ou medida de gráfica) fica dobrado. */
+.ae-more {
+  border-radius: 10px;
+}
+.ae-more summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ae-ink-2);
+}
+.ae-more summary::-webkit-details-marker {
+  display: none;
+}
+.ae-more summary::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+.ae-more[open] summary::before {
+  transform: rotate(45deg);
+}
+.ae-more summary:hover {
+  color: var(--ae-ink);
+}
+.ae-more-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 14px;
+}
+/* Título vazio na bancada: o nome-fantasma, para a capa não parecer vazia. */
+.ae-el.is-ghost > div {
+  opacity: 0.4;
+}
+
 @media (max-width: 960px) {
   .af-workbench {
     height: auto;
@@ -7226,6 +7472,15 @@ textarea.ae-input {
   .ae-split .ae-inspector {
     display: block;
     overflow: visible;
+  }
+  /* Inspetor na largura toda: os ícones de layout e as amostras não crescem
+     junto — viravam blocos de 140 px. */
+  .ae-split .ae-layouts {
+    grid-template-columns: repeat(auto-fill, minmax(56px, 72px));
+  }
+  .ae-fonts,
+  .ae-shapes {
+    grid-template-columns: repeat(6, minmax(0, 56px));
   }
 }
 
@@ -7452,5 +7707,248 @@ textarea.ae-input {
   }
 }
 
+/* ══ Etapas 3, 4 e 5 — ajustes de novembro ════════════════════════════════ */
+
+/* "?" alinhado ao que explica. Título e "?" são uma peça só (`.ae-group-title`)
+   centrada entre si; antes o "?" era irmão do título no cabeçalho e acompanhava
+   a caixa de linha alta do `h3`, caindo abaixo do meio do texto. O botão em si
+   tem altura fixa e `line-height` zerada em volta, para não herdar a linha. */
+.ae-group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.ae-group-head .ae-group-title .ae-help-wrap {
+  margin: 0;
+}
+.ae-help-wrap {
+  flex: none;
+  line-height: 0;
+}
+.ae-help {
+  line-height: 15px;
+}
+.ae-row-name {
+  line-height: 1.2;
+}
+.ae-row.is-stack .ae-row-label {
+  align-items: center;
+}
+.ae-group-head {
+  align-items: center;
+}
+.ae-group-right {
+  align-items: center;
+}
+/* Bloco que é só cabeçalho (interruptor desligado): a folga de baixo é a que
+   o corpo daria. */
+.ae-split .ae-group-head:only-child {
+  padding-bottom: 18px;
+}
+
+/* "Tirar foto do quadro" ao lado do número do quadro. */
+.ae-group-right .ae-danger {
+  padding: 0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Os três pontos de partida do texto numa fileira. */
+.ae-text-adds {
+  display: flex;
+  gap: 6px;
+}
+.ae-split .ae-text-adds .ae-chip,
+.ae-text-adds .ae-chip {
+  flex: 1 1 auto;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  padding-inline: 8px;
+}
+
+/* Interruptor (contracapa, lombada). */
+.ae-switch {
+  position: relative;
+  flex: none;
+  width: 38px;
+  height: 22px;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--ae-track);
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+}
+.ae-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  transition: transform 0.2s var(--landing-ease-out, ease);
+}
+.ae-switch.is-on {
+  background: var(--ae-accent);
+}
+.ae-switch.is-on .ae-switch-knob {
+  transform: translateX(16px);
+}
+.ae-switch:focus-visible {
+  outline: 2px solid var(--ae-accent);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ae-switch,
+  .ae-switch-knob {
+    transition: none;
+  }
+}
+
+/* Etapa 3: o álbum volta a ter cartão — branco, como a lateral —, e as
+   páginas dentro dele ganham sombra leve para não sumirem no branco. */
+.ae-split.ae-mode-pages .ae-main {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--album-line);
+  border-radius: 28px;
+  background: var(--color-surface-2);
+  box-shadow: 0 18px 44px var(--album-shadow);
+}
+.ae-split.ae-mode-pages .ae-strip {
+  margin-bottom: 14px;
+  box-shadow: 0 6px 18px var(--album-shadow);
+}
+.ae-mode-pages .af-board {
+  --album-shadow: rgb(23 24 27 / 0.09);
+}
+.ae-mode-pages .af-board-page {
+  outline: 1px solid rgb(23 24 27 / 0.06);
+  outline-offset: -1px;
+}
+
+/* Etapa 4: a sombra da capa cabia mal no palco e era cortada pela borda dele.
+   Mais curta e mais leve, e o palco ganha folga embaixo para ela inteira. */
+.ae-split .ae-wrap {
+  box-shadow:
+    0 14px 30px -14px rgb(0 0 0 / 0.38),
+    0 1px 4px rgb(0 0 0 / 0.1);
+}
+.ae-split.ae-mode-cover .ae-stage {
+  padding-bottom: clamp(48px, 4vw, 64px);
+}
+
+/* Rolar dentro da lateral ou da visão geral não arrasta a página junto. */
+.ae-split .ae-inspector,
+.ae-split .ae-board,
+.ae-split .ae-stage {
+  overscroll-behavior: contain;
+}
+
+/* Etapas 3 e 4 cabem na janela: título, bancada e "Continuar" ocupam a altura
+   da tela e a página não rola — só a lateral e o álbum rolam por dentro. Em
+   janela baixa ou estreita volta o fluxo normal da página. */
+@media (min-width: 961px) and (min-height: 620px) {
+  .af-root[data-step='3'],
+  .af-root[data-step='4'] {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .af-root[data-step='3'] .af-main,
+  .af-root[data-step='4'] .af-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .af-root[data-step='3'] .af-footer,
+  .af-root[data-step='4'] .af-footer {
+    display: none;
+  }
+  .af-root[data-step='3'] .af-section-build,
+  .af-root[data-step='4'] .af-section-build {
+    padding-top: clamp(8px, 2.4vh, 28px);
+    padding-bottom: clamp(10px, 2.4vh, 24px);
+  }
+  .af-root[data-step='3'] .af-title,
+  .af-root[data-step='4'] .af-title {
+    font-size: clamp(40px, 6.4vh, 64px);
+  }
+  .af-root[data-step='3'] .af-editor,
+  .af-root[data-step='4'] .af-editor {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    padding-bottom: clamp(12px, 2.4vh, 24px);
+  }
+  .af-root[data-step='3'] .af-workbench,
+  .af-root[data-step='4'] .af-workbench {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+  }
+  .af-root[data-step='3'] .af-build-foot,
+  .af-root[data-step='4'] .af-build-foot {
+    padding-top: clamp(10px, 2vh, 18px);
+  }
+}
+
+/* Etapa 5: só o álbum, sem cartão, com as visões no trilho do lado. */
+.ae.is-read.is-rail {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+.ae.is-rail .ae-main {
+  grid-template-rows: minmax(0, 1fr);
+  background: transparent;
+}
+.ae.is-rail .ae-stage {
+  border-top: 0;
+  background-image: none;
+  /* Folga para a sombra da folha e do livro caber inteira no palco. */
+  padding-bottom: clamp(48px, 4vw, 64px);
+}
+.ae.is-rail .ae-zoom {
+  background: var(--color-surface-2);
+  border-color: var(--album-line);
+}
+/* A sombra da folha aberta, mais curta fora do editor completo: a original
+   passava da folga do palco (que rola, e por isso corta) e virava uma faixa
+   reta embaixo e dos lados. */
+.ae.is-rail .ae-sheet-cast,
+.ae-split .ae-sheet-cast {
+  box-shadow:
+    0 18px 36px -18px rgb(0 0 0 / 0.42),
+    0 2px 8px rgb(0 0 0 / 0.12);
+}
+@media (max-width: 960px) {
+  .ae.is-read.is-rail {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 12px;
+  }
+}
+
 /* Fecha `@layer components`, aberto lá em cima. */
+}
+
+/* Fora da camada de propósito: a regra base de `h1…h6` (margem embaixo e
+   entrelinha de título) é sem camada e venceria qualquer classe de dentro de
+   `@layer components`. Com aquela margem o título do bloco ficava 4 px acima
+   do meio da linha, e o "?" e o que mora à direita pareciam caídos. */
+.ae-group-title > h3 {
+  margin: 0;
+  line-height: 1.2;
 }

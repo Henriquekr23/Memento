@@ -70,10 +70,12 @@ export function useEditorAlbum(initial?: EditorAlbum) {
   }, []);
 
   const addText = useCallback((text: string) => {
+    // Entra embaixo do título, como subtítulo — no y 30 de antes ele caía em
+    // cima da forma nova, que também nasce ali.
     const element = makeText({
       text,
-      size: 10,
-      y: 30,
+      size: 7,
+      y: 84,
       font: 'grotesk',
       uppercase: false,
       tracking: 0,

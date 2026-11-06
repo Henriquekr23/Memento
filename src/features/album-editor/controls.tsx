@@ -32,16 +32,21 @@ export function Group({
   title: string;
   help?: string;
   right?: React.ReactNode;
-  children: React.ReactNode;
+  /** Sem conteúdo (um interruptor desligado), o bloco é só o cabeçalho. */
+  children?: React.ReactNode;
 }) {
   return (
     <section className="ae-group">
       <header className="ae-group-head">
-        <h3>{title}</h3>
-        {help && <Help text={help} />}
+        {/* Título e "?" numa peça só, centrados entre si: soltos no cabeçalho,
+            o "?" seguia a linha de base do título e caía abaixo do meio dele. */}
+        <span className="ae-group-title">
+          <h3>{title}</h3>
+          {help && <Help text={help} />}
+        </span>
         {right && <span className="ae-group-right">{right}</span>}
       </header>
-      <div className="ae-group-body">{children}</div>
+      {children ? <div className="ae-group-body">{children}</div> : null}
     </section>
   );
 }
@@ -82,6 +87,33 @@ export function Row({
       </span>
       <span className="ae-row-control">{children}</span>
     </div>
+  );
+}
+
+/**
+ * Interruptor liga/desliga. É para o que só tem dois estados e um deles é
+ * "nada" (contracapa, lombada): o que ele liga aparece embaixo dele.
+ */
+export function Switch({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      className={`ae-switch${checked ? ' is-on' : ''}`}
+      onClick={() => onChange(!checked)}
+    >
+      <span className="ae-switch-knob" aria-hidden />
+    </button>
   );
 }
 

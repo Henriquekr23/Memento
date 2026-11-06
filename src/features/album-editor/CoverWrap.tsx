@@ -26,6 +26,8 @@ interface CoverWrapProps {
   onChange: (id: string, patch: Partial<CoverElement>) => void;
   snap: SnapState;
   setSnap: (snap: SnapState) => void;
+  /** Mostrado no lugar do título vazio — só na tela, nunca no arquivo. */
+  titlePlaceholder?: string;
 }
 
 /**
@@ -45,6 +47,7 @@ export function CoverWrap({
   onChange,
   snap,
   setSnap,
+  titlePlaceholder,
 }: CoverWrapProps) {
   const color = colorById(album.color);
   const trim = SPEC.trim;
@@ -178,6 +181,11 @@ export function CoverWrap({
               onSelect={onSelect}
               onChange={(patch) => onChange(element.id, patch)}
               snapTo={snapTo}
+              placeholder={
+                element.kind === 'text' && element.role === 'title'
+                  ? titlePlaceholder
+                  : undefined
+              }
             />
           ))}
           {snap.x && <div className="ae-snap ae-snap-v" />}

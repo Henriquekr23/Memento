@@ -229,9 +229,10 @@ export function PagesInspector({
             </p>
           )}
 
-          {/* Preenchimento e respiro só existem onde há quadro para preencher —
-              e não em "página inteira" nem em "com margem", que já são as duas
-              respostas para uma foto só. */}
+          {/* Preenchimento só existe onde há quadro para preencher — e não em
+              "página inteira" nem em "com margem", que já são as duas respostas
+              para uma foto só. O respiro entre quadros saiu da lateral: o
+              valor salvo continua valendo, só não se mexe mais aqui. */}
           {capacity > 1 && (
             <>
               <Row label={copy.pageFill} help={copy.pageFillHelp} stack>
@@ -244,17 +245,6 @@ export function PagesInspector({
                     { value: true, label: copy.fillBleed },
                     { value: false, label: copy.fillMargin },
                   ]}
-                />
-              </Row>
-              <Row label={copy.pageGap} stack>
-                <Slider
-                  value={activePage.gap}
-                  min={0}
-                  max={12}
-                  step={0.5}
-                  unit=" mm"
-                  label={copy.pageGap}
-                  onChange={(gap) => updatePage(activeIndex, { gap })}
                 />
               </Row>
             </>
@@ -287,26 +277,22 @@ export function PagesInspector({
           title={
             leftPage.spread ? copy.spreadPhotoGroup : copy.frameGroup(slotIndex + 1, capacity)
           }
+          /* Tirar a foto mora junto do nome do quadro: é sobre *este* quadro,
+             e o quadro se escolhe clicando nele na página. */
+          right={
+            frame.photoId ? (
+              <button
+                type="button"
+                className="ae-danger"
+                onClick={() =>
+                  updateFrame(framePage, frameSlot, { photoId: null, ...resetFraming() })
+                }
+              >
+                <IconX size={12} /> {copy.clearFrame}
+              </button>
+            ) : undefined
+          }
         >
-          {/* Escolher o quadro sem precisar acertar o clique na página. */}
-          {!leftPage.spread && capacity > 1 && (
-            <Row label={copy.framePick} stack>
-              <div className="ae-frames" role="group" aria-label={copy.framePick}>
-                {Array.from({ length: capacity }, (_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className={i === slotIndex ? 'is-on' : ''}
-                    aria-pressed={i === slotIndex}
-                    aria-label={copy.frameNumber(i + 1)}
-                    onClick={() => onSelectSlot(i)}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-            </Row>
-          )}
 
           {!frame.photoId && <p className="ae-note">{copy.frameEmptyNote}</p>}
 
@@ -338,24 +324,13 @@ export function PagesInspector({
           </>
           )}
           {frame.photoId && (
-            <>
-              <button
-                type="button"
-                className="ae-chip"
-                onClick={() => updateFrame(framePage, frameSlot, resetFraming(frame.fit))}
-              >
-                {copy.recenterFrame}
-              </button>
-              <button
-                type="button"
-                className="ae-danger"
-                onClick={() =>
-                  updateFrame(framePage, frameSlot, { photoId: null, ...resetFraming() })
-                }
-              >
-                <IconX size={12} /> {copy.clearFrame}
-              </button>
-            </>
+            <button
+              type="button"
+              className="ae-chip"
+              onClick={() => updateFrame(framePage, frameSlot, resetFraming(frame.fit))}
+            >
+              {copy.recenterFrame}
+            </button>
           )}
         </Group>
       )}
@@ -396,28 +371,20 @@ export function PagesInspector({
         </Group>
       )}
 
-      <Group
-        title={copy.pageTextGroup}
-        help={copy.pageTextNote}
-        right={
-          <span style={{ display: 'flex', gap: 4 }}>
-            <button type="button" className="ae-chip" onClick={() => addText('caption')}>
-              {copy.addCaption}
-            </button>
-            <button type="button" className="ae-chip" onClick={() => addText('header')}>
-              {copy.addHeader}
-            </button>
-          </span>
-        }
-      >
-        <button
-          type="button"
-          className="ae-chip"
-          style={{ alignSelf: 'flex-start' }}
-          onClick={() => addText('overlay')}
-        >
-          {copy.addOverlay}
-        </button>
+      <Group title={copy.pageTextGroup} help={copy.pageTextNote}>
+        {/* Os três pontos de partida numa fileira só, de cima para baixo da
+            página: no alto, sobre a foto, embaixo. */}
+        <div className="ae-text-adds">
+          <button type="button" className="ae-chip" onClick={() => addText('header')}>
+            {copy.addHeader}
+          </button>
+          <button type="button" className="ae-chip" onClick={() => addText('overlay')}>
+            {copy.addOverlay}
+          </button>
+          <button type="button" className="ae-chip" onClick={() => addText('caption')}>
+            {copy.addCaption}
+          </button>
+        </div>
 
         {blocks.length > 0 && (
           <div className="ae-chips">

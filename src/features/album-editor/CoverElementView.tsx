@@ -23,6 +23,11 @@ interface CoverElementViewProps {
   onSelect?: (id: string) => void;
   onChange?: (patch: Partial<CoverElement>) => void;
   snapTo?: SnapFn;
+  /**
+   * Texto-fantasma para um texto vazio na bancada. Um título em branco não
+   * desenhava nada, e a capa parecia não ter título nenhum para mexer.
+   */
+  placeholder?: string;
 }
 
 /**
@@ -43,6 +48,7 @@ export function CoverElementView({
   onSelect,
   onChange,
   snapTo,
+  placeholder,
 }: CoverElementViewProps) {
   const startDrag = useDrag();
   const color = element.color ?? ink;
@@ -172,10 +178,11 @@ export function CoverElementView({
   }
 
   const font = fontById(element.font);
+  const ghost = live && !element.text.trim() && !!placeholder;
 
   return (
     <div
-      className={`ae-el${selected ? ' is-selected' : ''}`}
+      className={`ae-el${selected ? ' is-selected' : ''}${ghost ? ' is-ghost' : ''}`}
       style={{ ...common, width: `${element.width}%` }}
       onPointerDown={dragBody}
     >
@@ -195,7 +202,7 @@ export function CoverElementView({
           userSelect: 'none',
         }}
       >
-        {element.text || ' '}
+        {ghost ? placeholder : element.text || ' '}
       </div>
       {handles}
     </div>

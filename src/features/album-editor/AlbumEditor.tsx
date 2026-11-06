@@ -402,7 +402,7 @@ export function AlbumEditor({
 
   return (
     <div
-      className={`ae${simple ? ' ae-split' : ''}`}
+      className={`ae${simple ? ` ae-split ae-mode-${mode}` : ''}`}
       style={{ '--ae-accent': accent } as React.CSSProperties}
     >
       {!simple && (
@@ -546,6 +546,7 @@ export function AlbumEditor({
                   onChange={state.updateElement}
                   snap={snap}
                   setSnap={setSnap}
+                  titlePlaceholder={copy.coverTitlePlaceholder}
                 />
               )}
 
@@ -725,6 +726,8 @@ export function AlbumEditor({
               copy={copy}
               selectedId={selectedId}
               onSelect={setSelectedId}
+              name={name}
+              onName={onName}
             />
           )}
 

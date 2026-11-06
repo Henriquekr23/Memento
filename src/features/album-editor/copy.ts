@@ -142,6 +142,21 @@ export interface EditorCopy {
   addOverlay: string;
   addHeader: string;
   textNew: string;
+
+  /* capa, revisada */
+  coverTitlePlaceholder: string;
+  titleMore: string;
+  titleStyleGroup: string;
+  done: string;
+  moreAdjust: string;
+  positionNote: string;
+  positionLabel: (key: string) => string;
+  spineNote: string;
+  spineShowTitle: string;
+  show: string;
+  hide: string;
+  spinePrint: string;
+  spineManualNote: string;
   pageTextNote: string;
   fieldColor: string;
   colorInk: string;
@@ -356,6 +371,20 @@ const PT: EditorCopy = {
   addOverlay: '+ Sobre a foto',
   addHeader: '+ Topo',
   textNew: 'Escreva aqui',
+
+  coverTitlePlaceholder: 'Nome do álbum',
+  titleMore: 'Posição e mais ajustes',
+  titleStyleGroup: 'Ajustes do título',
+  done: 'Pronto',
+  moreAdjust: 'Mais ajustes',
+  positionNote: 'Atalhos de posição. Na capa, arraste o elemento para qualquer lugar; as setas do teclado fazem o ajuste fino.',
+  positionLabel: (key) => ({ topLeft: 'Em cima, à esquerda', top: 'Em cima, no centro', topRight: 'Em cima, à direita', left: 'No meio, à esquerda', center: 'No centro', right: 'No meio, à direita', bottomLeft: 'Embaixo, à esquerda', bottom: 'Embaixo, no centro', bottomRight: 'Embaixo, à direita' } as Record<string, string>)[key] ?? key,
+  spineNote: 'A lombada repete o título do álbum, na mesma fonte da capa.',
+  spineShowTitle: 'Título na lombada',
+  show: 'Mostrar',
+  hide: 'Ocultar',
+  spinePrint: 'Ajustes de impressão',
+  spineManualNote: 'Espessura informada por você — use o valor que a gráfica passar.',
   pageTextNote:
     'Arraste o texto na página para posicionar. Dois cliques nele abrem a digitação; as alças mudam a largura e o corpo.',
   fieldColor: 'Cor',
@@ -560,6 +589,20 @@ const EN: EditorCopy = {
   addOverlay: '+ Over the photo',
   addHeader: '+ Top',
   textNew: 'Write here',
+
+  coverTitlePlaceholder: 'Album name',
+  titleMore: 'Position and more',
+  titleStyleGroup: 'Title settings',
+  done: 'Done',
+  moreAdjust: 'More settings',
+  positionNote: 'Position shortcuts. On the cover, drag the element anywhere; the arrow keys nudge it.',
+  positionLabel: (key) => ({ topLeft: 'Top left', top: 'Top center', topRight: 'Top right', left: 'Middle left', center: 'Center', right: 'Middle right', bottomLeft: 'Bottom left', bottom: 'Bottom center', bottomRight: 'Bottom right' } as Record<string, string>)[key] ?? key,
+  spineNote: 'The spine repeats the album title, in the same font as the cover.',
+  spineShowTitle: 'Title on spine',
+  show: 'Show',
+  hide: 'Hide',
+  spinePrint: 'Print settings',
+  spineManualNote: 'Thickness set by you — use the value your printer gives you.',
   pageTextNote:
     'Drag the text on the page to place it. Double-click it to type; the handles change the width and the size.',
   fieldColor: 'Colour',
