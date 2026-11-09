@@ -5847,6 +5847,9 @@ textarea.ae-input {
 /* ── topo ──────────────────────────────────────────────────────────────── */
 .af-top {
   position: relative;
+  /* Acima das etapas/abas que vêm logo depois: elas são posicionadas e, por
+     virem depois no HTML, eram pintadas por cima do menu da conta. */
+  z-index: 2;
   height: 88px;
 }
 /* No centro de verdade: posicionada, e não empurrada pelos botões. */
@@ -8138,6 +8141,23 @@ textarea.ae-input {
 }
 
 /* ══ Telas da conta ("Meus álbuns" e "Minha conta") na roupa da /album ════ */
+
+/* Nas telas da conta a navegação (marca, idioma, tema, conta e as abas) fica
+   presa no topo: a lista de álbuns é longa, e voltar ao topo para trocar de
+   aba ou abrir o menu era o caminho mais repetido. Vidro do tom da página,
+   como a barra da landing. A página de um álbum (sem abas) não entra. */
+.ac-root .af-chrome:has(.ac-tabs) {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: color-mix(in srgb, var(--album-step-1) 86%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border-bottom: 1px solid color-mix(in srgb, var(--album-ink) 7%, transparent);
+}
+.ac-root .af-chrome .af-steps {
+  padding-bottom: 12px;
+}
 
 .ac-root {
   --af-width: 1184px;
