@@ -1,6 +1,8 @@
 'use client';
 
 import { IconCheck } from '@/features/album-editor/icons';
+import { ACCOUNT_COPY } from '@/features/account/copy';
+import { useLang } from '@/features/i18n/LangProvider';
 
 /**
  * Um endereço à vista com o botão de copiar colado nele.
@@ -22,13 +24,14 @@ export function CopyField({
   disabled?: boolean;
   onCopy: () => void;
 }) {
+  const { lang } = useLang();
   return (
     <div className="av-copy" data-copied={copied || undefined}>
       <input
         className="av-copy-text"
         readOnly
         value={value}
-        aria-label="Endereço"
+        aria-label={ACCOUNT_COPY[lang].address}
         onFocus={(event) => event.currentTarget.select()}
       />
       <button

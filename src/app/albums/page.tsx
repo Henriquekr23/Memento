@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { AccountShell } from '@/features/account/AccountShell';
+import { AlbumsEmpty, AlbumsHead, SharedAlbumsHead } from '@/features/account/AccountTexts';
 import { AlbumCard } from '@/features/album-view/AlbumCard';
 import { firstNameOf, nameOf } from '@/features/auth/name';
 import { listAlbumsIEdit, listMyAlbums } from '@/features/album-view/loadAlbum';
@@ -43,32 +43,10 @@ export default async function AlbumsPage() {
         {/* Só uma ação aqui. "Sair" morava nesta barra, do mesmo tamanho e ao
             lado de "Montar um álbum" — a ação mais destrutiva colada na mais
             construtiva. Agora ele vive na tela de conta e no menu do topo. */}
-        <div className="af-head">
-          <h1 className="lp-h af-title">Seus álbuns.</h1>
-          <p className="af-lead">
-            {albums.length === 0
-              ? `Nada guardado ainda, ${firstName}.`
-              : `${albums.length} ${albums.length === 1 ? 'álbum guardado' : 'álbuns guardados'} na nuvem.`}
-          </p>
-          <Link href="/album" className="af-btn af-btn-primary af-btn-lg ac-head-cta">
-            <PlusIcon />
-            Montar um álbum
-          </Link>
-        </div>
+        <AlbumsHead count={albums.length} firstName={firstName} />
 
         {albums.length === 0 ? (
-          <div className="ac-empty">
-            <span aria-hidden className="ac-empty-art">
-              <span />
-              <span />
-              <span />
-            </span>
-            <h2 className="lp-h ac-empty-title">Seu primeiro álbum aparece aqui.</h2>
-            <p className="ac-empty-text">
-              Monte o álbum e, na última etapa, use <strong>Salvar na nuvem</strong>. Ele
-              fica guardado nesta lista, com um link para compartilhar quando você quiser.
-            </p>
-          </div>
+          <AlbumsEmpty />
         ) : (
           <ul className="ac-grid">
             {albums.map((album) => (
@@ -79,13 +57,7 @@ export default async function AlbumsPage() {
 
         {shared.length > 0 && (
           <div className="ac-block">
-            <div className="ac-block-head">
-              <h2 className="lp-h af-h2">Montando com outras pessoas</h2>
-              <p className="af-help">
-                Álbuns em que você foi convidado a montar. Quem compartilha e quem apaga é
-                quem começou o álbum.
-              </p>
-            </div>
+            <SharedAlbumsHead />
             <ul className="ac-grid">
               {shared.map((album) => (
                 <AlbumCard key={album.id} album={album} variant="shared" />
@@ -95,23 +67,5 @@ export default async function AlbumsPage() {
         )}
       </section>
     </AccountShell>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M12 5v14M5 12h14" />
-    </svg>
   );
 }

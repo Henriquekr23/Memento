@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Tooltip } from '@/components/Tooltip';
-import { AccountMenu } from '@/features/auth/AccountMenu';
+import { AccountMenu, AccountMenuBody } from '@/features/auth/AccountMenu';
 import { useSessionUser } from '@/features/auth/useSessionUser';
 import { COMMON } from '@/features/i18n/common';
 import { useLang } from '@/features/i18n/LangProvider';
@@ -240,8 +240,10 @@ function LandingDrawer({
             <span className="lp-link-text">{t.links[id]}</span>
           </a>
         ))}
-        {isSupabaseConfigured && <DrawerAccount onNavigate={() => onClose(false)} />}
+        {isSupabaseConfigured && <DrawerSignIn onNavigate={() => onClose(false)} />}
       </nav>
+
+      {isSupabaseConfigured && <DrawerAccount onNavigate={() => onClose(false)} />}
 
       <LandingCta className="lp-drawer-cta" />
 
@@ -253,20 +255,31 @@ function LandingDrawer({
   );
 }
 
-/** "Entrar" para quem não tem sessão; "Meus álbuns" para quem tem. */
+/** "Entrar" entre as opções da gaveta, só para quem não tem sessão. */
+function DrawerSignIn({ onNavigate }: { onNavigate: () => void }) {
+  const { user, isLoading } = useSessionUser();
+  const { lang } = useLang();
+  if (isLoading || user) return null;
+  return (
+    <Link href="/entrar?next=%2F" className="lp-drawer-link" onClick={onNavigate}>
+      <span className="lp-link-text">{COMMON[lang].navSignIn}</span>
+    </Link>
+  );
+}
+
+/**
+ * A conta dentro da gaveta, para quem tem sessão: o mesmo conteúdo do menu do
+ * avatar (quem entrou, "Meus álbuns", "Minha conta", "Sair"). No celular o
+ * avatar não cabe na barra, então é aqui que a conta aparece.
+ */
 function DrawerAccount({ onNavigate }: { onNavigate: () => void }) {
   const { user, isLoading } = useSessionUser();
   const { lang } = useLang();
-  const c = COMMON[lang];
-  if (isLoading) return null;
-  return user ? (
-    <Link href="/albums" className="lp-drawer-link" onClick={onNavigate}>
-      <span className="lp-link-text">{c.navMyAlbums}</span>
-    </Link>
-  ) : (
-    <Link href="/entrar?next=%2F" className="lp-drawer-link" onClick={onNavigate}>
-      <span className="lp-link-text">{c.navSignIn}</span>
-    </Link>
+  if (isLoading || !user) return null;
+  return (
+    <section aria-label={COMMON[lang].navAccount} className="lp-drawer-account">
+      <AccountMenuBody user={user} onNavigate={onNavigate} asMenu={false} />
+    </section>
   );
 }
 

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ACCOUNT_COPY } from '@/features/account/copy';
+import { useLang } from '@/features/i18n/LangProvider';
 import { deleteAlbum } from '@/features/album-save/actions';
 import { ShareControls } from '@/features/album-view/ShareControls';
 import type { AlbumListItem } from '@/features/album-view/loadAlbum';
@@ -30,11 +32,13 @@ export function AlbumCard({
   variant?: 'mine' | 'shared';
 }) {
   const router = useRouter();
+  const { lang } = useLang();
+  const t = ACCOUNT_COPY[lang];
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const created = new Date(album.createdAt).toLocaleDateString('pt-BR', {
+  const created = new Date(album.createdAt).toLocaleDateString(t.locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -54,11 +58,11 @@ export function AlbumCard({
 
   return (
     <li className="ac-album" data-pending={pending || undefined}>
-      <Link href={`/album/${album.id}`} className="ac-album-cover" aria-label={`Abrir ${album.title}`}>
+      <Link href={`/album/${album.id}`} className="ac-album-cover" aria-label={t.openAria(album.title)}>
         <span aria-hidden className="ac-album-book">
           <span className="ac-album-book-title">{album.title}</span>
         </span>
-        <span aria-hidden className="ac-album-open">Abrir</span>
+        <span aria-hidden className="ac-album-open">{t.open}</span>
       </Link>
 
       <div className="ac-album-body">
@@ -72,8 +76,8 @@ export function AlbumCard({
               onClick={() => setConfirming(true)}
               disabled={pending}
               className="ac-icon-btn is-danger"
-              aria-label={`Apagar ${album.title}`}
-              title="Apagar"
+              aria-label={t.removeAria(album.title)}
+              title={t.remove}
             >
               <svg
                 width="16"
@@ -95,12 +99,12 @@ export function AlbumCard({
 
         <p className="ac-album-meta">
           <span>
-            {album.photoCount} {album.photoCount === 1 ? 'foto' : 'fotos'}
+            {t.photos(album.photoCount)}
           </span>
           <span aria-hidden>·</span>
           <span>{created}</span>
-          {album.lockedAt && <span className="ac-badge">Finalizado</span>}
-          {variant === 'shared' && <span className="ac-badge is-soft">Convidado</span>}
+          {album.lockedAt && <span className="ac-badge">{t.finished}</span>}
+          {variant === 'shared' && <span className="ac-badge is-soft">{t.invited}</span>}
         </p>
 
         {variant === 'mine' && (
@@ -109,13 +113,13 @@ export function AlbumCard({
 
         <div className="ac-album-actions">
           <Link href={`/album/${album.id}`} className="af-btn af-btn-ghost ac-btn">
-            Abrir
+            {t.open}
           </Link>
           {/* Álbum finalizado não oferece editar: a bancada recusaria a
               abertura, e um botão que leva a um aviso é um botão quebrado. */}
           {!album.lockedAt && (
             <Link href={`/album/${album.id}/editar`} className="af-btn af-btn-ghost ac-btn">
-              Editar
+              {t.edit}
             </Link>
           )}
         </div>
@@ -129,9 +133,10 @@ export function AlbumCard({
 
       <ConfirmDialog
         open={confirming}
-        title={`Apagar "${album.title}"?`}
-        description="As fotos guardadas na nuvem e o link compartilhado somem para sempre. Os arquivos no seu computador continuam intactos."
-        confirmLabel="Apagar"
+        title={t.removeTitle(album.title)}
+        description={t.removeDescription}
+        confirmLabel={t.remove}
+        cancelLabel={t.cancel}
         destructive
         onConfirm={remove}
         onCancel={() => setConfirming(false)}
