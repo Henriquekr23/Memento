@@ -3,6 +3,9 @@
 import { useActionState, useId, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 
+import { ACCOUNT_COPY } from '@/features/account/copy';
+import { useLang } from '@/features/i18n/LangProvider';
+
 import { updateNameAction, updatePasswordAction } from './actions';
 import { EMPTY_AUTH_STATE, type AuthFormState } from './state';
 
@@ -63,6 +66,7 @@ function Feedback({ state }: { state: AuthFormState }) {
 }
 
 export function NameForm({ name, email }: { name: string; email: string }) {
+  const t = ACCOUNT_COPY[useLang().lang];
   const [state, action] = useActionState<AuthFormState, FormData>(
     updateNameAction,
     EMPTY_AUTH_STATE,
@@ -73,15 +77,13 @@ export function NameForm({ name, email }: { name: string; email: string }) {
   return (
     <section className="ac-card ac-form-card">
       <header className="ac-card-head">
-        <h2 className="ac-card-title">Seus dados</h2>
-        <p className="ac-hint">
-          O nome aparece no topo, na sua lista e no álbum que você compartilha.
-        </p>
+        <h2 className="ac-card-title">{t.dataTitle}</h2>
+        <p className="ac-hint">{t.dataHint}</p>
       </header>
 
       <form action={action} className="ac-form">
         <div className="ac-field">
-          <label htmlFor="account-name">Nome</label>
+          <label htmlFor="account-name">{t.name}</label>
           <input
             id="account-name"
             name="name"
@@ -96,7 +98,7 @@ export function NameForm({ name, email }: { name: string; email: string }) {
         </div>
 
         <div className="ac-field">
-          <label htmlFor="account-email">E-mail</label>
+          <label htmlFor="account-email">{t.email}</label>
           <input
             id="account-email"
             type="email"
@@ -105,12 +107,12 @@ export function NameForm({ name, email }: { name: string; email: string }) {
             readOnly
             className="ac-input"
           />
-          <span className="ac-hint">É o seu login. Trocar o e-mail ainda não está pronto.</span>
+          <span className="ac-hint">{t.emailHint}</span>
         </div>
 
         <div className="ac-form-foot">
           <Feedback state={state} />
-          <Submit label="Salvar nome" busy="Salvando…" disabled={unchanged || !value.trim()} />
+          <Submit label={t.saveName} busy={t.saving} disabled={unchanged || !value.trim()} />
         </div>
       </form>
     </section>
@@ -118,6 +120,7 @@ export function NameForm({ name, email }: { name: string; email: string }) {
 }
 
 export function PasswordForm() {
+  const t = ACCOUNT_COPY[useLang().lang];
   const [state, action] = useActionState<AuthFormState, FormData>(
     updatePasswordAction,
     EMPTY_AUTH_STATE,
@@ -148,16 +151,13 @@ export function PasswordForm() {
   return (
     <section className="ac-card ac-form-card">
       <header className="ac-card-head">
-        <h2 className="ac-card-title">Senha</h2>
-        <p className="ac-hint">
-          A senha atual é pedida porque uma sessão esquecida aberta não pode virar uma troca
-          de senha.
-        </p>
+        <h2 className="ac-card-title">{t.passwordTitle}</h2>
+        <p className="ac-hint">{t.passwordHint}</p>
       </header>
 
       <form action={action} className="ac-form">
         <div className="ac-field">
-          <label htmlFor="current-password">Senha atual</label>
+          <label htmlFor="current-password">{t.currentPassword}</label>
           <input
             id="current-password"
             name="currentPassword"
@@ -174,7 +174,7 @@ export function PasswordForm() {
             ler uma embaixo da outra sugere dois passos. */}
         <div className="ac-field-pair">
           <div className="ac-field">
-            <label htmlFor="new-password">Senha nova</label>
+            <label htmlFor="new-password">{t.newPassword}</label>
             <input
               id="new-password"
               name="newPassword"
@@ -190,13 +190,13 @@ export function PasswordForm() {
             />
             <span id="new-password-hint" className={`ac-hint${tooShort ? ' is-warn' : ''}`}>
               {tooShort
-                ? `Faltam ${MIN_PASSWORD - next.length} ${MIN_PASSWORD - next.length === 1 ? 'caractere' : 'caracteres'}.`
-                : `Pelo menos ${MIN_PASSWORD} caracteres.`}
+                ? t.missingChars(MIN_PASSWORD - next.length)
+                : t.minChars(MIN_PASSWORD)}
             </span>
           </div>
 
           <div className="ac-field">
-            <label htmlFor="confirm-password">Repita a senha nova</label>
+            <label htmlFor="confirm-password">{t.repeatPassword}</label>
             <input
               id="confirm-password"
               name="confirmPassword"
@@ -212,9 +212,9 @@ export function PasswordForm() {
             />
             <span id="confirm-password-hint" className={`ac-hint${mismatch ? ' is-warn' : ''}`}>
               {mismatch
-                ? 'Ainda não é igual à senha nova.'
+                ? t.mismatch
                 : confirm.length > 0 && confirm === next
-                  ? 'As duas batem.'
+                  ? t.match
                   : ' '}
             </span>
           </div>
@@ -227,12 +227,12 @@ export function PasswordForm() {
             checked={visible}
             onChange={(event) => setVisible(event.target.checked)}
           />
-          Mostrar as senhas
+          {t.showPasswords}
         </label>
 
         <div className="ac-form-foot">
           <Feedback state={state} />
-          <Submit label="Alterar senha" busy="Alterando…" disabled={!ready} />
+          <Submit label={t.changePassword} busy={t.changing} disabled={!ready} />
         </div>
       </form>
     </section>

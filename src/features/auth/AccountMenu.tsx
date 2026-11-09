@@ -9,7 +9,7 @@ import { useLang } from '@/features/i18n/LangProvider';
 
 import { signOutAction } from './actions';
 import { firstNameOf, initialOf } from './name';
-import { useSessionUser } from './useSessionUser';
+import { type SessionUser, useSessionUser } from './useSessionUser';
 
 /**
  * A conta na barra de navegação.
@@ -119,37 +119,67 @@ export function AccountMenu({
 
       {open && (
         <div role="menu" className="menu account-menu">
-          {/* Quem está entrou: o mesmo círculo do botão, nome e e-mail. */}
-          <div className="account-menu-head">
-            <span className="avatar" aria-hidden>
-              {initialOf(user.name)}
-            </span>
-            <span className="account-menu-who">
-              <span className="account-menu-name">{user.name}</span>
-              <span className="account-menu-email">{user.email}</span>
-            </span>
-          </div>
-          <div className="menu-sep" />
-          {/* Fechar no clique, e não num efeito que observa a rota: o menu
-              precisa sumir junto com o clique, antes da tela nova chegar. */}
-          <Link role="menuitem" href="/albums" className="menu-item" onClick={close}>
-            <MenuIcon d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5zM12 4v16" />
-            {t.navMyAlbums}
-          </Link>
-          <Link role="menuitem" href="/conta" className="menu-item" onClick={close}>
-            <MenuIcon d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20a7.5 7.5 0 0 1 15 0" />
-            {t.navAccount}
-          </Link>
-          <div className="menu-sep" />
-          <form action={signOutAction} onSubmit={close}>
-            <button role="menuitem" type="submit" className="menu-item is-danger">
-              <MenuIcon d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15M10 16l4-4-4-4M14 12H4" />
-              {t.navSignOut}
-            </button>
-          </form>
+          <AccountMenuBody user={user} onNavigate={close} />
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * O miolo do menu da conta: quem está logado (círculo, nome e e-mail) e as
+ * três saídas — "Meus álbuns", "Minha conta" e "Sair".
+ *
+ * Separado do botão porque mora em dois lugares: no menu que abre do avatar
+ * e, no celular, dentro da gaveta "Menu" da landing, onde a barra não tem
+ * espaço para o avatar. Assim os dois lugares não divergem.
+ *
+ * `role="menuitem"` só no menu de verdade (`asMenu`); na gaveta são links
+ * comuns dentro de um diálogo.
+ */
+export function AccountMenuBody({
+  user,
+  onNavigate,
+  asMenu = true,
+}: {
+  user: SessionUser;
+  onNavigate: () => void;
+  asMenu?: boolean;
+}) {
+  const { lang } = useLang();
+  const t = COMMON[lang];
+  const role = asMenu ? 'menuitem' : undefined;
+  return (
+    <>
+      {/* Quem está entrou: o mesmo círculo do botão, nome e e-mail. */}
+      <div className="account-menu-head">
+        <span className="avatar" aria-hidden>
+          {initialOf(user.name)}
+        </span>
+        <span className="account-menu-who">
+          <span className="account-menu-name">{user.name}</span>
+          <span className="account-menu-email">{user.email}</span>
+        </span>
+      </div>
+      <div className="menu-sep" />
+      {/* Fechar no clique, e não num efeito que observa a rota: o menu
+          precisa sumir junto com o clique, antes da tela nova chegar. */}
+      <Link role={role} href="/albums" className="menu-item" onClick={onNavigate}>
+        <MenuIcon d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5zM12 4v16" />
+        {t.navMyAlbums}
+      </Link>
+      <Link role={role} href="/conta" className="menu-item" onClick={onNavigate}>
+        <MenuIcon d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20a7.5 7.5 0 0 1 15 0" />
+        {t.navAccount}
+      </Link>
+      <div className="menu-sep" />
+      <form action={signOutAction} onSubmit={onNavigate}>
+        <button role={role} type="submit" className="menu-item is-danger">
+          <MenuIcon d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15M10 16l4-4-4-4M14 12H4" />
+          {t.navSignOut}
+        </button>
+      </form>
+    </>
   );
 }
 

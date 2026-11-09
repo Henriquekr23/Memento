@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
 import { setAlbumVisibility } from '@/features/album-save/actions';
+import { ACCOUNT_COPY } from '@/features/account/copy';
+import { useLang } from '@/features/i18n/LangProvider';
 import { useOrigin } from '@/hooks/useOrigin';
 
 import { CopyField } from './CopyField';
@@ -30,6 +32,8 @@ export function ShareControls({
   variant?: 'inline' | 'row';
 }) {
   const router = useRouter();
+  const { lang } = useLang();
+  const t = ACCOUNT_COPY[lang];
   const origin = useOrigin();
   const [isPublic, setIsPublic] = useState(initial);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +64,7 @@ export function ShareControls({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError('O navegador não deixou copiar. Copie da barra de endereços.');
+      setError(t.copyFailed);
     }
   }
 
@@ -71,7 +75,7 @@ export function ShareControls({
       type="button"
       role="switch"
       aria-checked={isPublic}
-      aria-label="Link público"
+      aria-label={t.publicLink}
       disabled={pending}
       onClick={() => toggle(!isPublic)}
       className="ac-switch"
@@ -85,11 +89,11 @@ export function ShareControls({
       <div className="av-item">
         <div className="av-item-head">
           <div className="av-item-text">
-            <h3 className="av-item-title">Link público</h3>
+            <h3 className="av-item-title">{t.publicLink}</h3>
             <p className="ac-hint">
               {isPublic
-                ? 'Quem tiver o link folheia o álbum, sem precisar de conta. Ninguém encontra o álbum por busca.'
-                : 'Desligado: só você e quem monta junto veem o álbum.'}
+                ? t.publicOnRow
+                : t.publicOffRow}
             </p>
           </div>
           {toggleButton}
@@ -97,7 +101,7 @@ export function ShareControls({
         {isPublic && (
           <CopyField
             value={link}
-            label={copied ? 'Copiado' : 'Copiar link'}
+            label={copied ? t.copied : t.copyLink}
             copied={copied}
             disabled={pending}
             onCopy={copyLink}
@@ -116,9 +120,9 @@ export function ShareControls({
     <div className="ac-share" data-on={isPublic || undefined}>
       <div className="ac-share-row">
         <span className="ac-share-text">
-          <span className="ac-share-label">Link público</span>
+          <span className="ac-share-label">{t.publicLink}</span>
           <span className="ac-share-hint">
-            {isPublic ? 'Quem tiver o link abre o álbum.' : 'Só você vê este álbum.'}
+            {isPublic ? t.publicOnInline : t.publicOffInline}
           </span>
         </span>
         {toggleButton}
@@ -126,7 +130,7 @@ export function ShareControls({
 
       {isPublic && (
         <button type="button" onClick={copyLink} className="ac-copy" data-copied={copied || undefined}>
-          {copied ? 'Link copiado' : 'Copiar link'}
+          {copied ? t.linkCopied : t.copyLink}
         </button>
       )}
 

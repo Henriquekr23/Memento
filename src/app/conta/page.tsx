@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
 import { AccountShell } from '@/features/account/AccountShell';
+import { AccountHead, SignOutHint, SignOutLabel } from '@/features/account/AccountTexts';
 import { NameForm, PasswordForm } from '@/features/auth/AccountForms';
 import { signOutAction } from '@/features/auth/actions';
 import { initialOf, nameOf } from '@/features/auth/name';
@@ -32,10 +33,7 @@ export default async function ContaPage() {
   return (
     <AccountShell section="account">
       <section className="af-section ac-section">
-        <div className="af-head">
-          <h1 className="lp-h af-title">Sua conta.</h1>
-          <p className="af-lead">Seu nome, sua senha e a saída — tudo aqui.</p>
-        </div>
+        <AccountHead />
 
         <div className="ac-account">
           <aside className="ac-card ac-profile">
@@ -63,11 +61,9 @@ export default async function ContaPage() {
                 >
                   <path d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15M10 16l4-4-4-4M14 12H4" />
                 </svg>
-                Sair da conta
+                <SignOutLabel />
               </button>
-              <p className="ac-hint">
-                Encerra a sessão neste navegador. Seus álbuns guardados continuam onde estão.
-              </p>
+              <SignOutHint />
             </form>
           </aside>
 
