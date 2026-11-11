@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
-import { SiteFooter } from '@/components/SiteFooter';
-import { SiteNav } from '@/components/SiteNav';
-import { AuthForm, type AuthMode } from '@/features/auth/AuthForm';
+import { AccountShell } from '@/features/account/AccountShell';
+import { AuthDisabled, AuthForm, type AuthMode } from '@/features/auth/AuthForm';
 import { safeNext } from '@/lib/safeNext';
 import { getSessionUser } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
@@ -13,6 +12,11 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
+/**
+ * Entrar e criar conta. Veste a mesma roupa das telas da conta
+ * (`AccountShell` sem abas): topo com a marca no centro, fundo chapado da
+ * etapa 1 e rodapé na mesma régua — entrar não parece trocar de site.
+ */
 export default async function EntrarPage({
   searchParams,
 }: {
@@ -24,15 +28,9 @@ export default async function EntrarPage({
 
   if (!isSupabaseConfigured) {
     return (
-      <main className="page-shell page-body">
-        <SiteNav variant="inner" />
-        <hr className="hr" />
-        <p className="card mx-auto mt-10 max-w-[520px] p-6 text-sm">
-          As contas não estão configuradas nesta instalação. O álbum continua
-          funcionando por completo em <strong>/album</strong>, sem conta.
-        </p>
-        <SiteFooter />
-      </main>
+      <AccountShell section={null}>
+        <AuthDisabled />
+      </AccountShell>
     );
   }
 
@@ -40,12 +38,8 @@ export default async function EntrarPage({
   if (await getSessionUser()) redirect(next);
 
   return (
-    <main className="page-shell page-body">
-      <SiteNav variant="inner" />
-      <hr className="hr" />
-      <div className="h-10" />
+    <AccountShell section={null}>
       <AuthForm mode={mode} next={next} />
-      <SiteFooter />
-    </main>
+    </AccountShell>
   );
 }

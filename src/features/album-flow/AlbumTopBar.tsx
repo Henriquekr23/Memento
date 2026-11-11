@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import { AccountMenu } from '@/features/auth/AccountMenu';
 import { useSessionUser } from '@/features/auth/useSessionUser';
@@ -49,11 +50,14 @@ export function AlbumTopBar({ onSignIn }: { onSignIn?: () => void } = {}) {
 function AccountSlot({ onSignIn }: { onSignIn?: () => void }) {
   const { user, isLoading } = useSessionUser();
   const { lang } = useLang();
+  const pathname = usePathname();
 
   // Reserva o lugar enquanto o cookie é lido: sem isso a barra pisca "Entrar"
   // por um quadro para quem já tem sessão.
   if (isLoading) return <span aria-hidden className="af-account-wait" />;
   if (user) return <AccountMenu />;
+  // Na própria /entrar, o botão "Entrar" seria eco do formulário logo abaixo.
+  if (pathname?.startsWith('/entrar')) return null;
 
   if (!onSignIn) {
     return (
