@@ -5847,6 +5847,9 @@ textarea.ae-input {
 /* ── topo ──────────────────────────────────────────────────────────────── */
 .af-top {
   position: relative;
+  /* Acima das etapas/abas que vêm logo depois: elas são posicionadas e, por
+     virem depois no HTML, eram pintadas por cima do menu da conta. */
+  z-index: 2;
   height: 88px;
 }
 /* No centro de verdade: posicionada, e não empurrada pelos botões. */
@@ -8139,6 +8142,23 @@ textarea.ae-input {
 
 /* ══ Telas da conta ("Meus álbuns" e "Minha conta") na roupa da /album ════ */
 
+/* Nas telas da conta a navegação (marca, idioma, tema, conta e as abas) fica
+   presa no topo: a lista de álbuns é longa, e voltar ao topo para trocar de
+   aba ou abrir o menu era o caminho mais repetido. Vidro do tom da página,
+   como a barra da landing. A página de um álbum (sem abas) não entra. */
+.ac-root .af-chrome:has(.ac-tabs) {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: color-mix(in srgb, var(--album-step-1) 86%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border-bottom: 1px solid color-mix(in srgb, var(--album-ink) 7%, transparent);
+}
+.ac-root .af-chrome .af-steps {
+  padding-bottom: 12px;
+}
+
 .ac-root {
   --af-width: 1184px;
 }
@@ -9762,3 +9782,160 @@ textarea.ae-input {
   margin: 0;
   line-height: 1.2;
 }
+
+/* ══ /entrar: entrar e criar conta, na roupa das telas da conta ═══════════ */
+
+.au-section {
+  gap: 28px;
+}
+.au-lead {
+  max-width: 440px;
+}
+.au-card {
+  width: 100%;
+  max-width: 440px;
+  margin-inline: auto;
+  padding: 10px 28px 28px;
+}
+.au-card-plain {
+  display: grid;
+  gap: 20px;
+  padding: 28px;
+  text-align: center;
+}
+
+/* Seletor em pílula: dois lados do mesmo tamanho e um fundinho que desliza
+   entre eles — só `transform`, nunca largura ou posição. */
+.au-switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 8px -14px 24px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface-2));
+}
+.au-switch-pill {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: var(--landing-pill);
+  box-shadow: 0 2px 8px var(--album-shadow);
+  transition: transform 260ms var(--landing-ease-out);
+}
+.au-switch[data-mode='signup'] .au-switch-pill {
+  transform: translateX(100%);
+}
+.au-switch-opt {
+  position: relative;
+  height: 42px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--album-muted);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 220ms ease;
+}
+.au-switch-opt[aria-selected='true'] {
+  color: var(--landing-pill-ink);
+}
+.au-switch-opt:focus-visible {
+  outline: 2px solid var(--landing-cta);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .au-switch-opt[aria-selected='false']:hover {
+    color: var(--album-ink);
+  }
+}
+
+.au-form {
+  gap: 16px;
+}
+.au-form .af-btn-block {
+  margin-top: 6px;
+}
+.au-feedback {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.au-feedback.is-error {
+  background: color-mix(in srgb, #b0342f 9%, transparent);
+  color: #b0342f;
+}
+.au-feedback.is-ok {
+  background: color-mix(in srgb, #2f7a4f 10%, transparent);
+  color: #2f7a4f;
+}
+
+/* Abaixo do cartão: a conta é opcional, e o caminho sem ela fica à vista. */
+.au-aside {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  max-width: 400px;
+  margin-inline: auto;
+  text-align: center;
+}
+.au-aside-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--album-ink-2);
+}
+.au-aside-text {
+  margin: 0;
+}
+.au-aside-link {
+  --lp-ink: var(--landing-pill-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--landing-pill-ink);
+}
+.au-cta {
+  --lp-ink: var(--landing-on-cta);
+}
+@media (hover: hover) and (pointer: fine) {
+  .au-aside-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .au-switch-pill {
+    transition: none;
+  }
+}
+@media (max-width: 767px) {
+  .au-section {
+    gap: 22px;
+  }
+  /* No celular a linha de apoio das etapas some (`.af-lead`); aqui ela diz
+     para que serve a conta, então fica. */
+  .au-lead {
+    display: block;
+    padding-inline: 8px;
+  }
+  .au-card {
+    padding: 8px 20px 22px;
+    border-radius: 24px;
+  }
+  .au-switch {
+    margin-inline: -10px;
+  }
+}
+
